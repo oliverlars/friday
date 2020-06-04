@@ -36,15 +36,13 @@ typedef void APIENTRY type_glGenVertexArrays(GLsizei n, GLuint *arrays);
 typedef void APIENTRY type_glBindBuffer (GLenum target, GLuint buffer);
 typedef void APIENTRY type_glGenBuffers (GLsizei n, GLuint *buffers);
 typedef void APIENTRY type_glBufferData (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
-typedef void APIENTRY type_glActiveTexture (GLenum texture);
+typedef void APIENTRY type_glBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
 typedef void APIENTRY type_glDeleteProgram (GLuint program);
 typedef void APIENTRY type_glDeleteShader (GLuint shader);
 typedef void APIENTRY type_glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers);
 typedef void APIENTRY type_glDrawBuffers (GLsizei n, const GLenum *bufs);
-typedef void APIENTRY type_glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
-typedef void APIENTRY type_glTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
 
-#define make_gl_func(name) type_##name name
+#define make_gl_func(name) type_##name* name
 
 make_gl_func(glTexImage2DMultisample);
 make_gl_func(glBindFramebuffer);
@@ -81,18 +79,16 @@ make_gl_func(glGenVertexArrays);
 make_gl_func(glBindBuffer);
 make_gl_func(glGenBuffers);
 make_gl_func(glBufferData);
-make_gl_func(glActiveTexture);
+make_gl_func(glBufferSubData);
 make_gl_func(glDeleteProgram);
 make_gl_func(glDeleteShader);
 make_gl_func(glDeleteFramebuffers);
 make_gl_func(glDrawBuffers);
-make_gl_func(glTexImage3D);
-make_gl_func(glTexSubImage3D);
 
 internal void
-init_opengl(){
+load_opengl(){
     
-#define get_gl_func(name) (type_##name *)SDL_GL_GetProcAddress(#name)
+#define get_gl_func(name) name = (type_##name *)SDL_GL_GetProcAddress(#name)
     
     get_gl_func(glTexImage2DMultisample);
     get_gl_func(glBlitFramebuffer);
@@ -122,13 +118,11 @@ init_opengl(){
     get_gl_func(glBindBuffer);
     get_gl_func(glGenBuffers);
     get_gl_func(glBufferData);
-    get_gl_func(glActiveTexture);
+    get_gl_func(glBufferSubData);
     get_gl_func(glDeleteProgram);
     get_gl_func(glDeleteShader);
     get_gl_func(glDeleteFramebuffers);
     get_gl_func(glDrawBuffers);
-    get_gl_func(glTexImage3D);
-    get_gl_func(glTexSubImage3D);
     get_gl_func(glUniform1f);
     get_gl_func(glUniform2fv);
     get_gl_func(glUniform3fv);

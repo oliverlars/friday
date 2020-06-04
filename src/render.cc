@@ -45,24 +45,26 @@ global struct {
     
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
-    Array<Command> commands;
+    Array<Command*> commands;
+    u64 command_index;
 } renderer;
 
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
     
-    Command_Rectangle rectangle;
-    rectangle.x = x;
-    rectangle.y = y;
-    rectangle.width = width;
-    rectangle.height = height;
-    rectangle.corner_radius = radius;
+    Command_Rectangle* rectangle = new Command_Rectangle;
+    rectangle->x = x;
+    rectangle->y = y;
+    rectangle->width = width;
+    rectangle->height = height;
+    rectangle->corner_radius = radius;
     
     renderer.commands.insert(rectangle);
+    renderer.command_index++;
 }
 
 internal void
-init_gl_renderer(){
+init_opengl_renderer(){
     
     glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
     glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
@@ -157,7 +159,7 @@ init_shaders(){
             "vec2 vertices[] = vec2[](vec2(0, 0), vec2(0, 1), vec2(1,1),\n"
             "vec2(0,0), vec2(1, 0), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[gl_VertexID], 0, 1);"
-            "screen_position.xy *= dim;\n"
+            //"screen_position.xy *= dim;\n"
             //"screen_position.xy += pos;\n"
             "gl_Position = screen_position;\n"
             //"gl_Position = ortho*view*vec4(pos, 0, 1);\n"
@@ -181,11 +183,50 @@ init_shaders(){
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius);\n"
             "vec3 box = mix(vec3(1,0,0), vec3(1,0,0),  smoothstep(0, 1, dist));\n"
-            "colour = vec4(box, 1);\n"
+            "colour = vec4(1,0,0, 1);\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         renderer.programs[COMMAND_RECTANGLE] = program;
         
     }
+}
+
+internal void
+opengl_start_frame() {
+    renderer.command_index = 0;
+}
+
+internal void
+process_and_draw_commands(){
+    for(int i = 0; i < renderer.command_index; i++){
+        Command* command = renderer.commands[i];
+        switch(command->type){
+            case COMMAND_RECTANGLE:{
+                auto rectangle = reinterpret_cast<Command_Rectangle*>(command);
+                
+                glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
+                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Command_Rectangle), rectangle);
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+                
+                glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
+                glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                glUseProgram(0);
+            }break;
+        }
+    }
+}
+
+internal void
+opengl_end_frame() {
+    glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+    
+    glViewport(0, 0, 1280, 720);
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    process_and_draw_commands();
+    
+    glUseProgram(0);
 }

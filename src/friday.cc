@@ -14,8 +14,6 @@ int
 main(int argc, char** args){
 #define TITLE "Friday"
     
-    init_opengl();
-    
     
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_EnableScreenSaver();
@@ -52,7 +50,12 @@ main(int argc, char** args){
                          SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
     
     SDL_GL_CreateContext(global_window);
+    load_opengl();
+    
     SDL_ShowWindow(global_window);
+    
+    init_opengl_renderer();
+    init_shaders();
     
     while(running){
         SDL_Event event;
@@ -62,12 +65,11 @@ main(int argc, char** args){
             }
             
         }
-        
-        glViewport(0, 0, 1280, 720);
-        glClearColor(1,0,0,1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
+        opengl_start_frame();
+        push_rectangle(0, 0, 20, 20, 1);
+        opengl_end_frame();
         SDL_GL_SwapWindow(global_window);
+        
     }
     
     return 0;

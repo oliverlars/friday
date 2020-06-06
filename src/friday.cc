@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <new>
 #include "friday.h"
+#include "maths.cc"
 #include "opengl.h"
 #include "render.cc"
 
@@ -67,7 +68,7 @@ main(int argc, char** args){
         }
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         opengl_start_frame();
-        push_rectangle(640, 360, 640, 360, 3);
+        push_rectangle(0, 0, 30, 40, 3);
         opengl_end_frame();
         SDL_GL_SwapWindow(global_window);
         

@@ -50,7 +50,14 @@ const f32 Tau32_ = 6.283185307179f;
 template<typename T>
 struct Array {
     T* data = nullptr;
-    u64 used = 0;
+    
+    union {
+        // NOTE(Oliver): the spec says this will be initialised to 0
+        // should just be able to rely on constructor, but it's helpful
+        // i guess?
+        u64 used;
+        u64 size;
+    };
     u64 capacity = 0;
     
     // TODO(Oliver): maybe a megabyte is unnecessary? probs more than i'll need it for
@@ -60,11 +67,16 @@ struct Array {
         // of 250 million arrays or something
         capacity = amount_to_reserve/sizeof(T);
         data = (T*)VirtualAlloc(0, amount_to_reserve, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        
     }
-    Array() {}
+    
+    Array() { used = 0;}
+    
     ~Array(){
         VirtualFree(data, 0, MEM_RELEASE);
+    }
+    
+    inline void reset(){
+        used = 0;
     }
     
     void insert(T item){
@@ -98,13 +110,17 @@ struct Array {
     }
     
     inline T* last() {
-        return &data[count];
+        return &data[used];
     }
     
     inline T pop(){
         T last_element = last();
-        count--;
+        used--;
         return last_element;
+    }
+    
+    inline T bytes_used() {
+        return used*sizeof(T);
     }
 };
 
@@ -124,3 +140,8 @@ struct Chunked_List {
     Chunked_List* previous = nullptr;
     Chunked_List** end = nullptr;
 };
+
+struct {
+    u32 width;
+    u32 height;
+} platform;

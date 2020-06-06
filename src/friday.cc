@@ -19,8 +19,8 @@ main(int argc, char** args){
     SDL_EnableScreenSaver();
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     
-    int width = 1280;
-    int height = 720;
+    platform.width = 1280;
+    platform.height = 720;
     
     b32 running = true;
     
@@ -44,7 +44,7 @@ main(int argc, char** args){
         SDL_CreateWindow(TITLE,
                          SDL_WINDOWPOS_UNDEFINED,
                          SDL_WINDOWPOS_UNDEFINED,
-                         width, height,
+                         platform.width, platform.height,
                          SDL_WINDOW_RESIZABLE | 
                          SDL_WINDOW_HIDDEN |
                          SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
@@ -65,8 +65,9 @@ main(int argc, char** args){
             }
             
         }
+        SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         opengl_start_frame();
-        push_rectangle(0, 0, 20, 20, 1);
+        push_rectangle(640, 360, 640, 360, 3);
         opengl_end_frame();
         SDL_GL_SwapWindow(global_window);
         

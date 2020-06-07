@@ -74,7 +74,14 @@ main(int argc, char** args){
             //push_rectangle(200, 200, 20 , 40, 3);
             
             //push_rectangle(200 + sinf((f32)tick/20)*20, 360, 100, 200, 3);
-            push_rectangle(640, 360, 200, 200, 0.5+ sinf((f32)tick/20)/2);
+            
+            for(int x = 0; x < 30; x++){
+                for(int y = 0; y < 20; y++){
+                    int size = 50;
+                    push_rectangle(x*size, y*size, size, size, 0.5+ sinf((f32)tick/20)/2);
+                    
+                }
+            }
             
         }opengl_end_frame();
         tick++;

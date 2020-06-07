@@ -11,10 +11,13 @@ enum Command_Type {
 struct Command {
     Command_Type type;
     u32 colour;
+    Command* previous = nullptr;
+    Command* next = nullptr;
 };
 
 struct Command_Rectangle: Command {
     Command_Rectangle() { type = COMMAND_RECTANGLE; }
+#define BYTES_PER_RECTANGLE (5*sizeof(f32))
     f32 x, y;
     f32 width, height;
     f32 corner_radius;
@@ -22,12 +25,14 @@ struct Command_Rectangle: Command {
 
 struct Command_Circle : Command {
     Command_Circle() { type = COMMAND_CIRCLE; }
+#define BYTES_PER_CIRCLE (5*sizeof(f32))
     s64 x, y;
     u64 radius;
 };
 
 struct Command_Rectangle_Outline : Command {
     Command_Rectangle_Outline() { type = COMMAND_RECTANGLE_OUTLINE; }
+#define BYTES_PER_RECTANGLE_OUTLINE (6*sizeof(f32))
     f32 x, y;
     f32 width, height;
     f32 border_size;
@@ -48,22 +53,89 @@ global struct {
     GLuint resolution_uniform;
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
-    Array<Command*> commands;
+    //Array<Command*> commands;
+    Memory_Pool commands;
+    Command* head = nullptr;
+    Command* tail = nullptr;
+    
     Array<f32> frame_data;
     
 } renderer;
 
+#define make_command(type) (type*) new (renderer.commands.allocate(sizeof(type))) type()
+
+internal void
+insert_command(Command* next_command){
+    if(renderer.head){
+        
+        Command* command = renderer.head;
+        while(command->next){
+            command = command->next;
+        }
+        command->next = next_command;
+        
+    }else{
+        // first node 
+        renderer.head = next_command;
+        //renderer.tail = renderer.head;
+    }
+}
+
+internal inline GLuint
+get_vao_rectangle() {
+    return renderer.vaos[COMMAND_RECTANGLE];
+}
+
+internal inline GLuint
+get_buffer_rectangle() {
+    return renderer.buffers[COMMAND_RECTANGLE];
+}
+
+internal inline GLuint
+get_program_rectangle() {
+    return renderer.programs[COMMAND_RECTANGLE];
+}
+
+internal inline GLuint
+get_vao_rectangle_outline() {
+    return renderer.vaos[COMMAND_RECTANGLE_OUTLINE];
+}
+
+internal inline GLuint
+get_buffer_rectangle_outline() {
+    return renderer.buffers[COMMAND_RECTANGLE_OUTLINE];
+}
+
+internal inline GLuint
+get_program_rectangle_outline() {
+    return renderer.programs[COMMAND_RECTANGLE_OUTLINE];
+}
+
+internal inline GLuint
+get_vao_circle() {
+    return renderer.vaos[COMMAND_CIRCLE];
+}
+
+internal inline GLuint
+get_buffer_circle() {
+    return renderer.buffers[COMMAND_CIRCLE];
+}
+
+internal inline GLuint
+get_program_circle() {
+    return renderer.programs[COMMAND_CIRCLE];
+}
+
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
     // TODO(Oliver): this is straight up leaking memory fix it asap
-    Command_Rectangle* rectangle = new Command_Rectangle;
+    Command_Rectangle* rectangle = make_command(Command_Rectangle);
     rectangle->x = x;
     rectangle->y = y;
     rectangle->width = width;
     rectangle->height = height;
     rectangle->corner_radius = radius;
-    
-    renderer.commands.insert(rectangle);
+    insert_command(rectangle);
 }
 
 internal void
@@ -76,7 +148,7 @@ init_opengl_renderer(){
     glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
     
     // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
-    glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*sizeof(f32)*5, 0, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE, 0, GL_DYNAMIC_DRAW);
     
     GLuint pos = 0;
     GLuint dim = 2;
@@ -84,15 +156,15 @@ init_opengl_renderer(){
     
     glEnableVertexAttribArray(pos);
     glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
-                          sizeof(f32)*5, reinterpret_cast<void*>(0));
+                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(0));
     
     glEnableVertexAttribArray(dim);
     glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
-                          sizeof(f32)*5, reinterpret_cast<void*>(sizeof(f32)*2));
+                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*2));
     
     glEnableVertexAttribArray(radius);
     glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
-                          sizeof(f32)*5, reinterpret_cast<void*>(sizeof(f32)*4));
+                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -150,6 +222,7 @@ make_program(char* vs, char* fs){
 
 internal void
 init_shaders(){
+    // NOTE(Oliver): init rectangle shader
     {
         GLchar* rectangle_vs =  
             "#version 330 core\n"
@@ -170,7 +243,6 @@ init_shaders(){
             "screen_position.xy *= (vec4(dim/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
-            //"gl_Position = ortho*view*vec4(pos, 0, 1);\n"
             "out_pos = pos;\n"
             "out_radius = radius;\n"
             "out_dim = dim;\n"
@@ -210,6 +282,8 @@ internal void
 opengl_start_frame() {
     renderer.commands.reset();
     renderer.frame_data.reset();
+    renderer.head = nullptr;
+    renderer.tail = nullptr;
 }
 
 internal inline void
@@ -221,8 +295,7 @@ internal void
 process_and_draw_commands(){
     int num_verts_to_render = 0;
     
-    for(int i = 0; i < renderer.commands.size; i++){
-        Command* command = renderer.commands[i];
+    for(Command* command = renderer.head; command; command = command->next){
         switch(command->type){
             case COMMAND_RECTANGLE:{
                 auto rectangle = reinterpret_cast<Command_Rectangle*>(command);

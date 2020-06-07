@@ -76,7 +76,10 @@ struct Array {
     }
     
     inline void reset(){
+        VirtualFree(data, 0, MEM_RELEASE);
         used = 0;
+        capacity = 0;
+        data = nullptr;
     }
     
     void insert(T item){
@@ -124,24 +127,68 @@ struct Array {
     }
 };
 
-template<typename T>
-struct Chunk {
-    T data;
-};
+bool is_power_of_two(u64 value) {
+	return (value & (value-1)) == 0;
+}
 
-struct Chunked_List {
-    Chunked_List(u64 the_chunk_size){
-        chunk_size = the_chunk_size;
+struct Memory_Pool {
+    
+    struct Chunk {
+        void* data = nullptr;
+        s64 used = 0;
+        s64 capacity = 0;
+    };
+    
+    const u64 DEFAULT_CHUNK_SIZE = 4096 * 4;
+    Array<Chunk> chunks;
+    
+    ~Memory_Pool() {
+        reset();
     }
     
-    u64 chunk_size;
+    void* allocate(u64 amount) {
+        
+        // TODO(Oliver): we should align this
+        
+        for (int i = 0; i < chunks.size; i++) {
+            Chunk* chunk = &chunks[i];
+            auto available = chunk->capacity - chunk->used;
+            assert(available >= 0);
+            
+            if (available >= amount) {
+                void* result = (char*)chunk->data + chunk->used;
+                chunk->used += amount;
+                
+                return result;
+            }
+        }
+        
+        // All chunks exhauted or amount simply doesnt fit..
+        auto ammount_to_allocate = DEFAULT_CHUNK_SIZE;
+        if (ammount_to_allocate < amount) ammount_to_allocate = amount;
+        
+        Chunk chunk;
+        chunk.data = malloc(ammount_to_allocate);
+        chunk.used = amount;
+        chunk.capacity = ammount_to_allocate;
+        chunks.insert(chunk);
+        
+        return chunk.data;
+    }
     
-    Chunked_List* next = nullptr;
-    Chunked_List* previous = nullptr;
-    Chunked_List** end = nullptr;
+    void reset() {
+        for (int i = 0; i < chunks.size; i++) {
+            free(chunks[i].data);
+        }
+        
+        chunks.reset();
+    }
+    
 };
 
 struct {
+    
     u32 width;
     u32 height;
+    
 } platform;

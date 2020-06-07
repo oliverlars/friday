@@ -57,6 +57,7 @@ main(int argc, char** args){
     
     init_opengl_renderer();
     init_shaders();
+    u64 tick = 0;
     
     while(running){
         SDL_Event event;
@@ -66,10 +67,18 @@ main(int argc, char** args){
             }
             
         }
+        
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
-        opengl_start_frame();
-        push_rectangle(0, 0, 30, 40, 3);
-        opengl_end_frame();
+        opengl_start_frame();{
+            
+            //push_rectangle(200, 200, 20 , 40, 3);
+            
+            push_rectangle(200 +tick, 360, 100, 200, 3);
+            push_rectangle(640, 360, 80, 20, 3);
+            
+        }opengl_end_frame();
+        tick++;
+        
         SDL_GL_SwapWindow(global_window);
         
     }

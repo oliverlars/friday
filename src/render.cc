@@ -166,9 +166,9 @@ init_shaders(){
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
-            "vec4 screen_position = vec4(vertices[gl_VertexID], 0, 1);\n"
-            "screen_position.xy *= (ortho*vec4(dim, 0, 1)).xy;\n"
-            "screen_position.xy += (ortho*vec4(pos,0,1)).xy;\n"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4(dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             //"gl_Position = ortho*view*vec4(pos, 0, 1);\n"
             "out_pos = pos;\n"
@@ -189,10 +189,10 @@ init_shaders(){
             "}\n"
             
             "void main(){\n"
-            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, 10);\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, 20);\n"
             "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
-            "colour = vec4(debug_colour, 1);\n"
+            "colour = vec4(1,0,0, alpha);\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -219,12 +219,17 @@ push_frame_data(f32 data){
 
 internal void
 process_and_draw_commands(){
+    int num_verts_to_render = 0;
+    
     for(int i = 0; i < renderer.commands.size; i++){
         Command* command = renderer.commands[i];
         switch(command->type){
             case COMMAND_RECTANGLE:{
                 auto rectangle = reinterpret_cast<Command_Rectangle*>(command);
                 
+                // NOTE(Oliver): there is probably a better way of doing this
+                // but we need to upload attributes per vert so we need to 
+                // duplicate them in the array
                 for(int i = 0; i < 6; i++){
                     push_frame_data(rectangle->x);
                     push_frame_data(rectangle->y);
@@ -232,26 +237,31 @@ process_and_draw_commands(){
                     push_frame_data(rectangle->height);
                     push_frame_data(rectangle->corner_radius);
                 }
-                glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, renderer.frame_data.bytes_used(), renderer.frame_data.data);
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-                
-                glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
-                
-                float resolution[2] = {platform.width, platform.height};
-                glUniform2fv(renderer.resolution_uniform, 1, resolution);
-                
-                mat4x4 projection = ortho(0, platform.width, 0, platform.height);
-                mat4x4 view = translate(0, 0);
-                
-                glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
-                glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
-                
-                glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-                glUseProgram(0);
+                num_verts_to_render += 6;
             }break;
         }
+    }
+    
+    // NOTE(Oliver): draw loaded data
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, renderer.frame_data.bytes_used(), renderer.frame_data.data);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
+        
+        float resolution[2] = {platform.width, platform.height};
+        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        
+        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
+        mat4x4 view = translate(0, 0);
+        
+        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
+        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
+        
+        glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+        glDrawArrays(GL_TRIANGLES, 0, num_verts_to_render);
+        glUseProgram(0);
     }
 }
 

@@ -26,9 +26,9 @@ struct Command_Rectangle: Command {
 
 struct Command_Circle : Command {
     Command_Circle() { type = COMMAND_CIRCLE; }
-#define BYTES_PER_CIRCLE (5*sizeof(f32))
-    s64 x, y;
-    u64 radius;
+#define BYTES_PER_CIRCLE (3*sizeof(f32))
+    f32 x, y;
+    f32 radius;
 };
 
 struct Command_Rectangle_Outline : Command {
@@ -147,7 +147,7 @@ get_program_circle() {
 
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
-    // TODO(Oliver): this is straight up leaking memory fix it asap
+    
     auto* rectangle = make_command(Command_Rectangle);
     rectangle->x = x;
     rectangle->y = y;
@@ -159,7 +159,7 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
 
 internal inline void
 push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius){
-    // TODO(Oliver): this is straight up leaking memory fix it asap
+    
     auto rectangle = make_command(Command_Rectangle_Outline);
     rectangle->x = x;
     rectangle->y = y;
@@ -170,8 +170,19 @@ push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radi
     insert_command(rectangle);
 }
 
+internal inline void
+push_circle(f32 x, f32 y, f32 radius){
+    
+    auto circle = make_command(Command_Circle);
+    circle->x = x;
+    circle->y = y;
+    circle->radius = radius;
+    insert_command(circle);
+}
+
 internal void
 init_opengl_renderer(){
+    
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
         glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
@@ -230,6 +241,29 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(radius);
         glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
                               BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*5));
+        
+    }
+    
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_CIRCLE]);
+        glBindVertexArray(get_vao_circle());
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_CIRCLE]);
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_CIRCLE, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        GLuint radius = 2;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_CIRCLE, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(radius);
+        glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
+                              BYTES_PER_CIRCLE, reinterpret_cast<void*>(sizeof(f32)*2));
         
     }
     
@@ -361,6 +395,7 @@ init_shaders(){
             "out vec2 out_dim;\n"
             "out float out_radius;\n"
             "out float out_border;\n"
+            "out vec2 out_res;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -373,6 +408,7 @@ init_shaders(){
             "out_radius = radius;\n"
             "out_dim = dim;\n"
             "out_border = border_size;\n"
+            "out_res = resolution;\n"
             "}\n";
         
         GLchar* rectangle_fs =  
@@ -381,18 +417,24 @@ init_shaders(){
             "in vec2 out_dim; \n"
             "in float out_radius; \n"
             "in float out_border; \n"
+            "in vec2 out_res; \n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             
-            "float box_no_pointy(vec2 p, vec2 b, float r){\n"
-            "return length(max(abs(p)-b+r,0.0))-r;\n"
+            "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
+            "float inner = length(max(abs(p)-b*border+r*border,0.0))-r*border;\n"
+            "float outer = length(max(abs(p)-b+r,0.0))-r;\n"
+            "return max(-inner, outer);\n"
             "}\n"
-            
+            "float box_dist(vec2 p, vec2 size, float radius, float border){\n"
+            "size -= vec2(radius);\n"
+            "vec2 d = abs(p) - size;\n"
+            "return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;\n"
+            "}\n"
             "void main(){\n"
-            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2);\n"
-            "vec2 inner_dim = out_dim - out_border;"
-            "float inner_dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), (inner_dim)/2, out_radius*min(inner_dim.x, inner_dim.y)/2);\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 2, max(-inner_dist, dist)));\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, 5 + 0*out_radius*min(out_dim.x, out_dim.y)/2, 0.3);\n"
+            "if(dist <= 0.0001) { dist = 0.0001; }\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
             "colour = vec4(0, 1, 0, alpha);\n"
             "}\n";
@@ -405,6 +447,60 @@ init_shaders(){
         
     }
     
+    // NOTE(Oliver): init rectangle outline shader
+    {
+        GLchar* circle_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in vec2 pos; \n"
+            "layout(location = 2) in float radius; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            "out vec2 out_pos;\n"
+            "out float out_radius;\n"
+            "out vec2 out_res;\n"
+            
+            "void main(){\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4((radius*1.2)/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+radius/2)/resolution,0,1)).xy -1;\n"
+            "gl_Position = screen_position;\n"
+            "out_pos = pos;\n"
+            "out_radius = radius;\n"
+            "out_res = resolution;\n"
+            "}\n";
+        
+        GLchar* circle_fs =  
+            "#version 330 core\n"
+            "in vec2 out_pos; \n"
+            "in float out_radius; \n"
+            "in float out_border; \n"
+            "in vec2 out_res; \n"
+            "out vec4 colour;\n"
+            "uniform vec2 in_position;\n"
+            
+            "float circle(vec2 p, float r){\n"
+            "return length(p) - r;\n"
+            "}\n"
+            
+            "void main(){\n"
+            "float dist = circle(gl_FragCoord.xy - (out_pos + out_radius/2), out_radius/2);\n"
+            "if(dist <= 0.0001) { dist = 0.0001; }\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
+            "colour = vec4(0, 1, 0, alpha);\n"
+            "}\n";
+        
+        GLuint program = make_program(circle_vs, circle_fs);
+        
+        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        
+        renderer.programs[COMMAND_CIRCLE] = program;
+        
+    }
+    
 }
 
 internal void
@@ -412,6 +508,7 @@ opengl_start_frame() {
     renderer.commands.reset();
     renderer.rectangle_attribs.reset();
     renderer.rectangle_outline_attribs.reset();
+    renderer.circle_attribs.reset();
     renderer.head = nullptr;
     renderer.tail = nullptr;
 }
@@ -426,10 +523,16 @@ push_rectangle_outline_attribs(f32 attribs){
     renderer.rectangle_outline_attribs.insert(attribs);
 }
 
+internal inline void
+push_circle_attribs(f32 attribs){
+    renderer.circle_attribs.insert(attribs);
+}
+
 internal void
 process_and_draw_commands(){
     int num_rectangle_verts = 0;
     int num_rectangle_outline_verts = 0;
+    int num_circle_verts = 0;
     
     for(Command* command = renderer.head; command; command = command->next){
         switch(command->type){
@@ -461,7 +564,19 @@ process_and_draw_commands(){
                     push_rectangle_outline_attribs(rectangle->corner_radius);
                 }
                 num_rectangle_outline_verts += 6;
-            };
+            }break;
+            
+            case COMMAND_CIRCLE:{
+                auto circle = reinterpret_cast<Command_Circle*>(command); 
+                
+                for(int i = 0; i < 6; i++){
+                    push_circle_attribs(circle->x);
+                    push_circle_attribs(circle->y);
+                    push_circle_attribs(circle->radius);
+                }
+                num_circle_verts += 6;
+            }break;
+            
         }
     }
     
@@ -511,6 +626,30 @@ process_and_draw_commands(){
         
         glBindVertexArray(get_vao_rectangle_outline());
         glDrawArrays(GL_TRIANGLES, 0, num_rectangle_outline_verts);
+        glUseProgram(0);
+    }
+    
+    // NOTE(Oliver): draw circle data
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                        renderer.circle_attribs.bytes_used(), 
+                        renderer.circle_attribs.data);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        glUseProgram(get_program_circle());
+        
+        float resolution[2] = {platform.width, platform.height};
+        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        
+        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
+        mat4x4 view = translate(0, 0);
+        
+        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
+        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
+        
+        glBindVertexArray(get_vao_circle());
+        glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
         glUseProgram(0);
     }
     

@@ -78,7 +78,8 @@ main(int argc, char** args){
             //push_rectangle(200 + sinf((f32)tick/20)*20, 360, 100, 200, 3);
             int x, y;
             SDL_GetMouseState(&x, &y);
-            push_rectangle_outline(x, platform.height-y, 100, 100, 9, 0.1f+ 0*sinf((f32)tick/20)/2);
+            //push_rectangle_outline(x, platform.height-y, 100, 100, 1, 0.5 + sinf((f32)tick/20)/2);
+            push_circle(x, platform.height-y, 200);
             
         }opengl_end_frame();
         tick++;

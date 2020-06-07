@@ -2,6 +2,7 @@
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
+    COMMAND_TEXT,
     COMMAND_RECTANGLE_OUTLINE,
     
     COMMAND_COUNT
@@ -58,7 +59,10 @@ global struct {
     Command* head = nullptr;
     Command* tail = nullptr;
     
-    Array<f32> frame_data;
+    Array<f32> rectangle_attribs;
+    Array<f32> rectangle_outline_attribs;
+    Array<f32> circle_attribs;
+    Array<f32> text_attribs;
     
 } renderer;
 
@@ -97,6 +101,21 @@ get_program_rectangle() {
 }
 
 internal inline GLuint
+get_vao_text() {
+    return renderer.vaos[COMMAND_TEXT];
+}
+
+internal inline GLuint
+get_buffer_text() {
+    return renderer.buffers[COMMAND_TEXT];
+}
+
+internal inline GLuint
+get_program_text() {
+    return renderer.programs[COMMAND_TEXT];
+}
+
+internal inline GLuint
 get_vao_rectangle_outline() {
     return renderer.vaos[COMMAND_RECTANGLE_OUTLINE];
 }
@@ -129,7 +148,7 @@ get_program_circle() {
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
     // TODO(Oliver): this is straight up leaking memory fix it asap
-    Command_Rectangle* rectangle = make_command(Command_Rectangle);
+    auto* rectangle = make_command(Command_Rectangle);
     rectangle->x = x;
     rectangle->y = y;
     rectangle->width = width;
@@ -138,33 +157,81 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
     insert_command(rectangle);
 }
 
+internal inline void
+push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius){
+    // TODO(Oliver): this is straight up leaking memory fix it asap
+    auto rectangle = make_command(Command_Rectangle_Outline);
+    rectangle->x = x;
+    rectangle->y = y;
+    rectangle->width = width;
+    rectangle->height = height;
+    rectangle->border_size = border;
+    rectangle->corner_radius = radius;
+    insert_command(rectangle);
+}
+
 internal void
 init_opengl_renderer(){
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
+        glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_RECTANGLE]);
+        glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        GLuint dim = 2;
+        GLuint radius = 3;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(dim);
+        glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(radius);
+        glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
+        
+    }
     
-    glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
-    glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
-    
-    glGenBuffers(1, &renderer.buffers[COMMAND_RECTANGLE]);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
-    
-    // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
-    glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE, 0, GL_DYNAMIC_DRAW);
-    
-    GLuint pos = 0;
-    GLuint dim = 2;
-    GLuint radius = 3;
-    
-    glEnableVertexAttribArray(pos);
-    glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
-                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(0));
-    
-    glEnableVertexAttribArray(dim);
-    glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
-                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*2));
-    
-    glEnableVertexAttribArray(radius);
-    glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
-                          BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE_OUTLINE]);
+        glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE_OUTLINE]);
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_RECTANGLE_OUTLINE]);
+        glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE_OUTLINE]);
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        GLuint dim = 2;
+        GLuint border_size = 3;
+        GLuint radius = 4;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(dim);
+        glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(border_size);
+        glVertexAttribPointer(border_size, 1, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*4));
+        
+        glEnableVertexAttribArray(radius);
+        glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*5));
+        
+    }
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -222,6 +289,7 @@ make_program(char* vs, char* fs){
 
 internal void
 init_shaders(){
+    
     // NOTE(Oliver): init rectangle shader
     {
         GLchar* rectangle_vs =  
@@ -276,24 +344,92 @@ init_shaders(){
         renderer.programs[COMMAND_RECTANGLE] = program;
         
     }
+    
+    
+    // NOTE(Oliver): init rectangle outline shader
+    {
+        GLchar* rectangle_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in vec2 pos; \n"
+            "layout(location = 2) in vec2 dim; \n"
+            "layout(location = 3) in float border_size; \n"
+            "layout(location = 4) in float radius; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            "out vec2 out_pos;\n"
+            "out vec2 out_dim;\n"
+            "out float out_radius;\n"
+            "out float out_border;\n"
+            
+            "void main(){\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4(dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
+            "gl_Position = screen_position;\n"
+            "out_pos = pos;\n"
+            "out_radius = radius;\n"
+            "out_dim = dim;\n"
+            "out_border = border_size;\n"
+            "}\n";
+        
+        GLchar* rectangle_fs =  
+            "#version 330 core\n"
+            "in vec2 out_pos; \n"
+            "in vec2 out_dim; \n"
+            "in float out_radius; \n"
+            "in float out_border; \n"
+            "out vec4 colour;\n"
+            "uniform vec2 in_position;\n"
+            
+            "float box_no_pointy(vec2 p, vec2 b, float r){\n"
+            "return length(max(abs(p)-b+r,0.0))-r;\n"
+            "}\n"
+            
+            "void main(){\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2);\n"
+            "vec2 inner_dim = out_dim - out_border;"
+            "float inner_dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), (inner_dim)/2, out_radius*min(inner_dim.x, inner_dim.y)/2);\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 2, max(-inner_dist, dist)));\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
+            "colour = vec4(0, 1, 0, alpha);\n"
+            "}\n";
+        
+        GLuint program = make_program(rectangle_vs, rectangle_fs);
+        
+        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        
+        renderer.programs[COMMAND_RECTANGLE_OUTLINE] = program;
+        
+    }
+    
 }
 
 internal void
 opengl_start_frame() {
     renderer.commands.reset();
-    renderer.frame_data.reset();
+    renderer.rectangle_attribs.reset();
+    renderer.rectangle_outline_attribs.reset();
     renderer.head = nullptr;
     renderer.tail = nullptr;
 }
 
 internal inline void
-push_frame_data(f32 data){
-    renderer.frame_data.insert(data);
+push_rectangle_attribs(f32 attribs){
+    renderer.rectangle_attribs.insert(attribs);
+}
+
+internal inline void
+push_rectangle_outline_attribs(f32 attribs){
+    renderer.rectangle_outline_attribs.insert(attribs);
 }
 
 internal void
 process_and_draw_commands(){
-    int num_verts_to_render = 0;
+    int num_rectangle_verts = 0;
+    int num_rectangle_outline_verts = 0;
     
     for(Command* command = renderer.head; command; command = command->next){
         switch(command->type){
@@ -304,21 +440,37 @@ process_and_draw_commands(){
                 // but we need to upload attributes per vert so we need to 
                 // duplicate them in the array
                 for(int i = 0; i < 6; i++){
-                    push_frame_data(rectangle->x);
-                    push_frame_data(rectangle->y);
-                    push_frame_data(rectangle->width);
-                    push_frame_data(rectangle->height);
-                    push_frame_data(rectangle->corner_radius);
+                    push_rectangle_attribs(rectangle->x);
+                    push_rectangle_attribs(rectangle->y);
+                    push_rectangle_attribs(rectangle->width);
+                    push_rectangle_attribs(rectangle->height);
+                    push_rectangle_attribs(rectangle->corner_radius);
                 }
-                num_verts_to_render += 6;
+                num_rectangle_verts += 6;
             }break;
+            
+            case COMMAND_RECTANGLE_OUTLINE:{
+                auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(command); 
+                
+                for(int i = 0; i < 6; i++){
+                    push_rectangle_outline_attribs(rectangle->x);
+                    push_rectangle_outline_attribs(rectangle->y);
+                    push_rectangle_outline_attribs(rectangle->width);
+                    push_rectangle_outline_attribs(rectangle->height);
+                    push_rectangle_outline_attribs(rectangle->border_size);
+                    push_rectangle_outline_attribs(rectangle->corner_radius);
+                }
+                num_rectangle_outline_verts += 6;
+            };
         }
     }
     
-    // NOTE(Oliver): draw loaded data
+    // NOTE(Oliver): draw filled rects data
     {
         glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, renderer.frame_data.bytes_used(), renderer.frame_data.data);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                        renderer.rectangle_attribs.bytes_used(), 
+                        renderer.rectangle_attribs.data);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
@@ -333,9 +485,35 @@ process_and_draw_commands(){
         glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
         
         glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
-        glDrawArrays(GL_TRIANGLES, 0, num_verts_to_render);
+        glDrawArrays(GL_TRIANGLES, 0, num_rectangle_verts);
         glUseProgram(0);
     }
+    
+    // NOTE(Oliver): draw rectangle outlines
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_outline());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                        renderer.rectangle_outline_attribs.bytes_used(), 
+                        renderer.rectangle_outline_attribs.data);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        glUseProgram(get_program_rectangle_outline());
+        
+        float resolution[2] = {platform.width, platform.height};
+        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        
+        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
+        mat4x4 view = translate(0, 0);
+        
+        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
+        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
+        
+        glBindVertexArray(get_vao_rectangle_outline());
+        glDrawArrays(GL_TRIANGLES, 0, num_rectangle_outline_verts);
+        glUseProgram(0);
+    }
+    
 }
 
 internal void

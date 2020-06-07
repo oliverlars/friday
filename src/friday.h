@@ -76,10 +76,7 @@ struct Array {
     }
     
     inline void reset(){
-        VirtualFree(data, 0, MEM_RELEASE);
         used = 0;
-        capacity = 0;
-        data = nullptr;
     }
     
     void insert(T item){

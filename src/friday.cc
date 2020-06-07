@@ -6,6 +6,8 @@
 #include "friday.h"
 #include "maths.cc"
 #include "opengl.h"
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "../ext/stb_truetype.h"
 #include "render.cc"
 
 global SDL_Window* global_window;
@@ -74,14 +76,9 @@ main(int argc, char** args){
             //push_rectangle(200, 200, 20 , 40, 3);
             
             //push_rectangle(200 + sinf((f32)tick/20)*20, 360, 100, 200, 3);
-            
-            for(int x = 0; x < 30; x++){
-                for(int y = 0; y < 20; y++){
-                    int size = 50;
-                    push_rectangle(x*size, y*size, size, size, 0.5+ sinf((f32)tick/20)/2);
-                    
-                }
-            }
+            int x, y;
+            SDL_GetMouseState(&x, &y);
+            push_rectangle_outline(x, platform.height-y, 100, 100, 9, 0.1f+ 0*sinf((f32)tick/20)/2);
             
         }opengl_end_frame();
         tick++;

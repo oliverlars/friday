@@ -80,6 +80,7 @@ struct Array {
     }
     
     void insert(T item){
+        OPTICK_EVENT();
         if(!data){
             // NOTE(Oliver): reserve  a megabyte of address space should give us a cap
             // of 250 million arrays or something
@@ -144,6 +145,7 @@ struct Memory_Pool {
     }
     
     void* allocate(u64 amount) {
+        OPTICK_EVENT();
         
         // TODO(Oliver): we should align this
         
@@ -163,6 +165,7 @@ struct Memory_Pool {
         // All chunks exhauted or amount simply doesnt fit..
         auto ammount_to_allocate = DEFAULT_CHUNK_SIZE;
         if (ammount_to_allocate < amount) ammount_to_allocate = amount;
+        OutputDebugStringA("ALLOC\n");
         
         Chunk chunk;
         chunk.data = malloc(ammount_to_allocate);
@@ -174,11 +177,13 @@ struct Memory_Pool {
     }
     
     void reset() {
+        OPTICK_EVENT();
+        Chunk* chunk = chunks.data;
         for (int i = 0; i < chunks.size; i++) {
-            free(chunks[i].data);
+            chunk->used = 0;
+            chunk++;
         }
         
-        chunks.reset();
     }
     
 };

@@ -6,4 +6,5 @@ build/*
 *.obj
 *.dll
 ext/*
+stats/*
 *.rdbg

@@ -1,7 +1,9 @@
 #include "../ext/sdl/SDL.h"
 #include "../ext/sdl/SDL_opengl.h"
+#include "../ext/optick/optick.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <stdio.h>
 #include <new>
 #include "friday.h"
 #include "maths.cc"
@@ -19,8 +21,6 @@ main(int argc, char** args){
     
     
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-    SDL_EnableScreenSaver();
-    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     
     platform.width = 1280;
     platform.height = 720;
@@ -35,9 +35,6 @@ main(int argc, char** args){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     
     int context_flag = SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
-#if DEBUG
-    context_flag |= SDL_GL_CONTEXT_DEBUG_FLAG;
-#endif
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, context_flag);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -49,10 +46,13 @@ main(int argc, char** args){
                          SDL_WINDOWPOS_UNDEFINED,
                          platform.width, platform.height,
                          SDL_WINDOW_RESIZABLE | 
-                         SDL_WINDOW_HIDDEN |
-                         SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
+                         SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
+    
     
     SDL_GL_CreateContext(global_window);
+    
+    SDL_GL_SetSwapInterval(1);
+    
     load_opengl();
     
     SDL_ShowWindow(global_window);
@@ -60,32 +60,55 @@ main(int argc, char** args){
     init_opengl_renderer();
     init_shaders();
     u64 tick = 0;
+    int start = 0;
+    int end = 0;
+    FILE* file = fopen("frames.txt", "w");
+    char buffer[4096];
+    u64 buffer_index = 0;
+    SDL_Event event;
     
     while(running){
-        SDL_Event event;
+        OPTICK_FRAME("MainThread");
+        opengl_start_frame();
+        
+        {
+            OPTICK_EVENT("Window Size");
+            SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
+        }
+        
+        {
+            OPTICK_EVENT("Draw Scope");
+            
+            
+            int x, y;
+            SDL_GetMouseState(&x, &y);
+            
+            push_circle(x, platform.height - y, 200);
+            
+            push_circle(sinf(tick/20)*20, 360, 200);
+            
+        }
+        opengl_end_frame();
+        
+        // NOTE(Oliver): supposedley this goes here
+        // to avoid weird frame spikes
+        // it helps a little but ultimately
+        // disabling threaded optimisation
+        // in the nvidia control panel is what
+        // fixed it
+        // fuck you opengl
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = false;
             }
-            
         }
         
-        SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
-        opengl_start_frame();{
-            
-            //push_rectangle(200, 200, 20 , 40, 3);
-            
-            //push_rectangle(200 + sinf((f32)tick/20)*20, 360, 100, 200, 3);
-            int x, y;
-            SDL_GetMouseState(&x, &y);
-            //push_rectangle_outline(x, platform.height-y, 100, 100, 1, 0.5 + sinf((f32)tick/20)/2);
-            push_circle(x, platform.height-y, 200);
-            
-        }opengl_end_frame();
+        {
+            OPTICK_EVENT("Swap Window");
+            SDL_GL_SwapWindow(global_window);
+        }
+        
         tick++;
-        
-        SDL_GL_SwapWindow(global_window);
-        
     }
     
     return 0;

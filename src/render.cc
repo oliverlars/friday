@@ -2,7 +2,7 @@
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
-    COMMAND_TEXT,
+    COMMAND_GLYPH,
     COMMAND_RECTANGLE_OUTLINE,
     
     COMMAND_COUNT
@@ -40,6 +40,15 @@ struct Command_Rectangle_Outline : Command {
     f32 corner_radius;
 };
 
+struct Command_Glyph : Command {
+    Command_Glyph() { type = COMMAND_GLYPH; }
+#define BYTES_PER_GLYPH (6*sizeof(f32))
+    f32 x, y;
+    f32 width, height;
+    f32 u, v;
+    char letter;
+};
+
 
 const int MAX_DRAW = 8192;
 
@@ -62,7 +71,7 @@ global struct {
     Array<f32> rectangle_attribs;
     Array<f32> rectangle_outline_attribs;
     Array<f32> circle_attribs;
-    Array<f32> text_attribs;
+    Array<f32> glyph_attribs;
     
 } renderer;
 
@@ -101,18 +110,18 @@ get_program_rectangle() {
 }
 
 internal inline GLuint
-get_vao_text() {
-    return renderer.vaos[COMMAND_TEXT];
+get_vao_glyph() {
+    return renderer.vaos[COMMAND_GLYPH];
 }
 
 internal inline GLuint
-get_buffer_text() {
-    return renderer.buffers[COMMAND_TEXT];
+get_buffer_glyph() {
+    return renderer.buffers[COMMAND_GLYPH];
 }
 
 internal inline GLuint
-get_program_text() {
-    return renderer.programs[COMMAND_TEXT];
+get_program_glyph() {
+    return renderer.programs[COMMAND_GLYPH];
 }
 
 internal inline GLuint
@@ -264,6 +273,24 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(radius);
         glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
                               BYTES_PER_CIRCLE, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+    }
+    
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_GLYPH]);
+        glBindVertexArray(get_vao_glyph());
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_GLYPH]);
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_GLYPH, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_GLYPH, reinterpret_cast<void*>(0));
         
     }
     
@@ -501,16 +528,77 @@ init_shaders(){
         
     }
     
+    // NOTE(Oliver): init rectangle outline shader
+    {
+        GLchar* glyph_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in vec2 pos; \n"
+            "layout(location = 2) in float radius; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            "out vec2 out_pos;\n"
+            "out float out_radius;\n"
+            "out vec2 out_res;\n"
+            
+            "void main(){\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4((radius*1.2)/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+radius/2)/resolution,0,1)).xy -1;\n"
+            "gl_Position = screen_position;\n"
+            "out_pos = pos;\n"
+            "out_radius = radius;\n"
+            "out_res = resolution;\n"
+            "}\n";
+        
+        GLchar* glyph_fs =  
+            "#version 330 core\n"
+            "in vec2 out_pos; \n"
+            "in float out_radius; \n"
+            "in float out_border; \n"
+            "in vec2 out_res; \n"
+            "out vec4 colour;\n"
+            "uniform vec2 in_position;\n"
+            
+            "float circle(vec2 p, float r){\n"
+            "return length(p) - r;\n"
+            "}\n"
+            
+            "void main(){\n"
+            "float dist = circle(gl_FragCoord.xy - (out_pos + out_radius/2), out_radius/2);\n"
+            "if(dist <= 0.0001) { dist = 0.0001; }\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
+            "colour = vec4(0, 1, 0, alpha);\n"
+            "}\n";
+        
+        GLuint program = make_program(glyph_vs, glyph_fs);
+        
+        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        
+        renderer.programs[COMMAND_GLYPH] = program;
+        
+    }
+    
 }
 
 internal void
 opengl_start_frame() {
+    OPTICK_EVENT();
     renderer.commands.reset();
     renderer.rectangle_attribs.reset();
     renderer.rectangle_outline_attribs.reset();
     renderer.circle_attribs.reset();
+    renderer.glyph_attribs.reset();
     renderer.head = nullptr;
     renderer.tail = nullptr;
+    
+    glViewport(0, 0, platform.width, platform.height);
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    
 }
 
 internal inline void
@@ -530,6 +618,7 @@ push_circle_attribs(f32 attribs){
 
 internal void
 process_and_draw_commands(){
+    OPTICK_EVENT();
     int num_rectangle_verts = 0;
     int num_rectangle_outline_verts = 0;
     int num_circle_verts = 0;
@@ -593,12 +682,6 @@ process_and_draw_commands(){
         float resolution[2] = {platform.width, platform.height};
         glUniform2fv(renderer.resolution_uniform, 1, resolution);
         
-        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
-        mat4x4 view = translate(0, 0);
-        
-        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
-        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
-        
         glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
         glDrawArrays(GL_TRIANGLES, 0, num_rectangle_verts);
         glUseProgram(0);
@@ -618,12 +701,6 @@ process_and_draw_commands(){
         float resolution[2] = {platform.width, platform.height};
         glUniform2fv(renderer.resolution_uniform, 1, resolution);
         
-        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
-        mat4x4 view = translate(0, 0);
-        
-        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
-        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
-        
         glBindVertexArray(get_vao_rectangle_outline());
         glDrawArrays(GL_TRIANGLES, 0, num_rectangle_outline_verts);
         glUseProgram(0);
@@ -642,12 +719,6 @@ process_and_draw_commands(){
         float resolution[2] = {platform.width, platform.height};
         glUniform2fv(renderer.resolution_uniform, 1, resolution);
         
-        mat4x4 projection = ortho(0, platform.width, 0, platform.height);
-        mat4x4 view = translate(0, 0);
-        
-        glUniformMatrix4fv(renderer.ortho_uniform, 1, GL_TRUE, projection.e);
-        glUniformMatrix4fv(renderer.view_uniform, 1, GL_TRUE, view.e);
-        
         glBindVertexArray(get_vao_circle());
         glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
         glUseProgram(0);
@@ -657,11 +728,7 @@ process_and_draw_commands(){
 
 internal void
 opengl_end_frame() {
-    glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
-    
-    glViewport(0, 0, platform.width, platform.height);
-    glClearColor(0,0,0,1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    OPTICK_EVENT();
     
     process_and_draw_commands();
     

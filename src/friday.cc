@@ -56,6 +56,7 @@ main(int argc, char** args){
     load_opengl();
     
     SDL_ShowWindow(global_window);
+    renderer.fonts.insert(init_font("../fonts/arial.ttf", 100));
     
     init_opengl_renderer();
     init_shaders();
@@ -63,7 +64,6 @@ main(int argc, char** args){
     int start = 0;
     int end = 0;
     SDL_Event event;
-    
     while(running){
         OPTICK_FRAME("MainThread");
         opengl_start_frame();
@@ -76,7 +76,8 @@ main(int argc, char** args){
         push_circle(x, platform.height - y, 200);
         
         push_circle(sinf(tick/20)*20, 360, 200);
-        
+        push_string(0, 0, "Speed Racer");
+        push_rectangle(0, 0, 20, 20, 0.2);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

@@ -8,3 +8,4 @@ build/*
 ext/*
 stats/*
 *.rdbg
+fonts/*

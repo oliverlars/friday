@@ -21,7 +21,7 @@ typedef GLint APIENTRY type_glGetUniformLocation (GLuint program, const GLchar *
 typedef void APIENTRY type_glUniform4fv(GLint location, GLsizei count, const GLfloat *value);
 typedef void APIENTRY type_glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 typedef void APIENTRY type_glUniform1i(GLint location, GLint v0);
-
+typedef void APIENTRY type_glGenerateMipmap(GLenum texture);
 typedef void APIENTRY type_glUniform1f(GLint location, GLfloat v0);
 typedef void APIENTRY type_glUniform2fv(GLint location, GLsizei count, const GLfloat *value);
 typedef void APIENTRY type_glUniform3fv(GLint location, GLsizei count, const GLfloat *value);
@@ -41,6 +41,10 @@ typedef void APIENTRY type_glDeleteProgram (GLuint program);
 typedef void APIENTRY type_glDeleteShader (GLuint shader);
 typedef void APIENTRY type_glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers);
 typedef void APIENTRY type_glDrawBuffers (GLsizei n, const GLenum *bufs);
+typedef void APIENTRY type_glDrawBuffers (GLsizei n, const GLenum *bufs);
+typedef void APIENTRY type_friday_glActiveTexture(GLenum texture);
+
+type_friday_glActiveTexture* friday_glActiveTexture;
 
 #define make_gl_func(name) type_##name* name
 
@@ -69,6 +73,7 @@ make_gl_func(glUniform1i);
 make_gl_func(glUniform1f);
 make_gl_func(glUniform2fv);
 make_gl_func(glUniform3fv);
+make_gl_func(glGenerateMipmap);
 make_gl_func(glEnableVertexAttribArray);
 make_gl_func(glDisableVertexAttribArray);
 make_gl_func(glGetAttribLocation);
@@ -89,7 +94,6 @@ internal void
 load_opengl(){
     
 #define get_gl_func(name) name = (type_##name *)SDL_GL_GetProcAddress(#name)
-    
     get_gl_func(glTexImage2DMultisample);
     get_gl_func(glBlitFramebuffer);
     get_gl_func(glAttachShader);
@@ -108,6 +112,7 @@ load_opengl(){
     get_gl_func(glUniform4fv);
     get_gl_func(glUniformMatrix4fv);
     get_gl_func(glUniform1i);
+    get_gl_func(glGenerateMipmap);
     get_gl_func(glEnableVertexAttribArray);
     get_gl_func(glDisableVertexAttribArray);
     get_gl_func(glGetAttribLocation);
@@ -126,5 +131,7 @@ load_opengl(){
     get_gl_func(glUniform1f);
     get_gl_func(glUniform2fv);
     get_gl_func(glUniform3fv);
+    friday_glActiveTexture = (type_friday_glActiveTexture*)SDL_GL_GetProcAddress("glActiveTexture");
     
 }
+#define glActiveTexture friday_glActiveTexture

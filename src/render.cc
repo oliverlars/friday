@@ -61,7 +61,7 @@ struct Font {
     // NOTE(Oliver): we store the font
     // texture here
 #define FONT_BITMAP_SIZE 4096
-    u8 bitmap[FONT_BITMAP_SIZE*FONT_BITMAP_SIZE];
+    u8* bitmap;
     
 #define CHAR_INFO_SIZE ('~' - ' ')
     stbtt_packedchar char_infos[CHAR_INFO_SIZE];
@@ -79,6 +79,8 @@ global struct {
     GLuint ortho_uniform;
     GLuint view_uniform;
     GLuint resolution_uniform;
+    
+    GLuint texture;
     
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
@@ -128,6 +130,8 @@ init_font(char* font_name, int font_size){
     stbtt_GetCodepointHMetrics(&result.info, ' ', 
                                &advance_x, &left_side_bearing);
     assert(advance_x > 0);
+    
+    result.bitmap = (u8*)malloc(FONT_BITMAP_SIZE*FONT_BITMAP_SIZE);
     
     stbtt_pack_context context;
     assert(stbtt_PackBegin(&context, result.bitmap, FONT_BITMAP_SIZE, 
@@ -653,7 +657,7 @@ init_shaders(){
         
     }
     // NOTE(Oliver): init glyph shader
-    {
+    if(1){
         GLchar* glyph_vs =  
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
@@ -687,10 +691,11 @@ init_shaders(){
             "in vec2 out_uv; \n"
             "in vec2 out_dim; \n"
             "out vec4 colour;\n"
-            "uniform sampler2D atlas;"
+            "uniform sampler2D atlas;\n"
             
             "void main(){\n"
-            "colour = vec4(1,1,1, 1);\n"
+            "float alpha = texture(atlas, out_uv).r;\n"
+            "colour = vec4(1,1,1, alpha);\n"
             "}\n";
         
         GLuint program = make_program(glyph_vs, glyph_fs);
@@ -698,6 +703,19 @@ init_shaders(){
         renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
         
         renderer.programs[COMMAND_GLYPH] = program;
+        
+        glGenTextures(1, &renderer.texture);
+        glBindTexture(GL_TEXTURE_2D, renderer.texture);
+        
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, FONT_BITMAP_SIZE,
+                     FONT_BITMAP_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE,
+                     renderer.fonts[0].bitmap);
+        
+        glActiveTexture(GL_TEXTURE0);
+        glUniform1i(glGetUniformLocation(program, "atlas"), 0);
+        
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
         
     }
     
@@ -713,10 +731,6 @@ opengl_start_frame() {
     renderer.glyph_attribs.reset();
     renderer.head = nullptr;
     renderer.tail = nullptr;
-    
-    glViewport(0, 0, platform.width, platform.height);
-    glClearColor(0,0,0,1);
-    glClear(GL_COLOR_BUFFER_BIT);
     
 }
 #if 0
@@ -869,7 +883,7 @@ process_and_draw_commands(){
         glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
         glUseProgram(0);
     }
-    
+#if 1
     // NOTE(Oliver): draw glyph data
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
@@ -883,16 +897,30 @@ process_and_draw_commands(){
         float resolution[2] = {platform.width, platform.height};
         glUniform2fv(renderer.resolution_uniform, 1, resolution);
         
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, renderer.texture);
+        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        
+        //glUniform1i(glGetUniformLocation(get_program_glyph(), "atlas"), 0);
         glBindVertexArray(get_vao_glyph());
         glDrawArrays(GL_TRIANGLES, 0, num_glyph_verts);
         glUseProgram(0);
     }
-    
+#endif
 }
 
 internal void
 opengl_end_frame() {
     OPTICK_EVENT();
+    
+    
+    glViewport(0, 0, platform.width, platform.height);
+    glClearColor(0,0,0,0);
+    glClear(GL_COLOR_BUFFER_BIT);
     
     process_and_draw_commands();
     

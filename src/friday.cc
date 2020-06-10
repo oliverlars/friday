@@ -62,32 +62,21 @@ main(int argc, char** args){
     u64 tick = 0;
     int start = 0;
     int end = 0;
-    FILE* file = fopen("frames.txt", "w");
-    char buffer[4096];
-    u64 buffer_index = 0;
     SDL_Event event;
     
     while(running){
         OPTICK_FRAME("MainThread");
         opengl_start_frame();
         
-        {
-            OPTICK_EVENT("Window Size");
-            SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
-        }
+        SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         
-        {
-            OPTICK_EVENT("Draw Scope");
-            
-            
-            int x, y;
-            SDL_GetMouseState(&x, &y);
-            
-            push_circle(x, platform.height - y, 200);
-            
-            push_circle(sinf(tick/20)*20, 360, 200);
-            
-        }
+        int x, y;
+        SDL_GetMouseState(&x, &y);
+        
+        push_circle(x, platform.height - y, 200);
+        
+        push_circle(sinf(tick/20)*20, 360, 200);
+        
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here
@@ -103,10 +92,7 @@ main(int argc, char** args){
             }
         }
         
-        {
-            OPTICK_EVENT("Swap Window");
-            SDL_GL_SwapWindow(global_window);
-        }
+        SDL_GL_SwapWindow(global_window);
         
         tick++;
     }

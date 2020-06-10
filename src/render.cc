@@ -2,8 +2,8 @@
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
-    COMMAND_GLYPH,
     COMMAND_RECTANGLE_OUTLINE,
+    COMMAND_GLYPH,
     
     COMMAND_COUNT
 };
@@ -40,15 +40,32 @@ struct Command_Rectangle_Outline : Command {
     f32 corner_radius;
 };
 
+struct Font;
+
 struct Command_Glyph : Command {
     Command_Glyph() { type = COMMAND_GLYPH; }
-#define BYTES_PER_GLYPH (6*sizeof(f32))
+#define BYTES_PER_GLYPH (8*sizeof(f32))
     f32 x, y;
     f32 width, height;
     f32 u, v;
-    char letter;
+    f32 u_width, v_height; 
+    Font* font;
 };
 
+struct Font {
+    stbtt_fontinfo info;
+    f32 line_height;
+    f32 scale;
+    f32 ascent;
+    f32 descent;
+    // NOTE(Oliver): we store the font
+    // texture here
+#define FONT_BITMAP_SIZE 4096
+    u8 bitmap[FONT_BITMAP_SIZE*FONT_BITMAP_SIZE];
+    
+#define CHAR_INFO_SIZE ('~' - ' ')
+    stbtt_packedchar char_infos[CHAR_INFO_SIZE];
+};
 
 const int MAX_DRAW = 8192;
 
@@ -58,9 +75,11 @@ global struct {
     GLuint buffers[COMMAND_COUNT];
     GLuint programs[COMMAND_COUNT];
     
+    // TODO(Oliver): remove these, not needed anymore
     GLuint ortho_uniform;
     GLuint view_uniform;
     GLuint resolution_uniform;
+    
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
     //Array<Command*> commands;
@@ -68,12 +87,61 @@ global struct {
     Command* head = nullptr;
     Command* tail = nullptr;
     
+    // TODO(Oliver): potential opportunities
+    // to make these arenas when i understand
+    // them better
+    Array<Font> fonts;
+    
     Array<f32> rectangle_attribs;
     Array<f32> rectangle_outline_attribs;
     Array<f32> circle_attribs;
     Array<f32> glyph_attribs;
     
 } renderer;
+
+internal Font
+init_font(char* font_name, int font_size){
+    
+    Font result;
+    
+    FILE* font_file = fopen(font_name, "rb");
+    fseek(font_file, 0, SEEK_END);
+    u64 size = ftell(font_file); 
+    fseek(font_file, 0, SEEK_SET);
+    
+    u8* ttf_buffer = (u8*)malloc(size);
+    
+    fread(ttf_buffer, size, 1, font_file);
+    fclose(font_file);
+    
+    
+    assert(stbtt_InitFont(&result.info, ttf_buffer, 0));
+    
+    result.line_height = font_size;
+    result.scale = stbtt_ScaleForPixelHeight(&result.info, result.line_height);
+    int ascent, descent, line_gap;
+    stbtt_GetFontVMetrics(&result.info, &ascent, &descent, &line_gap);
+    result.ascent = result.scale * ascent;
+    result.descent = result.scale * descent;
+    
+    int advance_x, left_side_bearing;
+    stbtt_GetCodepointHMetrics(&result.info, ' ', 
+                               &advance_x, &left_side_bearing);
+    assert(advance_x > 0);
+    
+    stbtt_pack_context context;
+    assert(stbtt_PackBegin(&context, result.bitmap, FONT_BITMAP_SIZE, 
+                           FONT_BITMAP_SIZE, 0, 1, nullptr));
+    
+    
+    stbtt_PackFontRange(&context, ttf_buffer, 0, result.line_height,
+                        ' ', CHAR_INFO_SIZE, result.char_infos);
+    
+    
+    stbtt_PackEnd(&context);
+    
+    return result;
+}
 
 #define make_command(type) (type*) new (renderer.commands.allocate(sizeof(type))) type()
 
@@ -189,6 +257,48 @@ push_circle(f32 x, f32 y, f32 radius){
     insert_command(circle);
 }
 
+
+internal void
+push_glyph(stbtt_aligned_quad quad){
+    
+    f32 x0, x1, y0, y1, s0, s1, t0, t1;
+    x0 = quad.x0;
+    x1 = quad.x1;
+    y0 = -quad.y0;
+    y1 = -quad.y1;
+    
+    s0 = quad.s0; s1 = quad.s1;
+    t0 = quad.t0; t1 = quad.t1;
+    
+    auto glyph = make_command(Command_Glyph);
+    glyph->x = x0;
+    glyph->y = y0;
+    glyph->width = x1 - x0;
+    glyph->height = y1 - y0;
+    glyph->u = s0;
+    glyph->v = t0;
+    glyph->u_width = s1 - s0;
+    glyph->v_height = t1 - t0;
+    insert_command(glyph);
+}
+
+internal void
+push_string(f32 x, f32 y, char* text){
+    
+    y = -y;
+    
+    // NOTE(Oliver): '#' is used for ID purposes
+    while(*text && *text != '#'){
+        if(*text >= 32 && *text < 128){
+            stbtt_aligned_quad quad;
+            stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
+                                *text-32, &x, &y, &quad, 1);
+            push_glyph(quad);
+        }
+        text++;
+    }
+}
+
 internal void
 init_opengl_renderer(){
     
@@ -287,10 +397,25 @@ init_opengl_renderer(){
         glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_GLYPH, 0, GL_DYNAMIC_DRAW);
         
         GLuint pos = 0;
+        GLuint pos_dim = 2;
+        GLuint uv = 4;
+        GLuint uv_dim = 6;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
                               BYTES_PER_GLYPH, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(pos_dim);
+        glVertexAttribPointer(pos_dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(uv);
+        glVertexAttribPointer(uv, 2, GL_FLOAT, false, 
+                              BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*4));
+        
+        glEnableVertexAttribArray(uv_dim);
+        glVertexAttribPointer(uv_dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*6));
         
     }
     
@@ -474,7 +599,7 @@ init_shaders(){
         
     }
     
-    // NOTE(Oliver): init rectangle outline shader
+    // NOTE(Oliver): init circle shader
     {
         GLchar* circle_vs =  
             "#version 330 core\n"
@@ -527,51 +652,45 @@ init_shaders(){
         renderer.programs[COMMAND_CIRCLE] = program;
         
     }
-    
-    // NOTE(Oliver): init rectangle outline shader
+    // NOTE(Oliver): init glyph shader
     {
         GLchar* glyph_vs =  
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
-            "layout(location = 2) in float radius; \n"
+            "layout(location = 2) in vec2 pos_dim; \n"
+            "layout(location = 4) in vec2 uv;\n"
+            "layout(location = 6) in vec2 uv_dim; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
             "out vec2 out_pos;\n"
-            "out float out_radius;\n"
-            "out vec2 out_res;\n"
+            "out vec2 out_uv;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
-            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));\n"
+            "vec2 uvs[] = vec2[](vec2(0, 0), vec2(1,0), vec2(1,1),\n"
+            "vec2(0,0), vec2(0, 1), vec2(1, 1));\n"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4((radius*1.2)/resolution, 0, 1)).xy;\n"
-            "screen_position.xy += 2*(vec4((pos+radius/2)/resolution,0,1)).xy -1;\n"
+            "screen_position.xy *= (vec4((pos_dim)/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+pos_dim/2)/resolution,0,1)).xy -1;\n"
+            "out_uv = uvs[gl_VertexID % 6];\n"
+            "out_uv *= uv_dim;\n"
+            "out_uv += uv;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
-            "out_radius = radius;\n"
-            "out_res = resolution;\n"
             "}\n";
         
         GLchar* glyph_fs =  
             "#version 330 core\n"
             "in vec2 out_pos; \n"
-            "in float out_radius; \n"
-            "in float out_border; \n"
-            "in vec2 out_res; \n"
+            "in vec2 out_uv; \n"
+            "in vec2 out_dim; \n"
             "out vec4 colour;\n"
-            "uniform vec2 in_position;\n"
-            
-            "float circle(vec2 p, float r){\n"
-            "return length(p) - r;\n"
-            "}\n"
+            "uniform sampler2D atlas;"
             
             "void main(){\n"
-            "float dist = circle(gl_FragCoord.xy - (out_pos + out_radius/2), out_radius/2);\n"
-            "if(dist <= 0.0001) { dist = 0.0001; }\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
-            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
-            "colour = vec4(0, 1, 0, alpha);\n"
+            "colour = vec4(1,1,1, 1);\n"
             "}\n";
         
         GLuint program = make_program(glyph_vs, glyph_fs);
@@ -600,7 +719,7 @@ opengl_start_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     
 }
-
+#if 0
 internal inline void
 push_rectangle_attribs(f32 attribs){
     renderer.rectangle_attribs.insert(attribs);
@@ -616,12 +735,24 @@ push_circle_attribs(f32 attribs){
     renderer.circle_attribs.insert(attribs);
 }
 
+internal inline void
+push_glyph_attribs(f32 attribs){
+    renderer.glyph_attribs.insert(attribs);
+}
+#endif
 internal void
 process_and_draw_commands(){
+    
+#define push_rectangle_attribs(attribs) renderer.rectangle_attribs.insert(attribs)
+#define push_rectangle_outline_attribs(attribs) renderer.rectangle_outline_attribs.insert(attribs)
+#define push_circle_attribs(attribs) renderer.circle_attribs.insert(attribs)
+#define push_glyph_attribs(attribs) renderer.glyph_attribs.insert(attribs)
+    
     OPTICK_EVENT();
     int num_rectangle_verts = 0;
     int num_rectangle_outline_verts = 0;
     int num_circle_verts = 0;
+    int num_glyph_verts = 0;
     
     for(Command* command = renderer.head; command; command = command->next){
         switch(command->type){
@@ -666,6 +797,21 @@ process_and_draw_commands(){
                 num_circle_verts += 6;
             }break;
             
+            case COMMAND_GLYPH: {
+                auto glyph = reinterpret_cast<Command_Glyph*>(command);
+                
+                for(int i = 0; i < 6; i++){
+                    push_glyph_attribs(glyph->x);
+                    push_glyph_attribs(glyph->y);
+                    push_glyph_attribs(glyph->width);
+                    push_glyph_attribs(glyph->height);
+                    push_glyph_attribs(glyph->u);
+                    push_glyph_attribs(glyph->v);
+                    push_glyph_attribs(glyph->u_width);
+                    push_glyph_attribs(glyph->v_height);
+                }
+                num_glyph_verts += 6;
+            }break;
         }
     }
     
@@ -721,6 +867,24 @@ process_and_draw_commands(){
         
         glBindVertexArray(get_vao_circle());
         glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
+        glUseProgram(0);
+    }
+    
+    // NOTE(Oliver): draw glyph data
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                        renderer.glyph_attribs.bytes_used(), 
+                        renderer.glyph_attribs.data);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        glUseProgram(get_program_glyph());
+        
+        float resolution[2] = {platform.width, platform.height};
+        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        
+        glBindVertexArray(get_vao_glyph());
+        glDrawArrays(GL_TRIANGLES, 0, num_glyph_verts);
         glUseProgram(0);
     }
     

@@ -78,7 +78,9 @@ global struct {
     // TODO(Oliver): remove these, not needed anymore
     GLuint ortho_uniform;
     GLuint view_uniform;
-    GLuint resolution_uniform;
+    
+    GLuint resolution_uniforms[COMMAND_COUNT];
+    
     
     GLuint texture;
     
@@ -527,7 +529,7 @@ init_shaders(){
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         
-        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        renderer.resolution_uniforms[COMMAND_RECTANGLE] = glGetUniformLocation(program, "resolution");
         renderer.ortho_uniform = glGetUniformLocation(program, "ortho");
         renderer.view_uniform = glGetUniformLocation(program, "view");
         
@@ -597,7 +599,7 @@ init_shaders(){
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         
-        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE] = glGetUniformLocation(program, "resolution");
         
         renderer.programs[COMMAND_RECTANGLE_OUTLINE] = program;
         
@@ -651,7 +653,7 @@ init_shaders(){
         
         GLuint program = make_program(circle_vs, circle_fs);
         
-        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        renderer.resolution_uniforms[COMMAND_CIRCLE] = glGetUniformLocation(program, "resolution");
         
         renderer.programs[COMMAND_CIRCLE] = program;
         
@@ -700,7 +702,7 @@ init_shaders(){
         
         GLuint program = make_program(glyph_vs, glyph_fs);
         
-        renderer.resolution_uniform = glGetUniformLocation(program, "resolution");
+        renderer.resolution_uniforms[COMMAND_GLYPH] = glGetUniformLocation(program, "resolution");
         
         renderer.programs[COMMAND_GLYPH] = program;
         
@@ -710,10 +712,6 @@ init_shaders(){
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, FONT_BITMAP_SIZE,
                      FONT_BITMAP_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE,
                      renderer.fonts[0].bitmap);
-        
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(glGetUniformLocation(program, "atlas"), 0);
-        
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
         
@@ -840,7 +838,7 @@ process_and_draw_commands(){
         glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
         
         float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
         
         glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
         glDrawArrays(GL_TRIANGLES, 0, num_rectangle_verts);
@@ -859,7 +857,7 @@ process_and_draw_commands(){
         glUseProgram(get_program_rectangle_outline());
         
         float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 1, resolution);
         
         glBindVertexArray(get_vao_rectangle_outline());
         glDrawArrays(GL_TRIANGLES, 0, num_rectangle_outline_verts);
@@ -877,13 +875,12 @@ process_and_draw_commands(){
         glUseProgram(get_program_circle());
         
         float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        glUniform2fv(renderer.resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
         
         glBindVertexArray(get_vao_circle());
         glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
         glUseProgram(0);
     }
-#if 1
     // NOTE(Oliver): draw glyph data
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
@@ -895,7 +892,7 @@ process_and_draw_commands(){
         glUseProgram(get_program_glyph());
         
         float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniform, 1, resolution);
+        glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, renderer.texture);
@@ -905,12 +902,10 @@ process_and_draw_commands(){
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         
-        //glUniform1i(glGetUniformLocation(get_program_glyph(), "atlas"), 0);
         glBindVertexArray(get_vao_glyph());
         glDrawArrays(GL_TRIANGLES, 0, num_glyph_verts);
         glUseProgram(0);
     }
-#endif
 }
 
 internal void

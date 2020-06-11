@@ -66,6 +66,7 @@ main(int argc, char** args){
     SDL_Event event;
     while(running){
         OPTICK_FRAME("MainThread");
+        
         opengl_start_frame();
         
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);

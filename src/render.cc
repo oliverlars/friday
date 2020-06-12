@@ -1008,3 +1008,42 @@ opengl_end_frame() {
     
     glUseProgram(0);
 }
+
+// NOTE(Oliver): this is global state for the render pass
+// may not be needed, we'll see
+struct {
+    int x;
+    int y;
+    
+} friday;
+
+internal void
+new_line(){
+    friday.y += renderer.fonts[0].line_height;
+}
+
+internal void
+render_graph(Node* root){
+    switch(root->type){
+        
+        case NODE_BINARY:{
+            auto binary = reinterpret_cast<Node_Binary*>(root);
+            render_graph(binary->left);
+            
+            char* ops[4] = {"+", "-", "/", "*"};
+            char* op = ops[binary->op_type];
+            push_string(friday.x, friday.y, op);
+            friday.x += get_text_width(op);
+            
+            render_graph(binary->right);
+        }break;
+        
+        case NODE_LITERAL:{
+            auto literal = reinterpret_cast<Node_Literal*>(root);
+            char buffer[256];
+            snprintf(buffer, 256, "%d", literal->_int);
+            push_string(friday.x, friday.y, buffer);
+            friday.x +=  get_text_width(buffer);
+        }break;
+    }
+}

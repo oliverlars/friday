@@ -3,6 +3,7 @@ enum Node_Type {
     NODE_INVALID=-1,
     NODE_BINARY,
     NODE_UNARY,
+    NODE_LITERAL,
     NODE_STRUCT,
     NODE_ENUM,
     NODE_UNION,
@@ -14,9 +15,25 @@ enum Node_Type {
     NODE_CALL,
 };
 
+enum Operator_Type {
+    OP_PLUS,
+    OP_MINUS,
+    OP_DIVIDE,
+    OP_MULITPLY,
+};
+
+enum Literal_Type {
+    LIT_FLOAT,
+    LIT_INTEGER,
+    LIT_STRING,
+};
 
 struct Node {
     Node_Type type;
+    
+    // HACK(Oliver)
+    char* name;
+    u8 name_length;
     
     Node* next;
     Node* previous;
@@ -24,6 +41,8 @@ struct Node {
 
 struct Node_Binary : Node {
     Node_Binary() { type = NODE_BINARY; }
+    
+    Operator_Type op_type;
     
     Node* left;
     Node* right;
@@ -35,6 +54,15 @@ struct Node_Unary : Node {
     Node* operand;
 };
 
+struct Node_Literal : Node {
+    Node_Literal() { type = NODE_LITERAL; }
+    
+    Literal_Type lit_type;
+    union {
+        f32 _float; 
+        s32 _int;
+    };
+};
 
 struct Node_Struct : Node {
     Node_Struct() { type = NODE_STRUCT; }
@@ -54,7 +82,6 @@ struct Node_Enum : Node {
     Node* members;
 };
 
-
 struct Node_Function : Node {
     Node_Function() { type = NODE_FUNCTION; }
     
@@ -63,13 +90,11 @@ struct Node_Function : Node {
     Node* scope;
 };
 
-
 struct Node_Declaration : Node {
     Node_Declaration() { type = NODE_DECLARATION; }
     
     Node* declaration;
 };
-
 
 struct Node_Type_Usage : Node {
     Node_Type_Usage() { type = NODE_TYPE_USAGE; }
@@ -81,8 +106,7 @@ struct Node_Type_Usage : Node {
 struct Node_Scope : Node {
     Node_Scope() { type = NODE_SCOPE; }
     
-    s64 number_of_pointers;
-    Node* type_reference;
+    Node* statements;
 };
 
 struct Node_Call : Node {

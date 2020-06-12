@@ -10,8 +10,9 @@
 #include "opengl.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../ext/stb_truetype.h"
+#include <string.h>
+#include "graph.cc"
 #include "render.cc"
-#include "ast.cc"
 
 global SDL_Window* global_window;
 
@@ -65,6 +66,22 @@ main(int argc, char** args){
     int start = 0;
     int end = 0;
     SDL_Event event;
+    
+    auto binary = new Node_Binary;
+    binary->op_type = OP_PLUS;
+    binary->left = new Node_Literal;
+    auto left = reinterpret_cast<Node_Literal*>(binary->left);
+    left->lit_type = LIT_INTEGER;
+    left->_int = 2;
+    
+    binary->right = new Node_Literal;
+    auto right = reinterpret_cast<Node_Literal*>(binary->right);
+    right->lit_type = LIT_INTEGER;
+    right->_int = 20;
+    
+    friday.x = 640;
+    friday.y = 360;
+    
     while(running){
         OPTICK_FRAME("MainThread");
         
@@ -75,7 +92,7 @@ main(int argc, char** args){
         int x, y;
         SDL_GetMouseState(&x, &y);
         
-        
+        /*
         push_circle(sinf(tick/20)*20, 360, 200);
         f32 text_width = get_text_width("SUPREME");
         push_rectangle(550, 360-20, text_width+50, renderer.fonts[0].line_height+20, 0.4, 0xFF0000FF);
@@ -83,6 +100,12 @@ main(int argc, char** args){
         push_circle(x, platform.height - y, 200);
         
         push_rectangle(0, 0, 20, 20, 0.2);
+*/
+        
+        friday.x = 640;
+        friday.y = 360;
+        
+        render_graph(binary);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

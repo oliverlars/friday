@@ -11,14 +11,21 @@ enum Command_Type {
 // NOTE(Oliver): Maybe a linked list for this would be better
 struct Command {
     Command_Type type;
-    u32 colour;
+    union {
+        struct {
+            u8 r, g, b, a;
+        };
+        u32 packed;
+    } colour;
     Command* previous = nullptr;
     Command* next = nullptr;
 };
 
+
 struct Command_Rectangle: Command {
     Command_Rectangle() { type = COMMAND_RECTANGLE; }
-#define BYTES_PER_RECTANGLE (5*sizeof(f32))
+#define BYTES_PER_RECTANGLE (9*sizeof(f32)) 
+    // NOTE(Oliver): bytes include size of colour, which is 4*sizeof(f32)
     f32 x, y;
     f32 width, height;
     f32 corner_radius;
@@ -26,14 +33,14 @@ struct Command_Rectangle: Command {
 
 struct Command_Circle : Command {
     Command_Circle() { type = COMMAND_CIRCLE; }
-#define BYTES_PER_CIRCLE (3*sizeof(f32))
+#define BYTES_PER_CIRCLE (7*sizeof(f32))
     f32 x, y;
     f32 radius;
 };
 
 struct Command_Rectangle_Outline : Command {
     Command_Rectangle_Outline() { type = COMMAND_RECTANGLE_OUTLINE; }
-#define BYTES_PER_RECTANGLE_OUTLINE (6*sizeof(f32))
+#define BYTES_PER_RECTANGLE_OUTLINE (10*sizeof(f32))
     f32 x, y;
     f32 width, height;
     f32 border_size;
@@ -44,7 +51,7 @@ struct Font;
 
 struct Command_Glyph : Command {
     Command_Glyph() { type = COMMAND_GLYPH; }
-#define BYTES_PER_GLYPH (8*sizeof(f32))
+#define BYTES_PER_GLYPH (12*sizeof(f32))
     f32 x, y;
     f32 width, height;
     f32 u, v;
@@ -229,7 +236,7 @@ get_program_circle() {
 }
 
 internal inline void
-push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
+push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto* rectangle = make_command(Command_Rectangle);
     rectangle->x = x;
@@ -237,11 +244,12 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius){
     rectangle->width = width;
     rectangle->height = height;
     rectangle->corner_radius = radius;
+    rectangle->colour.packed = colour;
     insert_command(rectangle);
 }
 
 internal inline void
-push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius){
+push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto rectangle = make_command(Command_Rectangle_Outline);
     rectangle->x = x;
@@ -250,22 +258,24 @@ push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radi
     rectangle->height = height;
     rectangle->border_size = border;
     rectangle->corner_radius = radius;
+    rectangle->colour.packed = colour;
     insert_command(rectangle);
 }
 
 internal inline void
-push_circle(f32 x, f32 y, f32 radius){
+push_circle(f32 x, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto circle = make_command(Command_Circle);
     circle->x = x;
     circle->y = y;
     circle->radius = radius;
+    circle->colour.packed = colour;
     insert_command(circle);
 }
 
 
 internal void
-push_glyph(stbtt_aligned_quad quad){
+push_glyph(stbtt_aligned_quad quad, u32 colour){
     
     f32 x0, x1, y0, y1, s0, s1, t0, t1;
     x0 = quad.x0;
@@ -285,11 +295,12 @@ push_glyph(stbtt_aligned_quad quad){
     glyph->v = t0;
     glyph->u_width = s1 - s0;
     glyph->v_height = t1 - t0;
+    glyph->colour.packed = colour;
     insert_command(glyph);
 }
 
 internal void
-push_string(f32 x, f32 y, char* text){
+push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
     
     y = -y;
     
@@ -299,12 +310,30 @@ push_string(f32 x, f32 y, char* text){
             stbtt_aligned_quad quad;
             stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
                                 *text-32, &x, &y, &quad, 1);
-            push_glyph(quad);
+            push_glyph(quad, colour);
         }
         text++;
     }
 }
 
+internal f32
+get_text_width(char* text){
+    f32 result = 0;
+    while(*text){
+        if(*text == '#') break;
+        s32 advance_x;
+        s32 left_side_bearing;
+        stbtt_GetCodepointHMetrics(&renderer.fonts[0].info, *text, &advance_x, &left_side_bearing);
+        int x0, x1, y0, y1;;
+        stbtt_GetCodepointBitmapBox(&renderer.fonts[0].info, *text, renderer.fonts[0].scale, 
+                                    renderer.fonts[0].scale,
+                                    &x0, &y0, &x1, &y1);
+        result += advance_x;
+        result += x1 - x0;
+        text++;
+    }
+    return result*renderer.fonts[0].scale;
+}
 internal void
 init_opengl_renderer(){
     
@@ -321,6 +350,7 @@ init_opengl_renderer(){
         GLuint pos = 0;
         GLuint dim = 2;
         GLuint radius = 3;
+        GLuint colour = 4;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -333,6 +363,10 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(radius);
         glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
                               BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
+        
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*5));
         
     }
     
@@ -350,6 +384,7 @@ init_opengl_renderer(){
         GLuint dim = 2;
         GLuint border_size = 3;
         GLuint radius = 4;
+        GLuint colour = 5;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -367,6 +402,10 @@ init_opengl_renderer(){
         glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
                               BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*5));
         
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_OUTLINE, reinterpret_cast<void*>(sizeof(f32)*6));
+        
     }
     
     {
@@ -381,6 +420,7 @@ init_opengl_renderer(){
         
         GLuint pos = 0;
         GLuint radius = 2;
+        GLuint colour = 3;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -389,6 +429,10 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(radius);
         glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
                               BYTES_PER_CIRCLE, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_CIRCLE, reinterpret_cast<void*>(sizeof(f32)*3));
         
     }
     
@@ -406,6 +450,7 @@ init_opengl_renderer(){
         GLuint pos_dim = 2;
         GLuint uv = 4;
         GLuint uv_dim = 6;
+        GLuint colour = 8;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -422,6 +467,10 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(uv_dim);
         glVertexAttribPointer(uv_dim, 2, GL_FLOAT, false, 
                               BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*6));
+        
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*8));
         
     }
     
@@ -489,12 +538,14 @@ init_shaders(){
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in vec2 dim; \n"
             "layout(location = 3) in float radius; \n"
+            "layout(location = 4) in vec4 colour; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
             "out vec2 out_pos;\n"
             "out vec2 out_dim;\n"
             "out float out_radius;\n"
+            "out vec4 frag_colour;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -506,6 +557,7 @@ init_shaders(){
             "out_pos = pos;\n"
             "out_radius = radius;\n"
             "out_dim = dim;\n"
+            "frag_colour = colour;\n"
             "}\n";
         
         GLchar* rectangle_fs =  
@@ -513,6 +565,7 @@ init_shaders(){
             "in vec2 out_pos; \n"
             "in vec2 out_dim; \n"
             "in float out_radius; \n"
+            "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             
@@ -524,7 +577,7 @@ init_shaders(){
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2);\n"
             "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
-            "colour = vec4(1,0,0, alpha);\n"
+            "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -546,6 +599,7 @@ init_shaders(){
             "layout(location = 2) in vec2 dim; \n"
             "layout(location = 3) in float border_size; \n"
             "layout(location = 4) in float radius; \n"
+            "layout(location = 5) in vec4 colour; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
@@ -554,6 +608,7 @@ init_shaders(){
             "out float out_radius;\n"
             "out float out_border;\n"
             "out vec2 out_res;\n"
+            "out vec4 frag_colour;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -567,6 +622,7 @@ init_shaders(){
             "out_dim = dim;\n"
             "out_border = border_size;\n"
             "out_res = resolution;\n"
+            "frag_colour = colour;\n"
             "}\n";
         
         GLchar* rectangle_fs =  
@@ -576,6 +632,7 @@ init_shaders(){
             "in float out_radius; \n"
             "in float out_border; \n"
             "in vec2 out_res; \n"
+            "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             
@@ -594,7 +651,7 @@ init_shaders(){
             "if(dist <= 0.0001) { dist = 0.0001; }\n"
             "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
-            "colour = vec4(0, 1, 0, alpha);\n"
+            "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -611,12 +668,14 @@ init_shaders(){
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in float radius; \n"
+            "layout(location = 3) in vec4 colour; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
             "out vec2 out_pos;\n"
             "out float out_radius;\n"
             "out vec2 out_res;\n"
+            "out vec4 frag_colour;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -628,6 +687,7 @@ init_shaders(){
             "out_pos = pos;\n"
             "out_radius = radius;\n"
             "out_res = resolution;\n"
+            "frag_colour = colour;\n"
             "}\n";
         
         GLchar* circle_fs =  
@@ -636,6 +696,7 @@ init_shaders(){
             "in float out_radius; \n"
             "in float out_border; \n"
             "in vec2 out_res; \n"
+            "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             
@@ -648,7 +709,7 @@ init_shaders(){
             "if(dist <= 0.0001) { dist = 0.0001; }\n"
             "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
-            "colour = vec4(0, 1, 0, alpha);\n"
+            "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
         GLuint program = make_program(circle_vs, circle_fs);
@@ -659,18 +720,20 @@ init_shaders(){
         
     }
     // NOTE(Oliver): init glyph shader
-    if(1){
+    {
         GLchar* glyph_vs =  
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in vec2 pos_dim; \n"
             "layout(location = 4) in vec2 uv;\n"
             "layout(location = 6) in vec2 uv_dim; \n"
+            "layout(location = 8) in vec4 colour;\n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
-            "out vec2 out_pos;\n"
-            "out vec2 out_uv;\n"
+            "out vec2 frag_pos;\n"
+            "out vec2 frag_uv;\n"
+            "out vec4 frag_colour;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -680,24 +743,26 @@ init_shaders(){
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
             "screen_position.xy *= (vec4((pos_dim)/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+pos_dim/2)/resolution,0,1)).xy -1;\n"
-            "out_uv = uvs[gl_VertexID % 6];\n"
-            "out_uv *= uv_dim;\n"
-            "out_uv += uv;\n"
+            "frag_uv = uvs[gl_VertexID % 6];\n"
+            "frag_uv *= uv_dim;\n"
+            "frag_uv += uv;\n"
             "gl_Position = screen_position;\n"
-            "out_pos = pos;\n"
+            "frag_pos = pos;\n"
+            "frag_colour = colour;\n"
             "}\n";
         
         GLchar* glyph_fs =  
             "#version 330 core\n"
-            "in vec2 out_pos; \n"
-            "in vec2 out_uv; \n"
-            "in vec2 out_dim; \n"
+            "in vec2 frag_pos; \n"
+            "in vec2 frag_uv; \n"
+            "in vec2 frag_dim; \n"
+            "in vec4 frag_colour; \n"
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             
             "void main(){\n"
-            "float alpha = texture(atlas, out_uv).r;\n"
-            "colour = vec4(1,1,1, alpha);\n"
+            "float alpha = texture(atlas, frag_uv).r;\n"
+            "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
         GLuint program = make_program(glyph_vs, glyph_fs);
@@ -780,6 +845,11 @@ process_and_draw_commands(){
                     push_rectangle_attribs(rectangle->width);
                     push_rectangle_attribs(rectangle->height);
                     push_rectangle_attribs(rectangle->corner_radius);
+                    push_rectangle_attribs(rectangle->colour.r/255.0f);
+                    push_rectangle_attribs(rectangle->colour.g/255.0f);
+                    push_rectangle_attribs(rectangle->colour.b/255.0f);
+                    push_rectangle_attribs(rectangle->colour.a/255.0f);
+                    
                 }
                 num_rectangle_verts += 6;
             }break;
@@ -794,7 +864,13 @@ process_and_draw_commands(){
                     push_rectangle_outline_attribs(rectangle->height);
                     push_rectangle_outline_attribs(rectangle->border_size);
                     push_rectangle_outline_attribs(rectangle->corner_radius);
+                    push_rectangle_outline_attribs(rectangle->colour.r/255.0f);
+                    push_rectangle_outline_attribs(rectangle->colour.g/255.0f);
+                    push_rectangle_outline_attribs(rectangle->colour.b/255.0f);
+                    push_rectangle_outline_attribs(rectangle->colour.a/255.0f);
+                    
                 }
+                
                 num_rectangle_outline_verts += 6;
             }break;
             
@@ -805,6 +881,11 @@ process_and_draw_commands(){
                     push_circle_attribs(circle->x);
                     push_circle_attribs(circle->y);
                     push_circle_attribs(circle->radius);
+                    push_circle_attribs(circle->colour.r/255.0f);
+                    push_circle_attribs(circle->colour.g/255.0f);
+                    push_circle_attribs(circle->colour.b/255.0f);
+                    push_circle_attribs(circle->colour.a/255.0f);
+                    
                 }
                 num_circle_verts += 6;
             }break;
@@ -821,6 +902,11 @@ process_and_draw_commands(){
                     push_glyph_attribs(glyph->v);
                     push_glyph_attribs(glyph->u_width);
                     push_glyph_attribs(glyph->v_height);
+                    push_glyph_attribs(glyph->colour.r/255.0f);
+                    push_glyph_attribs(glyph->colour.g/255.0f);
+                    push_glyph_attribs(glyph->colour.b/255.0f);
+                    push_glyph_attribs(glyph->colour.a/255.0f);
+                    
                 }
                 num_glyph_verts += 6;
             }break;

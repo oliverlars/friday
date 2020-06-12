@@ -29,7 +29,7 @@ main(int argc, char** args){
     
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -56,7 +56,7 @@ main(int argc, char** args){
     load_opengl();
     
     SDL_ShowWindow(global_window);
-    renderer.fonts.insert(init_font("../fonts/arial.ttf", 100));
+    renderer.fonts.insert(init_font("../fonts/Inconsolata-Regular.ttf", 100));
     
     init_opengl_renderer();
     init_shaders();
@@ -74,10 +74,13 @@ main(int argc, char** args){
         int x, y;
         SDL_GetMouseState(&x, &y);
         
-        push_circle(x, platform.height - y, 200);
         
         push_circle(sinf(tick/20)*20, 360, 200);
-        push_string(0, 0, "Speed Racer");
+        f32 text_width = get_text_width("SUPREME");
+        push_rectangle(550, 360-20, text_width+50, renderer.fonts[0].line_height+20, 0.4);
+        push_string(600, 360, "SUPREME");
+        push_circle(x, platform.height - y, 200);
+        
         push_rectangle(0, 0, 20, 20, 0.2);
         opengl_end_frame();
         

@@ -11,6 +11,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../ext/stb_truetype.h"
 #include "render.cc"
+#include "ast.cc"
 
 global SDL_Window* global_window;
 
@@ -77,8 +78,8 @@ main(int argc, char** args){
         
         push_circle(sinf(tick/20)*20, 360, 200);
         f32 text_width = get_text_width("SUPREME");
-        push_rectangle(550, 360-20, text_width+50, renderer.fonts[0].line_height+20, 0.4);
-        push_string(600, 360, "SUPREME");
+        push_rectangle(550, 360-20, text_width+50, renderer.fonts[0].line_height+20, 0.4, 0xFF0000FF);
+        push_string(600, 360, "SUPREME", 0xFFFFFFFF);
         push_circle(x, platform.height - y, 200);
         
         push_rectangle(0, 0, 20, 20, 0.2);

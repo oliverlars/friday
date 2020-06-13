@@ -19,7 +19,7 @@ enum Operator_Type {
     OP_PLUS,
     OP_MINUS,
     OP_DIVIDE,
-    OP_MULITPLY,
+    OP_MULTIPLY,
 };
 
 enum Literal_Type {
@@ -35,8 +35,8 @@ struct Node {
     char* name;
     u8 name_length;
     
-    Node* next;
-    Node* previous;
+    Node* next = nullptr;
+    Node* previous = nullptr;
 };
 
 struct Node_Binary : Node {

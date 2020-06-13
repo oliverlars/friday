@@ -784,18 +784,6 @@ init_shaders(){
     
 }
 
-internal void
-opengl_start_frame() {
-    OPTICK_EVENT();
-    renderer.commands.reset();
-    renderer.rectangle_attribs.reset();
-    renderer.rectangle_outline_attribs.reset();
-    renderer.circle_attribs.reset();
-    renderer.glyph_attribs.reset();
-    renderer.head = nullptr;
-    renderer.tail = nullptr;
-    
-}
 #if 0
 internal inline void
 push_rectangle_attribs(f32 attribs){
@@ -994,6 +982,32 @@ process_and_draw_commands(){
     }
 }
 
+// NOTE(Oliver): this is global state for the render pass
+// may not be needed, we'll see
+struct {
+    int x;
+    int y;
+    int x_offset;
+} friday;
+
+
+internal void
+opengl_start_frame() {
+    OPTICK_EVENT();
+    renderer.commands.reset();
+    renderer.rectangle_attribs.reset();
+    renderer.rectangle_outline_attribs.reset();
+    renderer.circle_attribs.reset();
+    renderer.glyph_attribs.reset();
+    renderer.head = nullptr;
+    renderer.tail = nullptr;
+    
+    friday.x = 640;
+    friday.y = 360;
+    friday.x_offset = 0;
+    
+}
+
 internal void
 opengl_end_frame() {
     OPTICK_EVENT();
@@ -1009,31 +1023,36 @@ opengl_end_frame() {
     glUseProgram(0);
 }
 
-// NOTE(Oliver): this is global state for the render pass
-// may not be needed, we'll see
-struct {
-    int x;
-    int y;
-    
-} friday;
-
 internal void
 new_line(){
-    friday.y += renderer.fonts[0].line_height;
+    friday.y -= renderer.fonts[0].line_height;
+    friday.x_offset = 0;
+}
+
+internal void
+indent(){
+    friday.x_offset += 40;
+}
+
+internal void
+draw_string(char* string){
+    push_string(friday.x+friday.x_offset, friday.y, string);
+    friday.x_offset += get_text_width(string);
 }
 
 internal void
 render_graph(Node* root){
+    if(!root) return;
     switch(root->type){
         
         case NODE_BINARY:{
             auto binary = reinterpret_cast<Node_Binary*>(root);
+            indent();
             render_graph(binary->left);
             
             char* ops[4] = {"+", "-", "/", "*"};
             char* op = ops[binary->op_type];
-            push_string(friday.x, friday.y, op);
-            friday.x += get_text_width(op);
+            draw_string(op);
             
             render_graph(binary->right);
         }break;
@@ -1042,8 +1061,24 @@ render_graph(Node* root){
             auto literal = reinterpret_cast<Node_Literal*>(root);
             char buffer[256];
             snprintf(buffer, 256, "%d", literal->_int);
-            push_string(friday.x, friday.y, buffer);
-            friday.x +=  get_text_width(buffer);
+            draw_string(buffer);
+        }break;
+        
+        case NODE_STRUCT: {
+            auto _struct = reinterpret_cast<Node_Struct*>(root);
+            draw_string(_struct->name);
+            draw_string(" :: struct {");
+            new_line();
+            indent();
+            for(Node* member = _struct->members; member; member = member->next){
+                render_graph(member);
+            }
+            new_line();
+            draw_string("}");
+        }break;
+        
+        case NODE_DECLARATION: {
+            
         }break;
     }
 }

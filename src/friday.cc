@@ -31,7 +31,7 @@ main(int argc, char** args){
     
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0);
+    //SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -58,7 +58,7 @@ main(int argc, char** args){
     load_opengl();
     
     SDL_ShowWindow(global_window);
-    renderer.fonts.insert(init_font("../fonts/Inconsolata-Regular.ttf", 100));
+    renderer.fonts.insert(init_font("../fonts/Inconsolata-Regular.ttf", 30));
     
     init_opengl_renderer();
     init_shaders();
@@ -68,7 +68,7 @@ main(int argc, char** args){
     SDL_Event event;
     
     auto binary = new Node_Binary;
-    binary->op_type = OP_PLUS;
+    binary->op_type = OP_MULTIPLY;
     binary->left = new Node_Literal;
     auto left = reinterpret_cast<Node_Literal*>(binary->left);
     left->lit_type = LIT_INTEGER;
@@ -79,8 +79,23 @@ main(int argc, char** args){
     right->lit_type = LIT_INTEGER;
     right->_int = 20;
     
+    auto _struct = new Node_Struct;
+    _struct->members = binary;
+    char name[32] = "speed racer";
+    _struct->name = name;
+    
     friday.x = 640;
     friday.y = 360;
+    
+    Pool pool(16);
+    u8* random_mem = nullptr;
+    for(int i = 0; i < 1000; i++){
+        u8* memory = (u8*)pool.allocate();
+        if(i == 32){
+            random_mem = memory;
+        }
+    }
+    pool.clear(random_mem);
     
     while(running){
         OPTICK_FRAME("MainThread");
@@ -92,20 +107,15 @@ main(int argc, char** args){
         int x, y;
         SDL_GetMouseState(&x, &y);
         
-        /*
-        push_circle(sinf(tick/20)*20, 360, 200);
-        f32 text_width = get_text_width("SUPREME");
-        push_rectangle(550, 360-20, text_width+50, renderer.fonts[0].line_height+20, 0.4, 0xFF0000FF);
-        push_string(600, 360, "SUPREME", 0xFFFFFFFF);
-        push_circle(x, platform.height - y, 200);
         
-        push_rectangle(0, 0, 20, 20, 0.2);
-*/
+        f32 offset = 5;
+        left->_int = tick;
+        right->_int = tick;
+        push_rectangle(offset, offset, 
+                       platform.width-offset*2, platform.height-offset*2, 0.1,
+                       0x00101010);
         
-        friday.x = 640;
-        friday.y = 360;
-        
-        render_graph(binary);
+        render_graph(_struct);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

@@ -188,9 +188,180 @@ struct Memory_Pool {
     
 };
 
+
+
 struct {
     
     u32 width;
     u32 height;
     
 } platform;
+
+const u64 default_memory_block_size = 4096; 
+
+
+struct Arena_Block {
+    u8* memory;
+    u64 size;
+    u64 used;
+    Arena_Block* next;
+};
+
+struct Arena {
+    Arena_Block* first = nullptr;
+    Arena_Block* active = nullptr;
+    
+    Arena() {}
+    
+    ~Arena() {
+        
+    }
+    
+    void* clear(){
+        for(auto block = first; block; block = block->next){
+            free(block);
+        }
+    }
+    
+    void* allocate(u64 size){
+        if(!active ||
+           active->used + size > active->size){
+            
+            u64 bytes_required = default_memory_block_size;
+            
+            if(size > bytes_required){
+                bytes_required = size;
+            }
+            
+            Arena_Block* new_block = 0;
+            
+            new_block = (Arena_Block*)malloc(sizeof(Arena_Block) + bytes_required);
+            assert(new_block);
+            new_block->memory = (u8*)new_block + sizeof(Arena_Block);
+            new_block->size = bytes_required;
+            new_block->next = nullptr;
+            
+            if(active){
+                active->next = new_block;
+                active = new_block;
+            }else{
+                first = new_block;
+                active = new_block;
+            }
+        }
+        
+        void* memory = active->memory + active->used;
+        active->used += size;
+        
+        return memory;
+    }
+    
+};
+
+
+struct Pool_Node {
+    Pool_Node* next;
+};
+
+const int default_pool_block_size = 4096;
+
+struct Pool_Block {
+    u8* memory;
+    u64 size;
+    u64 used;
+    Pool_Block* next;
+    //Pool_Node* free_head;
+    
+    /*
+        void clear(u64 chunk_size){
+            u64 number_of_chunks = size/chunk_size;
+            for(int i = 0; i < number_of_chunks; i++){
+                void* pointer = &memory[i * chunk_size];
+                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+                node->next = free_head;
+                free_head = node;
+            }
+        }
+    */
+};
+
+struct Pool {
+    Pool_Block* first = nullptr;
+    Pool_Block* active = nullptr;
+    Pool_Node* free_head = nullptr;
+    
+    Pool(u64 size) {chunk_size = size;}
+    u64 chunk_size;
+    
+    void* allocate(){
+        
+        if(!active || !free_head){
+            
+            u64 bytes_required = default_pool_block_size;
+            
+            if(chunk_size > bytes_required){
+                bytes_required = chunk_size;
+            }
+            
+            Pool_Block* new_block = 0;
+            
+            new_block = (Pool_Block*)malloc(sizeof(Pool_Block) + bytes_required);
+            assert(new_block);
+            new_block->memory = (u8*)new_block + sizeof(Pool_Block);
+            new_block->size = bytes_required;
+            new_block->next = nullptr;
+            
+            if(active){
+                active->next = new_block;
+                active = new_block;
+            }else{
+                first = new_block;
+                active = new_block;
+            }
+            
+            //active->clear(chunk_size);
+            for(int i = 0; i < active->size/chunk_size; i++){
+                void* pointer = &active->memory[i * chunk_size];
+                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+                node->next = free_head;
+                free_head = node;
+            }
+        }
+        
+        void* memory = free_head;
+        free_head = free_head->next;
+        
+        return memory;
+    }
+    
+    void clear(void* pointer){
+        bool is_valid_pointer = false;
+        for(auto block = first; block; block = block->next){
+            void* start = block->memory;
+            void* end = &block->memory[block->size-1];
+            if(!pointer){
+                return;
+            }
+            
+            if(start <= pointer && pointer < end){
+                is_valid_pointer = true;
+            }
+        }
+        if(!is_valid_pointer) return;
+        
+        Pool_Node* node;
+        
+        node = (Pool_Node*)pointer;
+        node->next = free_head;
+        free_head = node;
+    }
+    
+    void clear_all(){
+        for(auto block = first; block; block = block->next){
+            free(block);
+        }
+    }
+    
+};
+
+

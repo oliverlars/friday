@@ -77,22 +77,16 @@ main(int argc, char** args){
     int end = 0;
     SDL_Event event;
     
-    auto binary = new Node_Binary;
-    binary->op_type = OP_MULTIPLY;
-    binary->left = new Node_Literal;
-    auto left = reinterpret_cast<Node_Literal*>(binary->left);
-    left->lit_type = LIT_INTEGER;
-    left->_int = 2;
+    friday.node_pool = make_pool(sizeof(Node));
+    Pool* pool = &friday.node_pool;
     
-    binary->right = new Node_Literal;
-    auto right = reinterpret_cast<Node_Literal*>(binary->right);
-    right->lit_type = LIT_INTEGER;
-    right->_int = 20;
-    
-    auto _struct = new Node_Struct;
-    _struct->members = binary;
-    char name[32] = "speed racer";
-    _struct->name = name;
+    Node* binary = make_node(pool, NODE_BINARY);
+    binary->binary.left = make_node(pool, NODE_LITERAL);
+    binary->binary.right = make_node(pool, NODE_LITERAL);
+    binary->binary.left->literal._int = 10;
+    binary->binary.right->literal._int = 10;
+    auto left = &binary->binary.left->literal;
+    auto right = &binary->binary.right->literal;
     
     friday.x = 640;
     friday.y = 360;
@@ -120,7 +114,7 @@ main(int argc, char** args){
                        platform.width-offset*2, platform.height-offset*2, 0.1,
                        0x00101010);
         
-        render_graph(_struct);
+        render_graph(binary);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

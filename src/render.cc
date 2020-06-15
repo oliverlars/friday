@@ -104,7 +104,7 @@ global struct {
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
     //Array<Command*> commands;
-    Pool command_pool;
+    Arena commands;
     Command* head = nullptr;
     Command* tail = nullptr;
     
@@ -167,7 +167,7 @@ init_font(char* font_name, int font_size){
     return result;
 }
 
-#define make_command(type) (type*) new (renderer.command_pool.allocate()) type()
+#define make_command(type) (type*) new (arena_allocate(&renderer.commands, sizeof(type))) type()
 
 internal void
 insert_command(Command* next_command){
@@ -327,6 +327,23 @@ push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
     }
 }
 
+internal void
+push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
+    
+    y = -y;
+    
+    // NOTE(Oliver): '#' is used for ID purposes
+    while(*string.text && *string.text != '#'){
+        if(*string.text >= 32 && *string.text < 128){
+            stbtt_aligned_quad quad;
+            stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
+                                *string.text-32, &x, &y, &quad, 1);
+            push_glyph(quad, colour);
+        }
+        string.text++;
+    }
+}
+
 internal f32
 get_text_width(char* text){
     f32 result = 0;
@@ -345,11 +362,33 @@ get_text_width(char* text){
     }
     return result*renderer.fonts[0].scale;
 }
+
+internal f32
+get_text_width(String8 string){
+    f32 result = 0;
+    for(int i = 0; i < string.length; i++){
+        char text = string[i];
+        if(text == '#') break;
+        s32 advance_x;
+        s32 left_side_bearing;
+        stbtt_GetCodepointHMetrics(&renderer.fonts[0].info, text, &advance_x, &left_side_bearing);
+        int x0, x1, y0, y1;;
+        stbtt_GetCodepointBitmapBox(&renderer.fonts[0].info, text, renderer.fonts[0].scale, 
+                                    renderer.fonts[0].scale,
+                                    &x0, &y0, &x1, &y1);
+        result += advance_x;
+        result += x1 - x0;
+        text++;
+    }
+    return result*renderer.fonts[0].scale;
+}
+
 internal void
 init_opengl_renderer(){
     
     renderer.shape_attribs = 
         subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
+    
     
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
@@ -798,27 +837,6 @@ init_shaders(){
     
 }
 
-#if 0
-internal inline void
-push_rectangle_attribs(f32 attribs){
-    renderer.rectangle_attribs.insert(attribs);
-}
-
-internal inline void
-push_rectangle_outline_attribs(f32 attribs){
-    renderer.rectangle_outline_attribs.insert(attribs);
-}
-
-internal inline void
-push_circle_attribs(f32 attribs){
-    renderer.circle_attribs.insert(attribs);
-}
-
-internal inline void
-push_glyph_attribs(f32 attribs){
-    renderer.glyph_attribs.insert(attribs);
-}
-#endif
 internal void
 process_and_draw_commands(){
     
@@ -863,18 +881,8 @@ process_and_draw_commands(){
                     *rectangle_attribs++ = rectangle->colour.g/255.0f;
                     *rectangle_attribs++ = rectangle->colour.b/255.0f;
                     *rectangle_attribs++ = rectangle->colour.a/255.0f;
-#if 0
-                    push_rectangle_attribs(rectangle->x);
-                    push_rectangle_attribs(rectangle->y);
-                    push_rectangle_attribs(rectangle->width);
-                    push_rectangle_attribs(rectangle->height);
-                    push_rectangle_attribs(rectangle->corner_radius);
-                    push_rectangle_attribs(rectangle->colour.r/255.0f);
-                    push_rectangle_attribs(rectangle->colour.g/255.0f);
-                    push_rectangle_attribs(rectangle->colour.b/255.0f);
-                    push_rectangle_attribs(rectangle->colour.a/255.0f);
-#endif
                 }
+                
                 num_rectangle_verts += 6;
             }break;
             
@@ -892,18 +900,6 @@ process_and_draw_commands(){
                     *rectangle_outline_attribs++ = rectangle->colour.g/255.0f;
                     *rectangle_outline_attribs++ = rectangle->colour.b/255.0f;
                     *rectangle_outline_attribs++ = rectangle->colour.a/255.0f;
-#if 0
-                    push_rectangle_outline_attribs(rectangle->x);
-                    push_rectangle_outline_attribs(rectangle->y);
-                    push_rectangle_outline_attribs(rectangle->width);
-                    push_rectangle_outline_attribs(rectangle->height);
-                    push_rectangle_outline_attribs(rectangle->border_size);
-                    push_rectangle_outline_attribs(rectangle->corner_radius);
-                    push_rectangle_outline_attribs(rectangle->colour.r/255.0f);
-                    push_rectangle_outline_attribs(rectangle->colour.g/255.0f);
-                    push_rectangle_outline_attribs(rectangle->colour.b/255.0f);
-                    push_rectangle_outline_attribs(rectangle->colour.a/255.0f);
-#endif
                 }
                 num_rectangle_outline_verts += 6;
             }break;
@@ -919,15 +915,6 @@ process_and_draw_commands(){
                     *circle_attribs++ = circle->colour.g/255.0f;
                     *circle_attribs++ = circle->colour.g/255.0f;
                     *circle_attribs++ = circle->colour.a/255.0f;
-#if 0
-                    push_circle_attribs(circle->x);
-                    push_circle_attribs(circle->y);
-                    push_circle_attribs(circle->radius);
-                    push_circle_attribs(circle->colour.r/255.0f);
-                    push_circle_attribs(circle->colour.g/255.0f);
-                    push_circle_attribs(circle->colour.b/255.0f);
-                    push_circle_attribs(circle->colour.a/255.0f);
-#endif
                 }
                 num_circle_verts += 6;
             }break;
@@ -947,20 +934,7 @@ process_and_draw_commands(){
                     *glyph_attribs++ = glyph->colour.g/255.0f;
                     *glyph_attribs++ = glyph->colour.b/255.0f;
                     *glyph_attribs++ = glyph->colour.a/255.0f;
-#if 0
-                    push_glyph_attribs(glyph->x);
-                    push_glyph_attribs(glyph->y);
-                    push_glyph_attribs(glyph->width);
-                    push_glyph_attribs(glyph->height);
-                    push_glyph_attribs(glyph->u);
-                    push_glyph_attribs(glyph->v);
-                    push_glyph_attribs(glyph->u_width);
-                    push_glyph_attribs(glyph->v_height);
-                    push_glyph_attribs(glyph->colour.r/255.0f);
-                    push_glyph_attribs(glyph->colour.g/255.0f);
-                    push_glyph_attribs(glyph->colour.b/255.0f);
-                    push_glyph_attribs(glyph->colour.a/255.0f);
-#endif
+                    
                 }
                 num_glyph_verts += 6;
             }break;
@@ -1051,16 +1025,10 @@ process_and_draw_commands(){
 internal void
 opengl_start_frame() {
     OPTICK_EVENT();
-#if 0
-    renderer.command_pool.clear_all();
-    renderer.rectangle_attribs.reset();
-    renderer.rectangle_outline_attribs.reset();
-    renderer.circle_attribs.reset();
-    renderer.glyph_attribs.reset();
-#endif
-    //renderer.shape_attribs.clear();
-    //platform.temporary_arena.reset();
-    renderer.shape_attribs.reset();
+    
+    arena_reset(&renderer.commands);
+    arena_reset(&renderer.shape_attribs);
+    
     renderer.head = nullptr;
     renderer.tail = nullptr;
     
@@ -1103,12 +1071,18 @@ draw_string(char* string){
 }
 
 internal void
+draw_string(String8 string){
+    push_string8(friday.x+friday.x_offset, friday.y, string);
+    friday.x_offset += get_text_width(string);
+}
+
+internal void
 render_graph(Node* root){
     if(!root) return;
     switch(root->type){
         
         case NODE_BINARY:{
-            auto binary = reinterpret_cast<Node_Binary*>(root);
+            auto binary = &root->binary;
             indent();
             render_graph(binary->left);
             
@@ -1120,15 +1094,15 @@ render_graph(Node* root){
         }break;
         
         case NODE_LITERAL:{
-            auto literal = reinterpret_cast<Node_Literal*>(root);
+            auto literal = &root->literal;
             char buffer[256];
             snprintf(buffer, 256, "%d", literal->_int);
             draw_string(buffer);
         }break;
         
         case NODE_STRUCT: {
-            auto _struct = reinterpret_cast<Node_Struct*>(root);
-            draw_string(_struct->name);
+            auto _struct = &root->_struct;
+            draw_string(root->name);
             draw_string(" :: struct {");
             new_line();
             indent();

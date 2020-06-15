@@ -102,7 +102,7 @@ struct Array {
         data[used++] = item;
     }
     
-    T &operator[] (u64 index) {
+    T& operator[] (u64 index) {
         assert(index >= 0 && index < used);
         return data[index];
     }
@@ -202,29 +202,6 @@ struct Arena_Block {
 struct Arena {
     Arena_Block* first = nullptr;
     Arena_Block* active = nullptr;
-    
-    Arena() {}
-    
-    ~Arena() {
-        
-    }
-    
-    void clear(){
-        for(auto block = first; block; block = block->next){
-            free(block);
-        }
-        first = nullptr;
-        active = nullptr;
-    }
-    // NOTE(Oliver): this is to reuse allocations
-    void reset(){
-        for(auto block = first; block; block = block->next){
-            block->used = 0;
-        }
-        active = first;
-    }
-    
-    
 };
 
 internal void* 
@@ -262,6 +239,30 @@ arena_allocate(Arena* arena, u64 size){
     return memory;
 }
 
+struct String8 {
+    char* text;
+    u64 length;
+    
+    char operator[](u64 index){
+        assert(index >= 0 && index < length);
+        return text[index];
+    }
+};
+
+internal String8
+make_string(Arena* arena, char* string){
+    
+    char* pointer = string;
+    while(pointer && *pointer){
+        pointer++;
+    }
+    u64 length = pointer - string;
+    char* text = (char*)arena_allocate(arena, length);
+    String8 result;
+    result.text = text;
+    result.length = length;
+    return result;
+}
 internal Arena
 make_arena(u64 size, void* backing){
     Arena result;
@@ -275,7 +276,12 @@ make_arena(u64 size, void* backing){
 }
 
 internal void
-reset_arena(Arena* arena){
+arena_reset(Arena* arena){
+    
+    for(auto block = arena->first; block; block = block->next){
+        block->used = 0;
+    }
+    arena->active = arena->first;
     
 }
 
@@ -305,53 +311,12 @@ struct Pool_Block {
 };
 
 struct Pool {
+    
     Pool_Block* first = nullptr;
     Pool_Block* active = nullptr;
     Pool_Node* free_head = nullptr;
     
-    Pool(u64 size=64) {chunk_size = size;}
     u64 chunk_size;
-    
-    void* allocate(){
-        
-        if(!active || !free_head){
-            
-            u64 bytes_required = default_pool_block_size;
-            
-            if(chunk_size > bytes_required){
-                bytes_required = chunk_size;
-            }
-            
-            Pool_Block* new_block = 0;
-            
-            new_block = (Pool_Block*)malloc(sizeof(Pool_Block) + bytes_required);
-            assert(new_block);
-            new_block->memory = (u8*)new_block + sizeof(Pool_Block);
-            new_block->size = bytes_required;
-            new_block->next = nullptr;
-            
-            if(active){
-                active->next = new_block;
-                active = new_block;
-            }else{
-                first = new_block;
-                active = new_block;
-            }
-            
-            //active->clear(chunk_size);
-            for(int i = 0; i < active->size/chunk_size; i++){
-                void* pointer = &active->memory[i * chunk_size];
-                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
-                node->next = free_head;
-                free_head = node;
-            }
-        }
-        
-        void* memory = free_head;
-        free_head = free_head->next;
-        
-        return memory;
-    }
     
     void clear(void* pointer){
         bool is_valid_pointer = false;
@@ -400,7 +365,60 @@ struct Pool {
     
 };
 
+internal Pool
+make_pool(u64 size) {
+    Pool result;
+    result.chunk_size = size;
+    
+    result.first = nullptr;
+    result.active = nullptr;
+    result.free_head = nullptr;
+    
+    return result;
+}
 
+
+internal void* 
+pool_allocate(Pool* pool){
+    
+    if(!pool->active || !pool->free_head){
+        
+        u64 bytes_required = default_pool_block_size;
+        
+        if(pool->chunk_size > bytes_required){
+            bytes_required = pool->chunk_size;
+        }
+        
+        Pool_Block* new_block = 0;
+        
+        new_block = (Pool_Block*)malloc(sizeof(Pool_Block) + bytes_required);
+        assert(new_block);
+        new_block->memory = (u8*)new_block + sizeof(Pool_Block);
+        new_block->size = bytes_required;
+        new_block->next = nullptr;
+        
+        if(pool->active){
+            pool->active->next = new_block;
+            pool->active = new_block;
+        }else{
+            pool->first = new_block;
+            pool->active = new_block;
+        }
+        
+        //active->clear(chunk_size);
+        for(int i = 0; i < pool->active->size/pool->chunk_size; i++){
+            void* pointer = &pool->active->memory[i * pool->chunk_size];
+            Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+            node->next = pool->free_head;
+            pool->free_head = node;
+        }
+    }
+    
+    void* memory = pool->free_head;
+    pool->free_head = pool->free_head->next;
+    
+    return memory;
+}
 
 struct {
     

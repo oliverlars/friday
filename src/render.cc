@@ -119,6 +119,7 @@ global struct {
     Array<f32> glyph_attribs;
     
     Arena shape_attribs;
+    Arena frame_arena;
 } renderer;
 
 internal Font
@@ -333,7 +334,7 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
     y = -y;
     
     // NOTE(Oliver): '#' is used for ID purposes
-    while(*string.text && *string.text != '#'){
+    while(string.text && *string.text && *string.text != '#'){
         if(*string.text >= 32 && *string.text < 128){
             stbtt_aligned_quad quad;
             stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
@@ -389,6 +390,7 @@ init_opengl_renderer(){
     renderer.shape_attribs = 
         subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
     
+    renderer.frame_arena = subdivide_arena(&platform.temporary_arena, 8192);
     
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
@@ -1083,11 +1085,16 @@ render_graph(Node* root){
         
         case NODE_BINARY:{
             auto binary = &root->binary;
-            indent();
             render_graph(binary->left);
             
-            char* ops[4] = {"+", "-", "/", "*"};
-            char* op = ops[binary->op_type];
+            String8 op = {};
+            Arena* arena = &renderer.frame_arena;
+            switch(binary->op_type){
+                case OP_PLUS: op = make_string(arena, " + ");break;
+                case OP_MINUS: op = make_string(arena, " - ");break;
+                case OP_DIVIDE: op = make_string(arena, " / ");break;
+                case OP_MULTIPLY: op = make_string(arena, " * ");break;
+            }
             draw_string(op);
             
             render_graph(binary->right);
@@ -1114,7 +1121,11 @@ render_graph(Node* root){
         }break;
         
         case NODE_DECLARATION: {
-            
+            auto decl = root->declaration.declaration;
+            draw_string(root->name);
+            draw_string(" := ");
+            render_graph(decl);
+            draw_string(";");
         }break;
     }
 }

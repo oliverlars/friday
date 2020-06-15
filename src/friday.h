@@ -258,6 +258,9 @@ make_string(Arena* arena, char* string){
     }
     u64 length = pointer - string;
     char* text = (char*)arena_allocate(arena, length);
+    for(int i = 0; i < length; i++){
+        text[i] = string[i];
+    }
     String8 result;
     result.text = text;
     result.length = length;

@@ -53,7 +53,7 @@ struct Node {
                 f32 _float; 
                 s32 _int;
             };
-        }literal;
+        } literal;
         
         struct {
             Node* members;

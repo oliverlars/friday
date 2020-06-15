@@ -80,13 +80,18 @@ main(int argc, char** args){
     friday.node_pool = make_pool(sizeof(Node));
     Pool* pool = &friday.node_pool;
     
+    Node* decl = make_node(pool, NODE_DECLARATION);
+    
     Node* binary = make_node(pool, NODE_BINARY);
+    binary->binary.op_type = OP_PLUS;
     binary->binary.left = make_node(pool, NODE_LITERAL);
     binary->binary.right = make_node(pool, NODE_LITERAL);
     binary->binary.left->literal._int = 10;
     binary->binary.right->literal._int = 10;
     auto left = &binary->binary.left->literal;
     auto right = &binary->binary.right->literal;
+    decl->declaration.declaration = binary;
+    decl->name = make_string(&platform.permanent_arena, "potato");
     
     friday.x = 640;
     friday.y = 360;
@@ -114,7 +119,7 @@ main(int argc, char** args){
                        platform.width-offset*2, platform.height-offset*2, 0.1,
                        0x00101010);
         
-        render_graph(binary);
+        render_graph(decl);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

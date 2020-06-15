@@ -16,6 +16,9 @@
 
 global SDL_Window* global_window;
 
+#define Kilobytes(x) (1024*x)
+#define Megabytes(x) (Kilobytes(x)*1024)
+#define Gigabytes(x) (Megabytes(x)*1024)
 
 int 
 main(int argc, char** args){
@@ -26,6 +29,13 @@ main(int argc, char** args){
     
     platform.width = 1280;
     platform.height = 720;
+    
+    void* permanent_memory = VirtualAlloc(0, Gigabytes(1), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    platform.permanent_arena = make_arena(Gigabytes(1), permanent_memory);
+    
+    void* temporary_memory = VirtualAlloc(0, Megabytes(16), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    platform.temporary_arena = make_arena(Megabytes(16), temporary_memory);
+    
     
     b32 running = true;
     
@@ -87,15 +97,10 @@ main(int argc, char** args){
     friday.x = 640;
     friday.y = 360;
     
-    Pool pool(16);
-    u8* random_mem = nullptr;
-    for(int i = 0; i < 1000; i++){
-        u8* memory = (u8*)pool.allocate();
-        if(i == 32){
-            random_mem = memory;
-        }
-    }
-    pool.clear(random_mem);
+    Arena test;
+    f32* example = (f32*)arena_allocate(&test, 50);
+    *example++ = 5;
+    
     
     while(running){
         OPTICK_FRAME("MainThread");

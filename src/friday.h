@@ -7,6 +7,7 @@
 #include <float.h>
 #include <assert.h>
 #include <string.h>
+#include <memory.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -188,15 +189,6 @@ struct Memory_Pool {
     
 };
 
-
-
-struct {
-    
-    u32 width;
-    u32 height;
-    
-} platform;
-
 const u64 default_memory_block_size = 4096; 
 
 
@@ -217,47 +209,87 @@ struct Arena {
         
     }
     
-    void* clear(){
+    void clear(){
         for(auto block = first; block; block = block->next){
             free(block);
         }
+        first = nullptr;
+        active = nullptr;
+    }
+    // NOTE(Oliver): this is to reuse allocations
+    void reset(){
+        for(auto block = first; block; block = block->next){
+            block->used = 0;
+        }
+        active = first;
     }
     
-    void* allocate(u64 size){
-        if(!active ||
-           active->used + size > active->size){
-            
-            u64 bytes_required = default_memory_block_size;
-            
-            if(size > bytes_required){
-                bytes_required = size;
-            }
-            
-            Arena_Block* new_block = 0;
-            
-            new_block = (Arena_Block*)malloc(sizeof(Arena_Block) + bytes_required);
-            assert(new_block);
-            new_block->memory = (u8*)new_block + sizeof(Arena_Block);
-            new_block->size = bytes_required;
-            new_block->next = nullptr;
-            
-            if(active){
-                active->next = new_block;
-                active = new_block;
-            }else{
-                first = new_block;
-                active = new_block;
-            }
-        }
-        
-        void* memory = active->memory + active->used;
-        active->used += size;
-        
-        return memory;
-    }
     
 };
 
+internal void* 
+arena_allocate(Arena* arena, u64 size){
+    if(!arena->active  ||
+       arena->active->used + size > arena->active->size){
+        
+        u64 bytes_required = default_memory_block_size;
+        
+        if(size > bytes_required){
+            bytes_required = size;
+        }
+        
+        Arena_Block* new_block = 0;
+        
+        new_block = (Arena_Block*)malloc(sizeof(Arena_Block) + bytes_required);
+        assert(new_block);
+        new_block->memory = (u8*)new_block + sizeof(Arena_Block);
+        new_block->size = bytes_required;
+        new_block->next = nullptr;
+        new_block->used = 0;
+        
+        if(arena->active){
+            arena->active->next = new_block;
+            arena->active = new_block;
+        }else{
+            arena->first = new_block;
+            arena->active = new_block;
+        }
+    }
+    
+    void* memory = arena->active->memory + arena->active->used;
+    arena->active->used += size;
+    
+    return memory;
+}
+
+internal Arena
+make_arena(u64 size, void* backing){
+    Arena result;
+    result.first = (Arena_Block*)backing;
+    result.first->memory = (u8*)backing + sizeof(Arena_Block);
+    result.first->size = size - sizeof(Arena_Block);
+    result.first->next = nullptr;
+    result.first->used = 0;
+    result.active = result.first;
+    return result;
+}
+
+internal void
+reset_arena(Arena* arena){
+    
+}
+
+internal Arena
+subdivide_arena(Arena* arena, u64 size){
+    Arena result = {};
+    result.first = (Arena_Block*)arena_allocate(arena, size + sizeof(Arena_Block));
+    result.first->size = size + sizeof(Arena_Block);
+    result.first->memory = (u8*)result.first + sizeof(Arena_Block);
+    result.first->next = nullptr;
+    result.first->used = 0;
+    result.active = result.first;
+    return result;
+}
 
 struct Pool_Node {
     Pool_Node* next;
@@ -270,19 +302,6 @@ struct Pool_Block {
     u64 size;
     u64 used;
     Pool_Block* next;
-    //Pool_Node* free_head;
-    
-    /*
-        void clear(u64 chunk_size){
-            u64 number_of_chunks = size/chunk_size;
-            for(int i = 0; i < number_of_chunks; i++){
-                void* pointer = &memory[i * chunk_size];
-                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
-                node->next = free_head;
-                free_head = node;
-            }
-        }
-    */
 };
 
 struct Pool {
@@ -290,7 +309,7 @@ struct Pool {
     Pool_Block* active = nullptr;
     Pool_Node* free_head = nullptr;
     
-    Pool(u64 size) {chunk_size = size;}
+    Pool(u64 size=64) {chunk_size = size;}
     u64 chunk_size;
     
     void* allocate(){
@@ -338,7 +357,7 @@ struct Pool {
         bool is_valid_pointer = false;
         for(auto block = first; block; block = block->next){
             void* start = block->memory;
-            void* end = &block->memory[block->size-1];
+            void* end = &block->memory[block->size];
             if(!pointer){
                 return;
             }
@@ -356,6 +375,23 @@ struct Pool {
         free_head = node;
     }
     
+    void reset(){
+        for(auto block = first; block; block = block->next){
+            void* start = block->memory;
+            void* end = &block->memory[block->size-1];
+            
+            //active->clear(chunk_size);
+            for(int i = 0; i < active->size/chunk_size; i++){
+                void* pointer = &block->memory[i * chunk_size];
+                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+                node->next = free_head;
+                free_head = node;
+            }
+            
+        }
+        
+    }
+    
     void clear_all(){
         for(auto block = first; block; block = block->next){
             free(block);
@@ -365,3 +401,12 @@ struct Pool {
 };
 
 
+
+struct {
+    
+    u32 width;
+    u32 height;
+    
+    Arena permanent_arena;
+    Arena temporary_arena;
+} platform;

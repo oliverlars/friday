@@ -1,4 +1,14 @@
 
+// NOTE(Oliver): this is global state for the render pass
+// may not be needed, we'll see
+struct {
+    int x;
+    int y;
+    int x_offset;
+    
+    Pool node_pool;
+} friday;
+
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
@@ -94,7 +104,7 @@ global struct {
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
     //Array<Command*> commands;
-    Memory_Pool commands;
+    Pool command_pool;
     Command* head = nullptr;
     Command* tail = nullptr;
     
@@ -108,6 +118,7 @@ global struct {
     Array<f32> circle_attribs;
     Array<f32> glyph_attribs;
     
+    Arena shape_attribs;
 } renderer;
 
 internal Font
@@ -156,7 +167,7 @@ init_font(char* font_name, int font_size){
     return result;
 }
 
-#define make_command(type) (type*) new (renderer.commands.allocate(sizeof(type))) type()
+#define make_command(type) (type*) new (renderer.command_pool.allocate()) type()
 
 internal void
 insert_command(Command* next_command){
@@ -336,6 +347,9 @@ get_text_width(char* text){
 }
 internal void
 init_opengl_renderer(){
+    
+    renderer.shape_attribs = 
+        subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
     
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
@@ -819,15 +833,37 @@ process_and_draw_commands(){
     int num_circle_verts = 0;
     int num_glyph_verts = 0;
     
+    Arena* arena = &renderer.shape_attribs;
+    f32* rectangle_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
+    f32* rectangle_attribs_start = rectangle_attribs;
+    
+    f32* rectangle_outline_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
+    f32* rectangle_outline_attribs_start = rectangle_outline_attribs;
+    
+    f32* circle_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
+    f32* circle_attribs_start = circle_attribs;
+    
+    f32* glyph_attribs = (f32*)arena_allocate(arena, MAX_DRAW*2);
+    f32* glyph_attribs_start = glyph_attribs;
+    
     for(Command* command = renderer.head; command; command = command->next){
         switch(command->type){
             case COMMAND_RECTANGLE:{
                 auto rectangle = reinterpret_cast<Command_Rectangle*>(command);
-                
                 // NOTE(Oliver): there is probably a better way of doing this
                 // but we need to upload attributes per vert so we need to 
                 // duplicate them in the array
                 for(int i = 0; i < 6; i++){
+                    *rectangle_attribs++ = rectangle->x;
+                    *rectangle_attribs++ = rectangle->y;
+                    *rectangle_attribs++ = rectangle->width;
+                    *rectangle_attribs++ = rectangle->height;
+                    *rectangle_attribs++ = rectangle->corner_radius;
+                    *rectangle_attribs++ = rectangle->colour.r/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.g/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.b/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.a/255.0f;
+#if 0
                     push_rectangle_attribs(rectangle->x);
                     push_rectangle_attribs(rectangle->y);
                     push_rectangle_attribs(rectangle->width);
@@ -837,7 +873,7 @@ process_and_draw_commands(){
                     push_rectangle_attribs(rectangle->colour.g/255.0f);
                     push_rectangle_attribs(rectangle->colour.b/255.0f);
                     push_rectangle_attribs(rectangle->colour.a/255.0f);
-                    
+#endif
                 }
                 num_rectangle_verts += 6;
             }break;
@@ -846,6 +882,17 @@ process_and_draw_commands(){
                 auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(command); 
                 
                 for(int i = 0; i < 6; i++){
+                    *rectangle_outline_attribs++ = rectangle->x;
+                    *rectangle_outline_attribs++ = rectangle->y;
+                    *rectangle_outline_attribs++ = rectangle->width;
+                    *rectangle_outline_attribs++ = rectangle->height;
+                    *rectangle_outline_attribs++ = rectangle->border_size;
+                    *rectangle_outline_attribs++ = rectangle->corner_radius;
+                    *rectangle_outline_attribs++ = rectangle->colour.r/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.g/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.b/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.a/255.0f;
+#if 0
                     push_rectangle_outline_attribs(rectangle->x);
                     push_rectangle_outline_attribs(rectangle->y);
                     push_rectangle_outline_attribs(rectangle->width);
@@ -856,9 +903,8 @@ process_and_draw_commands(){
                     push_rectangle_outline_attribs(rectangle->colour.g/255.0f);
                     push_rectangle_outline_attribs(rectangle->colour.b/255.0f);
                     push_rectangle_outline_attribs(rectangle->colour.a/255.0f);
-                    
+#endif
                 }
-                
                 num_rectangle_outline_verts += 6;
             }break;
             
@@ -866,6 +912,14 @@ process_and_draw_commands(){
                 auto circle = reinterpret_cast<Command_Circle*>(command); 
                 
                 for(int i = 0; i < 6; i++){
+                    *circle_attribs++ = circle->x;
+                    *circle_attribs++ = circle->y;
+                    *circle_attribs++ = circle->radius;
+                    *circle_attribs++ = circle->colour.r/255.0f;
+                    *circle_attribs++ = circle->colour.g/255.0f;
+                    *circle_attribs++ = circle->colour.g/255.0f;
+                    *circle_attribs++ = circle->colour.a/255.0f;
+#if 0
                     push_circle_attribs(circle->x);
                     push_circle_attribs(circle->y);
                     push_circle_attribs(circle->radius);
@@ -873,15 +927,27 @@ process_and_draw_commands(){
                     push_circle_attribs(circle->colour.g/255.0f);
                     push_circle_attribs(circle->colour.b/255.0f);
                     push_circle_attribs(circle->colour.a/255.0f);
-                    
+#endif
                 }
                 num_circle_verts += 6;
             }break;
             
             case COMMAND_GLYPH: {
                 auto glyph = reinterpret_cast<Command_Glyph*>(command);
-                
                 for(int i = 0; i < 6; i++){
+                    *glyph_attribs++ = glyph->x;
+                    *glyph_attribs++ = glyph->y;
+                    *glyph_attribs++ = glyph->width;
+                    *glyph_attribs++ = glyph->height;
+                    *glyph_attribs++ = glyph->u;
+                    *glyph_attribs++ = glyph->v;
+                    *glyph_attribs++ = glyph->u_width;
+                    *glyph_attribs++ = glyph->v_height;
+                    *glyph_attribs++ = glyph->colour.r/255.0f;
+                    *glyph_attribs++ = glyph->colour.g/255.0f;
+                    *glyph_attribs++ = glyph->colour.b/255.0f;
+                    *glyph_attribs++ = glyph->colour.a/255.0f;
+#if 0
                     push_glyph_attribs(glyph->x);
                     push_glyph_attribs(glyph->y);
                     push_glyph_attribs(glyph->width);
@@ -894,19 +960,18 @@ process_and_draw_commands(){
                     push_glyph_attribs(glyph->colour.g/255.0f);
                     push_glyph_attribs(glyph->colour.b/255.0f);
                     push_glyph_attribs(glyph->colour.a/255.0f);
-                    
+#endif
                 }
                 num_glyph_verts += 6;
             }break;
         }
     }
-    
     // NOTE(Oliver): draw filled rects data
     {
         glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
         glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        renderer.rectangle_attribs.bytes_used(), 
-                        renderer.rectangle_attribs.data);
+                        MAX_DRAW, 
+                        rectangle_attribs_start);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
@@ -923,8 +988,8 @@ process_and_draw_commands(){
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_outline());
         glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        renderer.rectangle_outline_attribs.bytes_used(), 
-                        renderer.rectangle_outline_attribs.data);
+                        MAX_DRAW,
+                        rectangle_outline_attribs_start);
         
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
@@ -942,8 +1007,8 @@ process_and_draw_commands(){
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
         glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        renderer.circle_attribs.bytes_used(), 
-                        renderer.circle_attribs.data);
+                        MAX_DRAW,
+                        circle_attribs_start);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         glUseProgram(get_program_circle());
@@ -959,8 +1024,8 @@ process_and_draw_commands(){
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
         glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        renderer.glyph_attribs.bytes_used(), 
-                        renderer.glyph_attribs.data);
+                        MAX_DRAW*2,
+                        glyph_attribs_start);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         glUseProgram(get_program_glyph());
@@ -982,23 +1047,20 @@ process_and_draw_commands(){
     }
 }
 
-// NOTE(Oliver): this is global state for the render pass
-// may not be needed, we'll see
-struct {
-    int x;
-    int y;
-    int x_offset;
-} friday;
-
 
 internal void
 opengl_start_frame() {
     OPTICK_EVENT();
-    renderer.commands.reset();
+#if 0
+    renderer.command_pool.clear_all();
     renderer.rectangle_attribs.reset();
     renderer.rectangle_outline_attribs.reset();
     renderer.circle_attribs.reset();
     renderer.glyph_attribs.reset();
+#endif
+    //renderer.shape_attribs.clear();
+    //platform.temporary_arena.reset();
+    renderer.shape_attribs.reset();
     renderer.head = nullptr;
     renderer.tail = nullptr;
     

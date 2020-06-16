@@ -606,7 +606,7 @@ init_shaders(){
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4(dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy *= (vec4(1.2*dim/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
@@ -630,7 +630,7 @@ init_shaders(){
             
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2);\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
@@ -705,7 +705,7 @@ init_shaders(){
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2, out_border);\n"
             "if(dist <= 0.0001) { dist = 0.0001; }\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
@@ -1074,7 +1074,7 @@ draw_string(char* string){
 }
 
 internal void
-draw_string(String8 string, f32 colour = 0xFFFFFFFF){
+draw_string(String8 string, u32 colour = 0xFFFFFFFF){
     push_string8(friday.x+friday.x_offset, friday.y, string, colour);
     friday.x_offset += get_text_width(string);
 }

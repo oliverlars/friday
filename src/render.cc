@@ -9,6 +9,46 @@ struct {
     Pool node_pool;
 } friday;
 
+
+// NOTE(Oliver): 0xAABBGGRR 
+union Colour {
+    u32 packed;
+    struct {
+        u8 a;
+        u8 b;
+        u8 g;
+        u8 r;
+    };
+};
+
+struct Theme {
+    Colour base;
+    Colour base_margin;
+    Colour text;
+    Colour text_light;
+    Colour text_comment;
+    Colour text_function;
+    Colour text_type;
+    Colour cursor;
+    Colour error;
+};
+
+global Theme theme;
+
+internal void
+load_theme_ayu(){
+    
+    theme.base.packed = 0x0f1419ff;
+    theme.base_margin.packed = 0x0a0e12ff;
+    theme.text.packed = 0xffbfbab0;
+    theme.text_light.packed = 0xff262c33;
+    theme.text_comment.packed = 0xffc2d94d;
+    theme.text_function.packed = 0xff5ac2ff;
+    theme.text_type.packed = 0xffff29719;
+    theme.cursor.packed = 0xe08c17ff;
+    theme.error.packed = 0xffcc3333;
+}
+
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
@@ -18,7 +58,6 @@ enum Command_Type {
     COMMAND_COUNT
 };
 
-// NOTE(Oliver): Maybe a linked list for this would be better
 struct Command {
     Command_Type type;
     union {
@@ -843,11 +882,6 @@ init_shaders(){
 internal void
 process_and_draw_commands(){
     
-#define push_rectangle_attribs(attribs) renderer.rectangle_attribs.insert(attribs)
-#define push_rectangle_outline_attribs(attribs) renderer.rectangle_outline_attribs.insert(attribs)
-#define push_circle_attribs(attribs) renderer.circle_attribs.insert(attribs)
-#define push_glyph_attribs(attribs) renderer.glyph_attribs.insert(attribs)
-    
     OPTICK_EVENT();
     int num_rectangle_verts = 0;
     int num_rectangle_outline_verts = 0;
@@ -880,10 +914,10 @@ process_and_draw_commands(){
                     *rectangle_attribs++ = rectangle->width;
                     *rectangle_attribs++ = rectangle->height;
                     *rectangle_attribs++ = rectangle->corner_radius;
-                    *rectangle_attribs++ = rectangle->colour.r/255.0f;
-                    *rectangle_attribs++ = rectangle->colour.g/255.0f;
-                    *rectangle_attribs++ = rectangle->colour.b/255.0f;
                     *rectangle_attribs++ = rectangle->colour.a/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.b/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.g/255.0f;
+                    *rectangle_attribs++ = rectangle->colour.r/255.0f;
                 }
                 
                 num_rectangle_verts += 6;
@@ -899,10 +933,10 @@ process_and_draw_commands(){
                     *rectangle_outline_attribs++ = rectangle->height;
                     *rectangle_outline_attribs++ = rectangle->border_size;
                     *rectangle_outline_attribs++ = rectangle->corner_radius;
-                    *rectangle_outline_attribs++ = rectangle->colour.r/255.0f;
-                    *rectangle_outline_attribs++ = rectangle->colour.g/255.0f;
-                    *rectangle_outline_attribs++ = rectangle->colour.b/255.0f;
                     *rectangle_outline_attribs++ = rectangle->colour.a/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.b/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.g/255.0f;
+                    *rectangle_outline_attribs++ = rectangle->colour.r/255.0f;
                 }
                 num_rectangle_outline_verts += 6;
             }break;
@@ -916,7 +950,7 @@ process_and_draw_commands(){
                     *circle_attribs++ = circle->radius;
                     *circle_attribs++ = circle->colour.r/255.0f;
                     *circle_attribs++ = circle->colour.g/255.0f;
-                    *circle_attribs++ = circle->colour.g/255.0f;
+                    *circle_attribs++ = circle->colour.b/255.0f;
                     *circle_attribs++ = circle->colour.a/255.0f;
                 }
                 num_circle_verts += 6;
@@ -1047,7 +1081,10 @@ opengl_end_frame() {
     
     
     glViewport(0, 0, platform.width, platform.height);
-    glClearColor(0,0,0,0);
+    glClearColor(theme.base_margin.r/255.0f,
+                 theme.base_margin.g/255.0f,
+                 theme.base_margin.b/255.0f,
+                 1);
     glClear(GL_COLOR_BUFFER_BIT);
     
     process_and_draw_commands();
@@ -1068,8 +1105,8 @@ indent(){
 }
 
 internal void
-draw_string(char* string){
-    push_string(friday.x+friday.x_offset, friday.y, string);
+draw_string(char* string, u32 colour = 0xFFFFFFFF){
+    push_string(friday.x+friday.x_offset, friday.y, string, colour);
     friday.x_offset += get_text_width(string);
 }
 
@@ -1095,9 +1132,19 @@ draw_leaf(Node* leaf){
     f32 x = friday.x - offset;
     f32 y = friday.y - line_height/2;
     if(is_mouse_in_rect(x, y, width, height)){
-        push_rectangle_outline(x, y, width, height, 0.95, 0.4);
+        push_rectangle_outline(x, y, width, height, 0.95, 0.2, theme.cursor.packed);
     }
     draw_string(leaf->name);
+}
+
+internal void
+draw_misc(char* string){
+    draw_string(string, theme.text_light.packed);
+}
+
+internal void
+draw_misc(String8 string){
+    draw_string(string, theme.text_light.packed);
 }
 
 internal void
@@ -1117,7 +1164,7 @@ render_graph(Node* root){
                 case OP_DIVIDE: op = make_string(arena, " / ");break;
                 case OP_MULTIPLY: op = make_string(arena, " * ");break;
             }
-            draw_string(op);
+            draw_misc(op);
             
             render_graph(binary->right);
         }break;
@@ -1134,7 +1181,7 @@ render_graph(Node* root){
         case NODE_STRUCT: {
             auto _struct = &root->_struct;
             draw_string(root->name);
-            draw_string(" :: struct {");
+            draw_misc(" :: struct {");
             new_line();
             indent();
             for(Node* member = _struct->members; member; member = member->next){
@@ -1148,9 +1195,9 @@ render_graph(Node* root){
             auto decl = root->declaration.declaration;
             draw_leaf(root);
             //draw_string(root->name);
-            draw_string(" := ");
+            draw_misc(" := ");
             render_graph(decl);
-            draw_string(";");
+            draw_misc(";");
         }break;
         
         case NODE_FUNCTION: {

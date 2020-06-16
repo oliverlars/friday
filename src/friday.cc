@@ -41,7 +41,7 @@ main(int argc, char** args){
     
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    //SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0);
+    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -68,7 +68,7 @@ main(int argc, char** args){
     load_opengl();
     
     SDL_ShowWindow(global_window);
-    renderer.fonts.insert(init_font("../fonts/Inconsolata-Regular.ttf", 30));
+    renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
     init_opengl_renderer();
     init_shaders();
@@ -100,6 +100,12 @@ main(int argc, char** args){
     f32* example = (f32*)arena_allocate(&test, 50);
     *example++ = 5;
     
+    load_theme_ayu();
+    
+    assert(theme.base.r == 0x0F);
+    assert(theme.base.g == 0x14);
+    assert(theme.base.b == 0x19);
+    assert(theme.base.a == 0xFF);
     
     while(running){
         OPTICK_FRAME("MainThread");
@@ -116,9 +122,11 @@ main(int argc, char** args){
         f32 offset = 5;
         left->_int = tick;
         right->_int = tick;
+        
+        //background
         push_rectangle(offset, offset, 
                        platform.width-offset*2, platform.height-offset*2, 0.1,
-                       0x00101010);
+                       theme.base.packed);
         
         render_graph(decl);
         opengl_end_frame();

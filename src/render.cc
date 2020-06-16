@@ -9,6 +9,17 @@ struct {
     Pool node_pool;
 } friday;
 
+// NOTE(Oliver): probably should do this better
+internal inline int
+get_friday_x(){
+    return friday.x + friday.x_offset;
+}
+
+internal inline int
+get_friday_y(){
+    return friday.y;
+}
+
 
 // NOTE(Oliver): 0xAABBGGRR 
 union Colour {
@@ -40,8 +51,8 @@ load_theme_ayu(){
     
     theme.base.packed = 0x0f1419ff;
     theme.base_margin.packed = 0x0a0e12ff;
-    theme.text.packed = 0xffbfbab0;
-    theme.text_light.packed = 0xff262c33;
+    theme.text.packed = 0xFFFFFFff;
+    theme.text_light.packed = 0x262c33ff;
     theme.text_comment.packed = 0xffc2d94d;
     theme.text_function.packed = 0xff5ac2ff;
     theme.text_type.packed = 0xffff29719;
@@ -123,7 +134,7 @@ struct Font {
     stbtt_packedchar char_infos[CHAR_INFO_SIZE];
 };
 
-const int MAX_DRAW = 8192;
+const int MAX_DRAW = 8192*4;
 
 global struct {
     
@@ -373,21 +384,23 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
     y = -y;
     
     // NOTE(Oliver): '#' is used for ID purposes
-    while(string.text && *string.text && *string.text != '#'){
-        if(*string.text >= 32 && *string.text < 128){
+    for(int i = 0; i < string.length; i++){
+        char text = string[i];
+        if(text == '#'){break;}
+        //while(string.text && *string.text && *string.text != '#'){
+        if(text >= 32 && text < 128){
             stbtt_aligned_quad quad;
             stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
-                                *string.text-32, &x, &y, &quad, 1);
+                                text-32, &x, &y, &quad, 1);
             push_glyph(quad, colour);
         }
-        string.text++;
     }
 }
 
 internal f32
 get_text_width(char* text){
     f32 result = 0;
-    while(*text){
+    while(text && *text){
         if(*text == '#') break;
         s32 advance_x;
         s32 left_side_bearing;
@@ -412,13 +425,12 @@ get_text_width(String8 string){
         s32 advance_x;
         s32 left_side_bearing;
         stbtt_GetCodepointHMetrics(&renderer.fonts[0].info, text, &advance_x, &left_side_bearing);
-        int x0, x1, y0, y1;;
+        int x0, x1, y0, y1;
         stbtt_GetCodepointBitmapBox(&renderer.fonts[0].info, text, renderer.fonts[0].scale, 
                                     renderer.fonts[0].scale,
                                     &x0, &y0, &x1, &y1);
         result += advance_x;
         result += x1 - x0;
-        text++;
     }
     return result*renderer.fonts[0].scale;
 }
@@ -948,10 +960,10 @@ process_and_draw_commands(){
                     *circle_attribs++ = circle->x;
                     *circle_attribs++ = circle->y;
                     *circle_attribs++ = circle->radius;
-                    *circle_attribs++ = circle->colour.r/255.0f;
-                    *circle_attribs++ = circle->colour.g/255.0f;
-                    *circle_attribs++ = circle->colour.b/255.0f;
                     *circle_attribs++ = circle->colour.a/255.0f;
+                    *circle_attribs++ = circle->colour.b/255.0f;
+                    *circle_attribs++ = circle->colour.g/255.0f;
+                    *circle_attribs++ = circle->colour.r/255.0f;
                 }
                 num_circle_verts += 6;
             }break;
@@ -967,10 +979,10 @@ process_and_draw_commands(){
                     *glyph_attribs++ = glyph->v;
                     *glyph_attribs++ = glyph->u_width;
                     *glyph_attribs++ = glyph->v_height;
-                    *glyph_attribs++ = glyph->colour.r/255.0f;
-                    *glyph_attribs++ = glyph->colour.g/255.0f;
-                    *glyph_attribs++ = glyph->colour.b/255.0f;
                     *glyph_attribs++ = glyph->colour.a/255.0f;
+                    *glyph_attribs++ = glyph->colour.b/255.0f;
+                    *glyph_attribs++ = glyph->colour.g/255.0f;
+                    *glyph_attribs++ = glyph->colour.r/255.0f;
                     
                 }
                 num_glyph_verts += 6;
@@ -1035,7 +1047,7 @@ process_and_draw_commands(){
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
         glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        MAX_DRAW*2,
+                        MAX_DRAW*10,
                         glyph_attribs_start);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
@@ -1106,13 +1118,13 @@ indent(){
 
 internal void
 draw_string(char* string, u32 colour = 0xFFFFFFFF){
-    push_string(friday.x+friday.x_offset, friday.y, string, colour);
+    push_string(get_friday_x(),get_friday_y(), string, colour);
     friday.x_offset += get_text_width(string);
 }
 
 internal void
 draw_string(String8 string, u32 colour = 0xFFFFFFFF){
-    push_string8(friday.x+friday.x_offset, friday.y, string, colour);
+    push_string8(get_friday_x(), get_friday_y(), string, colour);
     friday.x_offset += get_text_width(string);
 }
 
@@ -1128,13 +1140,19 @@ draw_leaf(Node* leaf){
     f32 offset = 5.0f;
     width += 2*offset;
     f32 line_height = renderer.fonts[0].line_height;
-    f32 height = line_height*1.5;
-    f32 x = friday.x - offset;
-    f32 y = friday.y - line_height/2;
+    f32 height = line_height;
+    f32 x = get_friday_x() - offset;
+    f32 y = get_friday_y() - line_height*0.25;
+    
+    u32 text_colour = theme.text.packed;
+    
     if(is_mouse_in_rect(x, y, width, height)){
-        push_rectangle_outline(x, y, width, height, 0.95, 0.2, theme.cursor.packed);
+        push_rectangle(x, y, width, height, 0.2, theme.cursor.packed);
+        text_colour = theme.base.packed;
     }
-    draw_string(leaf->name);
+    
+    draw_string(leaf->name, text_colour);
+    
 }
 
 internal void
@@ -1180,7 +1198,7 @@ render_graph(Node* root){
         
         case NODE_STRUCT: {
             auto _struct = &root->_struct;
-            draw_string(root->name);
+            draw_leaf(root);
             draw_misc(" :: struct {");
             new_line();
             indent();
@@ -1188,16 +1206,41 @@ render_graph(Node* root){
                 render_graph(member);
             }
             new_line();
-            draw_string("}");
+            draw_misc("}");
+            new_line();
         }break;
         
         case NODE_DECLARATION: {
             auto decl = root->declaration.declaration;
             draw_leaf(root);
             //draw_string(root->name);
-            draw_misc(" := ");
+            draw_misc(" :");
+            static f32 width = 0.0f;
+            if(is_mouse_in_rect(friday.x + friday.x_offset-20, friday.y-20, 40, 40)){
+                width = exp(1.1f + width);
+                width = width > 20 ? 20 : width;
+                if(platform.mouse_left_clicked && !root->declaration.type_usage){
+                    Pool* pool = &friday.node_pool;
+                    root->declaration.type_usage = make_node(pool, NODE_TYPE_USAGE);
+                    root->declaration.type_usage->name = 
+                        make_string(&platform.permanent_arena, "integer");
+                }
+            }else {
+                width = exp(-width);
+                width = width < 0 ? 0 : width;
+            }
+            render_graph(root->declaration.type_usage);
+            friday.x += width;
+            draw_misc("= ");
             render_graph(decl);
             draw_misc(";");
+        }break;
+        
+        case NODE_SCOPE: {
+            auto scope = &root->scope;
+            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
+                render_graph(stmt);
+            }
         }break;
         
         case NODE_FUNCTION: {
@@ -1205,6 +1248,10 @@ render_graph(Node* root){
         
         case NODE_CALL: {
             
+        }break;
+        
+        case NODE_TYPE_USAGE: {
+            draw_leaf(root);
         }break;
     }
 }

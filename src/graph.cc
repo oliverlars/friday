@@ -75,7 +75,7 @@ struct Node {
         
         struct {
             Node* declaration;
-            
+            Node* type_usage;
         } declaration;
         
         struct {

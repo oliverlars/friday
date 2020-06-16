@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <string.h>
 #include <memory.h>
+#include <math.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -257,6 +258,7 @@ make_string(Arena* arena, char* string){
         pointer++;
     }
     u64 length = pointer - string;
+    
     char* text = (char*)arena_allocate(arena, length);
     for(int i = 0; i < length; i++){
         text[i] = string[i];
@@ -395,7 +397,7 @@ pool_allocate(Pool* pool){
         
         Pool_Block* new_block = 0;
         
-        new_block = (Pool_Block*)malloc(sizeof(Pool_Block) + bytes_required);
+        new_block = (Pool_Block*)calloc(1, sizeof(Pool_Block) + bytes_required);
         assert(new_block);
         new_block->memory = (u8*)new_block + sizeof(Pool_Block);
         new_block->size = bytes_required;
@@ -433,4 +435,8 @@ struct {
     Arena temporary_arena;
     
     f32 mouse_x, mouse_y;
-} platform;
+    bool mouse_left_clicked;
+    bool mouse_middle_clicked;
+    bool mouse_right_clicked;
+    
+}platform;

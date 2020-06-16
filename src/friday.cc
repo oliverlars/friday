@@ -93,6 +93,14 @@ main(int argc, char** args){
     decl->declaration.declaration = binary;
     decl->name = make_string(&platform.permanent_arena, "potato");
     
+    Node* _struct = make_node(pool, NODE_STRUCT);
+    _struct->name = make_string(&platform.permanent_arena, "mat4x4");
+    _struct->_struct.members = nullptr;
+    
+    Node* scope = make_node(pool, NODE_SCOPE);
+    scope->scope.statements = _struct;
+    scope->scope.statements->next = decl;
+    
     friday.x = 640;
     friday.y = 360;
     
@@ -115,9 +123,10 @@ main(int argc, char** args){
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         
         int x, y;
-        SDL_GetMouseState(&x, &y);
+        u32 mouse_state = SDL_GetMouseState(&x, &y);
         platform.mouse_x = x;
         platform.mouse_y = platform.height - y;
+        platform.mouse_left_clicked = mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT);
         
         f32 offset = 5;
         left->_int = tick;
@@ -128,7 +137,7 @@ main(int argc, char** args){
                        platform.width-offset*2, platform.height-offset*2, 0.1,
                        theme.base.packed);
         
-        render_graph(decl);
+        render_graph(scope);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

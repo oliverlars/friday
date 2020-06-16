@@ -110,7 +110,8 @@ main(int argc, char** args){
         
         int x, y;
         SDL_GetMouseState(&x, &y);
-        
+        platform.mouse_x = x;
+        platform.mouse_y = platform.height - y;
         
         f32 offset = 5;
         left->_int = tick;

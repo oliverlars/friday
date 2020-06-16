@@ -75,6 +75,7 @@ struct Node {
         
         struct {
             Node* declaration;
+            
         } declaration;
         
         struct {

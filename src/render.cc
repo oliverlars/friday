@@ -669,7 +669,7 @@ init_shaders(){
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4(dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy *= (vec4(1.2*dim/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
@@ -692,17 +692,18 @@ init_shaders(){
             "uniform vec2 in_position;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
-            "float inner = length(max(abs(p)-b*border+r*border,0.0))-r*border;\n"
+            "float inner = length(max(abs(p)-b*border+r,0.0))-r;\n"
             "float outer = length(max(abs(p)-b+r,0.0))-r;\n"
             "return max(-inner, outer);\n"
             "}\n"
+            
             "float box_dist(vec2 p, vec2 size, float radius, float border){\n"
             "size -= vec2(radius);\n"
             "vec2 d = abs(p) - size;\n"
             "return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;\n"
             "}\n"
             "void main(){\n"
-            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, 5 + 0*out_radius*min(out_dim.x, out_dim.y)/2, 0.3);\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2, out_border);\n"
             "if(dist <= 0.0001) { dist = 0.0001; }\n"
             "float alpha = mix(1, 0,  smoothstep(0, 2, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
@@ -1073,9 +1074,30 @@ draw_string(char* string){
 }
 
 internal void
-draw_string(String8 string){
-    push_string8(friday.x+friday.x_offset, friday.y, string);
+draw_string(String8 string, f32 colour = 0xFFFFFFFF){
+    push_string8(friday.x+friday.x_offset, friday.y, string, colour);
     friday.x_offset += get_text_width(string);
+}
+
+internal bool
+is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
+    return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
+        platform.mouse_y <= (y + height) && platform.mouse_y >= y;
+}
+
+internal void
+draw_leaf(Node* leaf){
+    f32 width = get_text_width(leaf->name);
+    f32 offset = 5.0f;
+    width += 2*offset;
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 height = line_height*1.5;
+    f32 x = friday.x - offset;
+    f32 y = friday.y - line_height/2;
+    if(is_mouse_in_rect(x, y, width, height)){
+        push_rectangle_outline(x, y, width, height, 0.95, 0.4);
+    }
+    draw_string(leaf->name);
 }
 
 internal void
@@ -1101,10 +1123,12 @@ render_graph(Node* root){
         }break;
         
         case NODE_LITERAL:{
+            Arena* arena = &renderer.frame_arena;
+            
             auto literal = &root->literal;
-            char buffer[256];
-            snprintf(buffer, 256, "%d", literal->_int);
-            draw_string(buffer);
+            char* string = (char*)arena_allocate(arena, 256);
+            snprintf(string, 256, "%d", literal->_int);
+            draw_string(string);
         }break;
         
         case NODE_STRUCT: {
@@ -1122,10 +1146,18 @@ render_graph(Node* root){
         
         case NODE_DECLARATION: {
             auto decl = root->declaration.declaration;
-            draw_string(root->name);
+            draw_leaf(root);
+            //draw_string(root->name);
             draw_string(" := ");
             render_graph(decl);
             draw_string(";");
+        }break;
+        
+        case NODE_FUNCTION: {
+        }break;
+        
+        case NODE_CALL: {
+            
         }break;
     }
 }

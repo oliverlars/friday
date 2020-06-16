@@ -266,6 +266,7 @@ make_string(Arena* arena, char* string){
     result.length = length;
     return result;
 }
+
 internal Arena
 make_arena(u64 size, void* backing){
     Arena result;
@@ -430,4 +431,6 @@ struct {
     
     Arena permanent_arena;
     Arena temporary_arena;
+    
+    f32 mouse_x, mouse_y;
 } platform;

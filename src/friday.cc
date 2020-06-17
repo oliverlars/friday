@@ -148,6 +148,9 @@ main(int argc, char** args){
         // fixed it
         // fuck you opengl
         platform.has_text_input = 0;
+        platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
+                                                    256);
+        char* text_input = platform.text_input;
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = false;
@@ -167,7 +170,7 @@ main(int argc, char** args){
             }
             if(event.type == SDL_TEXTINPUT){
                 platform.has_text_input = 1;
-                platform.text_input = event.text.text;
+                *text_input++ = *event.text.text;
             }
         }
         

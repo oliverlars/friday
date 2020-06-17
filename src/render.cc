@@ -427,7 +427,7 @@ get_text_width(String8 string){
                                     renderer.fonts[0].scale,
                                     &x0, &y0, &x1, &y1);
         result += advance_x;
-        result += x1 - x0;
+        //result += x1 - x0;
     }
     return result*renderer.fonts[0].scale;
 }
@@ -1141,7 +1141,7 @@ internal void
 edit_node(Node* node){
     if(platform.has_text_input){
         insert_in_string(&node->name, platform.text_input, friday.cursor_index);
-        friday.cursor_index++;
+        friday.cursor_index += strlen(platform.text_input);
     }
     
     if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
@@ -1186,7 +1186,7 @@ draw_leaf(Node* leaf){
         String8 cursor_string = leaf->name;
         cursor_string.length = friday.cursor_index;
         f32 cursor_pos = get_text_width(cursor_string);
-        push_rectangle(x+cursor_pos, y, 5, height, 0.2, theme.cursor.packed);
+        push_rectangle(3+x+cursor_pos, y, 3, height, 0.2, theme.cursor.packed);
         edit_node(leaf);
     }
     

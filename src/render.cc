@@ -9,6 +9,8 @@ struct {
     int cursor_index;
     Node* active_node;
     
+    Node* test_node;
+    
     Pool node_pool;
 } friday;
 
@@ -1142,6 +1144,7 @@ edit_node(Node* node){
     if(platform.has_text_input){
         insert_in_string(&node->name, platform.text_input, friday.cursor_index);
         friday.cursor_index += strlen(platform.text_input);
+        platform.has_text_input = 0;
     }
     
     if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
@@ -1206,7 +1209,11 @@ draw_misc(String8 string){
 
 internal bool
 draw_insertable(){
-    return 1;
+    f32 x = get_friday_x();
+    f32 y = get_friday_y();
+    f32 width = 100.0f; // TODO(Oliver): make this not magic
+    f32 height = renderer.fonts[0].line_height;
+    return is_mouse_in_rect(x, y, width, height);
 }
 
 internal void
@@ -1241,13 +1248,32 @@ render_graph(Node* root){
         }break;
         
         case NODE_STRUCT: {
+            friday.test_node = root;
             auto _struct = &root->_struct;
             draw_leaf(root);
             draw_misc(" :: struct {");
             new_line();
-            indent();
             for(Node* member = _struct->members; member; member = member->next){
+                indent();
                 render_graph(member);
+                new_line();
+            }
+            if(draw_insertable() && platform.mouse_left_double_clicked){
+                Node* member = _struct->members;
+                Pool* pool = &friday.node_pool;
+                if(member){
+                    for(member = _struct->members; member->next; member = member->next){}
+                    member->next = make_node(pool, NODE_DECLARATION);
+                    member->next->name = make_string(&platform.permanent_arena,
+                                                     "new");
+                    
+                }else{
+                    _struct->members = make_node(pool, NODE_DECLARATION);
+                    _struct->members->name = make_string(&platform.permanent_arena,
+                                                         "new");
+                }
+                
+                platform.mouse_left_double_clicked = 0;
             }
             new_line();
             draw_misc("}");
@@ -1267,15 +1293,14 @@ render_graph(Node* root){
                 if(platform.mouse_left_clicked && !root->declaration.type_usage){
                     Pool* pool = &friday.node_pool;
                     root->declaration.type_usage = make_node(pool, NODE_TYPE_USAGE);
-                    root->declaration.type_usage->name = 
-                        make_string(&platform.permanent_arena, "integer");
+                    root->declaration.type_usage->type_usage.type_reference = friday.test_node;
                 }
             }else {
                 width = exp(-width);
                 width = width < 0 ? 0 : width;
             }
             render_graph(root->declaration.type_usage);
-            friday.x += width;
+            //friday.x += width;
             draw_misc("= ");
             render_graph(decl);
             draw_misc(";");
@@ -1296,8 +1321,9 @@ render_graph(Node* root){
         }break;
         
         case NODE_TYPE_USAGE: {
+            auto type_usage = &root->type_usage;
             space();
-            draw_leaf(root);
+            draw_leaf(type_usage->type_reference);
             space();
         }break;
     }

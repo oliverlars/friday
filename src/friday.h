@@ -255,10 +255,9 @@ struct String8 {
 
 internal void
 insert_in_string(String8* string, char* insertable, u64 index){
-    if(string->length >= string->capacity) return;
     if(!insertable) return;
     int length = strlen(insertable);
-    for(int i = string->capacity; i > index; i--){
+    for(int i = string->capacity-1; i > index; i--){
         string->text[i] = string->text[i-length];
     }
     for(int i = index; i < index+length; i++){

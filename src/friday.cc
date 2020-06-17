@@ -97,6 +97,10 @@ main(int argc, char** args){
     _struct->name = make_string(&platform.permanent_arena, "mat4x4");
     _struct->_struct.members = nullptr;
     
+    if(_struct->name.text - decl->name.text == 256){
+        OutputDebugStringA("test");
+    }
+    
     Node* scope = make_node(pool, NODE_SCOPE);
     scope->scope.statements = _struct;
     scope->scope.statements->next = decl;

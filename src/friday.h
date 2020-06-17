@@ -244,14 +244,37 @@ struct String8 {
     char* text;
     u64 length;
     
+    // NOTE(Oliver): we may want to append to strings
+    u64 capacity;
+    
     char operator[](u64 index){
         assert(index >= 0 && index < length);
         return text[index];
     }
 };
 
+internal void
+insert_in_string(String8* string, char* insertable, u64 index){
+    if(string->length >= string->capacity) return;
+    if(!insertable) return;
+    for(int i = string->capacity; i > index; i--){
+        string->text[i] = string->text[i-1];
+    }
+    string->text[index] = *insertable;
+    string->length++;
+}
+
+internal void
+pop_from_string(String8* string, u64 index){
+    if(string->length == 0) return;
+    for(int i = index; i < string->length; i++){
+        string->text[i-1] = string->text[i];
+    }
+    string->length--;
+}
+
 internal String8
-make_string(Arena* arena, char* string){
+make_string(Arena* arena, char* string, u64 capacity = 256){
     
     char* pointer = string;
     while(pointer && *pointer){
@@ -259,13 +282,14 @@ make_string(Arena* arena, char* string){
     }
     u64 length = pointer - string;
     
-    char* text = (char*)arena_allocate(arena, length);
+    char* text = (char*)arena_allocate(arena, capacity);
     for(int i = 0; i < length; i++){
         text[i] = string[i];
     }
     String8 result;
     result.text = text;
     result.length = length;
+    result.capacity = capacity;
     return result;
 }
 
@@ -438,5 +462,11 @@ struct {
     bool mouse_left_clicked;
     bool mouse_middle_clicked;
     bool mouse_right_clicked;
+    bool mouse_left_double_clicked;
+    
+    bool keys_pressed[4096];
+    
+    bool has_text_input;
+    char* text_input;
     
 }platform;

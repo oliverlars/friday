@@ -6,6 +6,9 @@ struct {
     int y;
     int x_offset;
     
+    int cursor_index;
+    Node* active_node;
+    
     Pool node_pool;
 } friday;
 
@@ -158,15 +161,9 @@ global struct {
     Command* head = nullptr;
     Command* tail = nullptr;
     
-    // TODO(Oliver): potential opportunities
-    // to make these arenas when i understand
-    // them better
+    // TODO(Oliver): remove last array and 
+    // move to arena
     Array<Font> fonts;
-    
-    Array<f32> rectangle_attribs;
-    Array<f32> rectangle_outline_attribs;
-    Array<f32> circle_attribs;
-    Array<f32> glyph_attribs;
     
     Arena shape_attribs;
     Arena frame_arena;
@@ -1117,6 +1114,11 @@ indent(){
 }
 
 internal void
+space() {
+    friday.x_offset += 10;
+}
+
+internal void
 draw_string(char* string, u32 colour = 0xFFFFFFFF){
     push_string(get_friday_x(),get_friday_y(), string, colour);
     friday.x_offset += get_text_width(string);
@@ -1134,11 +1136,35 @@ is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
         platform.mouse_y <= (y + height) && platform.mouse_y >= y;
 }
 
+
+internal void
+edit_node(Node* node){
+    if(platform.has_text_input){
+        insert_in_string(&node->name, platform.text_input, friday.cursor_index);
+        friday.cursor_index++;
+    }
+    
+    if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
+        friday.cursor_index--;
+        platform.keys_pressed[SDL_SCANCODE_LEFT] = 0;
+    }
+    
+    if(platform.keys_pressed[SDL_SCANCODE_RIGHT]){
+        friday.cursor_index++;
+        platform.keys_pressed[SDL_SCANCODE_RIGHT] = 0;
+    }
+    if(platform.keys_pressed[SDL_SCANCODE_BACKSPACE]){
+        platform.keys_pressed[SDL_SCANCODE_BACKSPACE] = 0;
+        pop_from_string(&node->name, friday.cursor_index);
+        friday.cursor_index--;
+    }
+}
+
 internal void
 draw_leaf(Node* leaf){
-    f32 width = get_text_width(leaf->name);
+    f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
-    width += 2*offset;
+    f32 width = text_width+ 2*offset;
     f32 line_height = renderer.fonts[0].line_height;
     f32 height = line_height;
     f32 x = get_friday_x() - offset;
@@ -1149,6 +1175,19 @@ draw_leaf(Node* leaf){
     if(is_mouse_in_rect(x, y, width, height)){
         push_rectangle(x, y, width, height, 0.2, theme.cursor.packed);
         text_colour = theme.base.packed;
+        if(platform.mouse_left_double_clicked){
+            friday.active_node = leaf;
+            platform.mouse_left_double_clicked = 0;
+            friday.cursor_index = leaf->name.length;
+        }
+    }
+    
+    if(friday.active_node == leaf){
+        String8 cursor_string = leaf->name;
+        cursor_string.length = friday.cursor_index;
+        f32 cursor_pos = get_text_width(cursor_string);
+        push_rectangle(x+cursor_pos, y, 5, height, 0.2, theme.cursor.packed);
+        edit_node(leaf);
     }
     
     draw_string(leaf->name, text_colour);
@@ -1163,6 +1202,11 @@ draw_misc(char* string){
 internal void
 draw_misc(String8 string){
     draw_string(string, theme.text_light.packed);
+}
+
+internal bool
+draw_insertable(){
+    return 1;
 }
 
 internal void
@@ -1208,6 +1252,7 @@ render_graph(Node* root){
             new_line();
             draw_misc("}");
             new_line();
+            new_line();
         }break;
         
         case NODE_DECLARATION: {
@@ -1251,7 +1296,9 @@ render_graph(Node* root){
         }break;
         
         case NODE_TYPE_USAGE: {
+            space();
             draw_leaf(root);
+            space();
         }break;
     }
 }

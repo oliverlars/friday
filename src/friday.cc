@@ -114,7 +114,7 @@ main(int argc, char** args){
     assert(theme.base.g == 0x14);
     assert(theme.base.b == 0x19);
     assert(theme.base.a == 0xFF);
-    
+    SDL_StartTextInput();
     while(running){
         OPTICK_FRAME("MainThread");
         
@@ -147,9 +147,27 @@ main(int argc, char** args){
         // in the nvidia control panel is what
         // fixed it
         // fuck you opengl
+        platform.has_text_input = 0;
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = false;
+            }
+            if(event.type == SDL_MOUSEBUTTONDOWN){
+                if(event.button.button == SDL_BUTTON_LEFT){
+                    if(event.button.clicks == 1){
+                        platform.mouse_left_clicked = 1;
+                    }else {
+                        platform.mouse_left_double_clicked = 1;
+                    }
+                }
+            }
+            if(event.type == SDL_KEYDOWN){
+                SDL_Keycode key = event.key.keysym.sym;
+                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
+            }
+            if(event.type == SDL_TEXTINPUT){
+                platform.has_text_input = 1;
+                platform.text_input = event.text.text;
             }
         }
         

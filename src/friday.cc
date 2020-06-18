@@ -151,9 +151,11 @@ main(int argc, char** args){
         // in the nvidia control panel is what
         // fixed it
         // fuck you opengl
+        platform.mouse_move = 1;
         platform.has_text_input = 0;
         platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
                                                     256);
+        
         char* text_input = platform.text_input;
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -175,6 +177,9 @@ main(int argc, char** args){
             if(event.type == SDL_TEXTINPUT){
                 platform.has_text_input = 1;
                 *text_input++ = *event.text.text;
+            }
+            if(event.type == SDL_MOUSEMOTION){
+                platform.mouse_move = 1;
             }
         }
         

@@ -466,9 +466,11 @@ struct {
     bool mouse_right_clicked;
     bool mouse_left_double_clicked;
     
+    bool mouse_move;
+    
     bool keys_pressed[4096];
     
     bool has_text_input;
     char* text_input;
     
-}platform;
+} platform;

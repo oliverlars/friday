@@ -139,7 +139,7 @@ struct Font {
     stbtt_packedchar char_infos[CHAR_INFO_SIZE];
 };
 
-const int MAX_DRAW = 8192*4;
+const int MAX_DRAW = 8192;
 
 global struct {
     
@@ -894,46 +894,60 @@ internal void
 process_and_draw_commands(){
     
     OPTICK_EVENT();
-    int num_rectangle_verts = 0;
-    int num_rectangle_outline_verts = 0;
-    int num_circle_verts = 0;
-    int num_glyph_verts = 0;
     
-    Arena* arena = &renderer.shape_attribs;
-    f32* rectangle_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
-    f32* rectangle_attribs_start = rectangle_attribs;
+    f32* rectangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE);
+    f32* glyphs = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_GLYPH);
     
-    f32* rectangle_outline_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
-    f32* rectangle_outline_attribs_start = rectangle_outline_attribs;
     
-    f32* circle_attribs = (f32*)arena_allocate(arena, MAX_DRAW);
-    f32* circle_attribs_start = circle_attribs;
-    
-    f32* glyph_attribs = (f32*)arena_allocate(arena, MAX_DRAW*2);
-    f32* glyph_attribs_start = glyph_attribs;
+    // TODO(Oliver): batch these in chunks to preserve draw order!
     
     for(Command* command = renderer.head; command; command = command->next){
+        Command* previous_command = command;
+        
         switch(command->type){
             case COMMAND_RECTANGLE:{
-                auto rectangle = reinterpret_cast<Command_Rectangle*>(command);
                 // NOTE(Oliver): there is probably a better way of doing this
                 // but we need to upload attributes per vert so we need to 
                 // duplicate them in the array
-                for(int i = 0; i < 6; i++){
-                    *rectangle_attribs++ = rectangle->x;
-                    *rectangle_attribs++ = rectangle->y;
-                    *rectangle_attribs++ = rectangle->width;
-                    *rectangle_attribs++ = rectangle->height;
-                    *rectangle_attribs++ = rectangle->corner_radius;
-                    *rectangle_attribs++ = rectangle->colour.a/255.0f;
-                    *rectangle_attribs++ = rectangle->colour.b/255.0f;
-                    *rectangle_attribs++ = rectangle->colour.g/255.0f;
-                    *rectangle_attribs++ = rectangle->colour.r/255.0f;
+                int num_verts = 0;
+                f32* attribs = rectangles;
+                for(Command* _command = command; _command && _command->type == previous_command->type; 
+                    _command = _command->next){
+                    auto rectangle = reinterpret_cast<Command_Rectangle*>(_command);
+                    for(int i = 0; i < 6; i++){
+                        *attribs++ = rectangle->x;
+                        *attribs++ = rectangle->y;
+                        *attribs++ = rectangle->width;
+                        *attribs++ = rectangle->height;
+                        *attribs++ = rectangle->corner_radius;
+                        *attribs++ = rectangle->colour.a/255.0f;
+                        *attribs++ = rectangle->colour.b/255.0f;
+                        *attribs++ = rectangle->colour.g/255.0f;
+                        *attribs++ = rectangle->colour.r/255.0f;
+                    }
+                    num_verts += 6;
+                    previous_command = command;
+                }
+                // NOTE(Oliver): draw filled rects data
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_RECTANGLE,
+                                    rectangles);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
+                    
+                    float resolution[2] = {platform.width, platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
+                    
+                    glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
                 }
                 
-                num_rectangle_verts += 6;
             }break;
-            
+#if 0
             case COMMAND_RECTANGLE_OUTLINE:{
                 auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(command); 
                 
@@ -966,46 +980,63 @@ process_and_draw_commands(){
                 }
                 num_circle_verts += 6;
             }break;
-            
+#endif
             case COMMAND_GLYPH: {
-                auto glyph = reinterpret_cast<Command_Glyph*>(command);
-                for(int i = 0; i < 6; i++){
-                    *glyph_attribs++ = glyph->x;
-                    *glyph_attribs++ = glyph->y;
-                    *glyph_attribs++ = glyph->width;
-                    *glyph_attribs++ = glyph->height;
-                    *glyph_attribs++ = glyph->u;
-                    *glyph_attribs++ = glyph->v;
-                    *glyph_attribs++ = glyph->u_width;
-                    *glyph_attribs++ = glyph->v_height;
-                    *glyph_attribs++ = glyph->colour.a/255.0f;
-                    *glyph_attribs++ = glyph->colour.b/255.0f;
-                    *glyph_attribs++ = glyph->colour.g/255.0f;
-                    *glyph_attribs++ = glyph->colour.r/255.0f;
+                f32* attribs = glyphs;
+                int num_verts = 0;
+                for(Command* _command = command; _command->next && 
+                    _command->type == previous_command->type ? 
+                    (previous_command = _command) : 0; 
+                    _command = _command->next){
+                    auto glyph = reinterpret_cast<Command_Glyph*>(_command);
+                    for(int i = 0; i < 6; i++){
+                        *attribs++ = glyph->x;
+                        *attribs++ = glyph->y;
+                        *attribs++ = glyph->width;
+                        *attribs++ = glyph->height;
+                        *attribs++ = glyph->u;
+                        *attribs++ = glyph->v;
+                        *attribs++ = glyph->u_width;
+                        *attribs++ = glyph->v_height;
+                        *attribs++ = glyph->colour.a/255.0f;
+                        *attribs++ = glyph->colour.b/255.0f;
+                        *attribs++ = glyph->colour.g/255.0f;
+                        *attribs++ = glyph->colour.r/255.0f;
+                        
+                    }
+                    num_verts += 6;
                     
                 }
-                num_glyph_verts += 6;
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_GLYPH,
+                                    glyphs);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(get_program_glyph());
+                    
+                    float resolution[2] = {platform.width, platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
+                    
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, renderer.texture);
+                    
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                    
+                    glBindVertexArray(get_vao_glyph());
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
+                }
             }break;
         }
+        command = previous_command;
+        
     }
-    // NOTE(Oliver): draw filled rects data
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE]);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        MAX_DRAW, 
-                        rectangle_attribs_start);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        
-        glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
-        
-        float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
-        
-        glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
-        glDrawArrays(GL_TRIANGLES, 0, num_rectangle_verts);
-        glUseProgram(0);
-    }
-    
+#if 0
     // NOTE(Oliver): draw rectangle outlines
     {
         glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_outline());
@@ -1043,30 +1074,7 @@ process_and_draw_commands(){
         glUseProgram(0);
     }
     // NOTE(Oliver): draw glyph data
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        MAX_DRAW*10,
-                        glyph_attribs_start);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        
-        glUseProgram(get_program_glyph());
-        
-        float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, renderer.texture);
-        
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        
-        glBindVertexArray(get_vao_glyph());
-        glDrawArrays(GL_TRIANGLES, 0, num_glyph_verts);
-        glUseProgram(0);
-    }
+#endif
 }
 
 
@@ -1183,6 +1191,11 @@ draw_leaf(Node* leaf){
             platform.mouse_left_double_clicked = 0;
             friday.cursor_index = leaf->name.length;
         }
+        
+    }
+    
+    if(platform.mouse_left_clicked && platform.mouse_move){
+        push_rectangle(platform.mouse_x, platform.mouse_y-100, 100, 100, 0.2);
     }
     
     if(friday.active_node == leaf){

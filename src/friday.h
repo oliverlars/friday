@@ -467,6 +467,8 @@ struct {
     bool mouse_left_double_clicked;
     
     bool mouse_move;
+    f32 mouse_drag_x;
+    f32 mouse_drag_y;
     
     bool keys_pressed[4096];
     

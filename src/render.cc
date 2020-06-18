@@ -12,6 +12,8 @@ struct {
     Node* test_node;
     
     Pool node_pool;
+    
+    bool create_node_menu;
 } friday;
 
 // NOTE(Oliver): probably should do this better
@@ -742,8 +744,8 @@ init_shaders(){
             "uniform vec2 in_position;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
-            "float inner = length(max(abs(p)-b*border+r,0.0))-r;\n"
-            "float outer = length(max(abs(p)-b+r,0.0))-r;\n"
+            "float inner = length(max(abs(p)-(b-min(b.y,b.x)*border),0.0))-r;\n"
+            "float outer = length(max(abs(p)-b,0.0))-r;\n"
             "return max(-inner, outer);\n"
             "}\n"
             
@@ -896,6 +898,8 @@ process_and_draw_commands(){
     OPTICK_EVENT();
     
     f32* rectangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE);
+    f32* rectangle_outlines = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
+    
     f32* glyphs = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_GLYPH);
     
     
@@ -947,25 +951,48 @@ process_and_draw_commands(){
                 }
                 
             }break;
-#if 0
-            case COMMAND_RECTANGLE_OUTLINE:{
-                auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(command); 
-                
-                for(int i = 0; i < 6; i++){
-                    *rectangle_outline_attribs++ = rectangle->x;
-                    *rectangle_outline_attribs++ = rectangle->y;
-                    *rectangle_outline_attribs++ = rectangle->width;
-                    *rectangle_outline_attribs++ = rectangle->height;
-                    *rectangle_outline_attribs++ = rectangle->border_size;
-                    *rectangle_outline_attribs++ = rectangle->corner_radius;
-                    *rectangle_outline_attribs++ = rectangle->colour.a/255.0f;
-                    *rectangle_outline_attribs++ = rectangle->colour.b/255.0f;
-                    *rectangle_outline_attribs++ = rectangle->colour.g/255.0f;
-                    *rectangle_outline_attribs++ = rectangle->colour.r/255.0f;
-                }
-                num_rectangle_outline_verts += 6;
-            }break;
             
+            case COMMAND_RECTANGLE_OUTLINE:{
+                int num_verts = 0;
+                f32* attribs = rectangle_outlines;
+                for(Command* _command = command; _command && _command->type == previous_command->type; 
+                    _command = _command->next){
+                    for(int i = 0; i < 6; i++){
+                        auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(_command); 
+                        *attribs++ = rectangle->x;
+                        *attribs++ = rectangle->y;
+                        *attribs++ = rectangle->width;
+                        *attribs++ = rectangle->height;
+                        *attribs++ = rectangle->border_size;
+                        *attribs++ = rectangle->corner_radius;
+                        *attribs++ = rectangle->colour.a/255.0f;
+                        *attribs++ = rectangle->colour.b/255.0f;
+                        *attribs++ = rectangle->colour.g/255.0f;
+                        *attribs++ = rectangle->colour.r/255.0f;
+                    }
+                    num_verts += 6;
+                }
+                
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_RECTANGLE_OUTLINE]);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE,
+                                    rectangle_outlines);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(renderer.programs[COMMAND_RECTANGLE_OUTLINE]);
+                    
+                    float resolution[2] = {platform.width, platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 
+                                 1, resolution);
+                    
+                    glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE_OUTLINE]);
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
+                }
+                
+            }break;
+#if 0
             case COMMAND_CIRCLE:{
                 auto circle = reinterpret_cast<Command_Circle*>(command); 
                 
@@ -984,7 +1011,7 @@ process_and_draw_commands(){
             case COMMAND_GLYPH: {
                 f32* attribs = glyphs;
                 int num_verts = 0;
-                for(Command* _command = command; _command->next && 
+                for(Command* _command = command; _command && 
                     _command->type == previous_command->type ? 
                     (previous_command = _command) : 0; 
                     _command = _command->next){
@@ -1191,11 +1218,12 @@ draw_leaf(Node* leaf){
             platform.mouse_left_double_clicked = 0;
             friday.cursor_index = leaf->name.length;
         }
-        
     }
     
-    if(platform.mouse_left_clicked && platform.mouse_move){
-        push_rectangle(platform.mouse_x, platform.mouse_y-100, 100, 100, 0.2);
+    if(platform.mouse_left_clicked && platform.mouse_move && !friday.create_node_menu){
+        friday.create_node_menu = 1;
+        platform.mouse_drag_x = platform.mouse_x;
+        platform.mouse_drag_y = platform.mouse_y;
     }
     
     if(friday.active_node == leaf){
@@ -1340,4 +1368,13 @@ render_graph(Node* root){
             space();
         }break;
     }
+    
+    if(friday.create_node_menu){
+        //push_rectangle(platform.mouse_drag_x, platform.mouse_drag_y-100, 300, 100, 0.2,
+        //theme.base.packed);
+        push_rectangle_outline(platform.mouse_drag_x, platform.mouse_drag_y-100, 300, 100, 
+                               0.1, 0.2,
+                               theme.base_margin.packed);
+    }
+    
 }

@@ -207,8 +207,14 @@ struct Arena {
 
 internal void* 
 arena_allocate(Arena* arena, u64 size){
-    if(!arena->active  ||
+    if(!arena->active  || 
        arena->active->used + size > arena->active->size){
+        if(arena->active && arena->active->next){
+            // NOTE(Oliver): we must have already allocated some
+            // blocks, lets reuse those!!!
+            arena->active = arena->active->next;
+            goto end; // NOTE(Oliver): lazy...
+        }
         
         u64 bytes_required = default_memory_block_size;
         
@@ -218,7 +224,7 @@ arena_allocate(Arena* arena, u64 size){
         
         Arena_Block* new_block = 0;
         
-        new_block = (Arena_Block*)malloc(sizeof(Arena_Block) + bytes_required);
+        new_block = (Arena_Block*)calloc(1, sizeof(Arena_Block) + bytes_required);
         assert(new_block);
         new_block->memory = (u8*)new_block + sizeof(Arena_Block);
         new_block->size = bytes_required;
@@ -233,7 +239,7 @@ arena_allocate(Arena* arena, u64 size){
             arena->active = new_block;
         }
     }
-    
+    end: 
     void* memory = arena->active->memory + arena->active->used;
     arena->active->used += size;
     

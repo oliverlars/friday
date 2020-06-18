@@ -70,6 +70,7 @@ main(int argc, char** args){
     SDL_ShowWindow(global_window);
     renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
+    //glEnable(GL_FRAMEBUFFER_SRGB);
     init_opengl_renderer();
     init_shaders();
     u64 tick = 0;
@@ -97,23 +98,29 @@ main(int argc, char** args){
     _struct->name = make_string(&platform.permanent_arena, "mat4x4");
     _struct->_struct.members = nullptr;
     
+    Node* _struct2 = make_node(pool, NODE_STRUCT);
+    _struct2->name = make_string(&platform.permanent_arena, "vec3");
+    _struct2->_struct.members = nullptr;
+    
     if(_struct->name.text - decl->name.text == 256){
         OutputDebugStringA("test");
     }
     
     Node* scope = make_node(pool, NODE_SCOPE);
     scope->scope.statements = _struct;
-    scope->scope.statements->next = decl;
+    scope->scope.statements->next = _struct2;
+    scope->scope.statements->next->next = decl;
+    
+    friday.program_root = scope;
     
     friday.x = 640;
-    friday.y = 360;
+    friday.y = 100;
     
     Arena test;
     f32* example = (f32*)arena_allocate(&test, 50);
     *example++ = 5;
     
     load_theme_ayu();
-    
     assert(theme.base.r == 0x0F);
     assert(theme.base.g == 0x14);
     assert(theme.base.b == 0x19);
@@ -168,6 +175,11 @@ main(int argc, char** args){
                         platform.mouse_left_clicked = 1;
                     }else {
                         platform.mouse_left_double_clicked = 1;
+                    }
+                }
+                if(event.button.button == SDL_BUTTON_RIGHT){
+                    if(event.button.clicks == 1){
+                        platform.mouse_right_clicked = 1;
                     }
                 }
             }

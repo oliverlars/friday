@@ -9,11 +9,16 @@ struct {
     int cursor_index;
     Node* active_node;
     
+    Node* program_root;
+    
     Node* test_node;
     
     Pool node_pool;
     
+    
+    f32 menu_x, menu_y;
     bool create_node_menu;
+    Node* menu_node;
 } friday;
 
 // NOTE(Oliver): probably should do this better
@@ -42,6 +47,7 @@ union Colour {
 struct Theme {
     Colour base;
     Colour base_margin;
+    Colour menu;
     Colour text;
     Colour text_light;
     Colour text_comment;
@@ -58,6 +64,7 @@ load_theme_ayu(){
     
     theme.base.packed = 0x0f1419ff;
     theme.base_margin.packed = 0x0a0e12ff;
+    theme.menu.packed = 0x13181dff;
     theme.text.packed = 0xFFFFFFff;
     theme.text_light.packed = 0x262c33ff;
     theme.text_comment.packed = 0xffc2d94d;
@@ -658,7 +665,7 @@ init_shaders(){
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4(1.2*dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy *= (vec4(vec2(1.2, 1.4)*dim/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
@@ -677,7 +684,7 @@ init_shaders(){
             "uniform vec2 in_position;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r){\n"
-            "return length(max(abs(p)-b+r,0.0))-r;\n"
+            "return length(max(abs(p)-b,0.0))-r;\n"
             "}\n"
             
             "void main(){\n"
@@ -744,7 +751,9 @@ init_shaders(){
             "uniform vec2 in_position;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
-            "float inner = length(max(abs(p)-(b-min(b.y,b.x)*border),0.0))-r;\n"
+            "float border_ = min(b.y,b.x)*border;\n"
+            "float border_percent = border*min(b.y,b.x)/max(b.y,b.x);\n"
+            "float inner = length(max(abs(p)-(b-border_),0.0))-r*(1.0-border);\n"
             "float outer = length(max(abs(p)-b,0.0))-r;\n"
             "return max(-inner, outer);\n"
             "}\n"
@@ -924,10 +933,11 @@ process_and_draw_commands(){
                         *attribs++ = rectangle->width;
                         *attribs++ = rectangle->height;
                         *attribs++ = rectangle->corner_radius;
-                        *attribs++ = rectangle->colour.a/255.0f;
-                        *attribs++ = rectangle->colour.b/255.0f;
-                        *attribs++ = rectangle->colour.g/255.0f;
-                        *attribs++ = rectangle->colour.r/255.0f;
+                        *attribs++ = (rectangle->colour.a/255.0f);
+                        *attribs++ = (rectangle->colour.b/255.0f);
+                        *attribs++ = (rectangle->colour.g/255.0f);
+                        *attribs++ = (rectangle->colour.r/255.0f);
+                        
                     }
                     num_verts += 6;
                     previous_command = command;
@@ -965,10 +975,10 @@ process_and_draw_commands(){
                         *attribs++ = rectangle->height;
                         *attribs++ = rectangle->border_size;
                         *attribs++ = rectangle->corner_radius;
-                        *attribs++ = rectangle->colour.a/255.0f;
-                        *attribs++ = rectangle->colour.b/255.0f;
-                        *attribs++ = rectangle->colour.g/255.0f;
-                        *attribs++ = rectangle->colour.r/255.0f;
+                        *attribs++ = (rectangle->colour.a/255.0f);
+                        *attribs++ = (rectangle->colour.b/255.0f);
+                        *attribs++ = (rectangle->colour.g/255.0f);
+                        *attribs++ = (rectangle->colour.r/255.0f);
                     }
                     num_verts += 6;
                 }
@@ -1111,12 +1121,13 @@ opengl_start_frame() {
     
     arena_reset(&renderer.commands);
     arena_reset(&renderer.shape_attribs);
+    arena_reset(&renderer.frame_arena);
     
     renderer.head = nullptr;
     renderer.tail = nullptr;
     
     friday.x = 640;
-    friday.y = 360;
+    friday.y = 600;
     friday.x_offset = 0;
     
 }
@@ -1199,7 +1210,57 @@ edit_node(Node* node){
 }
 
 internal void
-draw_leaf(Node* leaf){
+find_node_types_helper(Node* root, Node*** node_list, u64 node_list_length, Node_Type type){
+    if(!root) return;
+    if(type == root->type){
+        **node_list = root;
+        (*node_list)++;
+    }
+    switch(root->type){
+        
+        case NODE_BINARY:{
+            auto binary = &root->binary;
+            find_node_types_helper(binary->left, node_list, node_list_length, type);
+            find_node_types_helper(binary->right, node_list, node_list_length, type);
+        }break;
+        
+        case NODE_LITERAL:{
+            
+        }break;
+        
+        case NODE_STRUCT:{
+            auto _struct = &root->_struct;
+            for(Node* member = _struct->members; member; member = member->next){
+                find_node_types_helper(member, node_list, node_list_length, type);
+            }
+        }break;
+        
+        case NODE_DECLARATION:{
+            auto decl = root->declaration.declaration;
+            find_node_types_helper(root->declaration.type_usage, node_list, 
+                                   node_list_length, type);
+            find_node_types_helper(decl, node_list, node_list_length, type);
+        }break;
+        
+        case NODE_SCOPE:{
+            auto scope = &root->scope;
+            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
+                find_node_types_helper(stmt, node_list, node_list_length, type);
+            }
+        }break;
+        
+        case NODE_TYPE_USAGE:{
+        }break;
+    }
+}
+
+internal void
+find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
+    find_node_types_helper(friday.program_root, &node_list, node_list_length, type);
+}
+
+internal void
+draw_leaf(Node* leaf, bool* right_clicked = nullptr){
     f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
     f32 width = text_width+ 2*offset;
@@ -1210,6 +1271,7 @@ draw_leaf(Node* leaf){
     
     u32 text_colour = theme.text.packed;
     
+    
     if(is_mouse_in_rect(x, y, width, height)){
         push_rectangle(x, y, width, height, 0.2, theme.cursor.packed);
         text_colour = theme.base.packed;
@@ -1218,14 +1280,19 @@ draw_leaf(Node* leaf){
             platform.mouse_left_double_clicked = 0;
             friday.cursor_index = leaf->name.length;
         }
+        
+        if(platform.mouse_right_clicked && !friday.create_node_menu){
+            friday.active_node = leaf;
+            friday.create_node_menu = 1;
+            friday.menu_x = x;
+            friday.menu_y = y-10;
+            platform.mouse_right_clicked = 0;
+            if(right_clicked){
+                *right_clicked = 1;
+            }
+        }
+        
     }
-    
-    if(platform.mouse_left_clicked && platform.mouse_move && !friday.create_node_menu){
-        friday.create_node_menu = 1;
-        platform.mouse_drag_x = platform.mouse_x;
-        platform.mouse_drag_y = platform.mouse_y;
-    }
-    
     if(friday.active_node == leaf){
         String8 cursor_string = leaf->name;
         cursor_string.length = friday.cursor_index;
@@ -1340,7 +1407,16 @@ render_graph(Node* root){
                 width = exp(-width);
                 width = width < 0 ? 0 : width;
             }
-            render_graph(root->declaration.type_usage);
+            if(root->declaration.type_usage){
+                space();
+                bool right_clicked = 0;
+                draw_leaf(root->declaration.type_usage->type_usage.type_reference, 
+                          &right_clicked);
+                if(right_clicked){
+                    friday.menu_node = root;
+                }
+                space();
+            }
             //friday.x += width;
             draw_misc("= ");
             render_graph(decl);
@@ -1361,20 +1437,47 @@ render_graph(Node* root){
             
         }break;
         
-        case NODE_TYPE_USAGE: {
-            auto type_usage = &root->type_usage;
-            space();
-            draw_leaf(type_usage->type_reference);
-            space();
-        }break;
     }
     
-    if(friday.create_node_menu){
-        //push_rectangle(platform.mouse_drag_x, platform.mouse_drag_y-100, 300, 100, 0.2,
-        //theme.base.packed);
-        push_rectangle_outline(platform.mouse_drag_x, platform.mouse_drag_y-100, 300, 100, 
-                               0.1, 0.2,
+    if(friday.create_node_menu ){
+        int num_elements = 7;
+        f32 height = 40;
+        f32 size_x = 200;
+        f32 size_y = (num_elements)*height;
+        f32 x = friday.menu_x;
+        f32 y = friday.menu_y-size_y;
+        
+        push_rectangle(x,y, size_x, size_y, 0.0, theme.menu.packed);
+        Node* node_list[12] = {};
+        find_node_types(node_list, 7, NODE_STRUCT);
+        for(int i = 0; i < num_elements; i++){
+            String8 string;
+            if(node_list[i]){
+                string = node_list[i]->name;
+            }else{
+                continue;
+            }
+            
+            //String8 string = make_string(&renderer.frame_arena, "test");
+            f32 line_height = renderer.fonts[0].line_height;
+            if(is_mouse_in_rect(x, y + i*height, 
+                                size_x, height)){
+                if(platform.mouse_left_clicked){
+                    friday.menu_node->declaration.type_usage->type_usage.type_reference =
+                        node_list[i];
+                    friday.create_node_menu = 0;
+                }
+                push_rectangle(x, y+ i*height, 
+                               size_x, height, 0.0,
                                theme.base_margin.packed);
+                push_string8(x+10, y + i*height+line_height/2, string,
+                             theme.cursor.packed);
+            }else{
+                push_string8(x+10, y + i*height+line_height/2, string,
+                             theme.text_light.packed);
+            }
+        }
+        
     }
     
 }

@@ -4,7 +4,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
-#include <new>
+#include <stdlib.h>
 #include "friday.h"
 #include "maths.cc"
 #include "opengl.h"

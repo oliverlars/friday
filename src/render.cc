@@ -32,7 +32,6 @@ get_friday_y(){
     return friday.y;
 }
 
-
 // NOTE(Oliver): 0xAABBGGRR 
 union Colour {
     u32 packed;
@@ -93,44 +92,40 @@ struct Command {
     } colour;
     Command* previous = nullptr;
     Command* next = nullptr;
-};
-
-
-struct Command_Rectangle: Command {
-    Command_Rectangle() { type = COMMAND_RECTANGLE; }
+    
+    union{
+        
+        struct {
 #define BYTES_PER_RECTANGLE (9*sizeof(f32)) 
-    // NOTE(Oliver): bytes include size of colour, which is 4*sizeof(f32)
-    f32 x, y;
-    f32 width, height;
-    f32 corner_radius;
-};
-
-struct Command_Circle : Command {
-    Command_Circle() { type = COMMAND_CIRCLE; }
+            // NOTE(Oliver): bytes include size of colour, which is 4*sizeof(f32)
+            f32 x, y;
+            f32 width, height;
+            f32 corner_radius;
+        }rectangle;
+        
+        struct {
 #define BYTES_PER_CIRCLE (7*sizeof(f32))
-    f32 x, y;
-    f32 radius;
-};
-
-struct Command_Rectangle_Outline : Command {
-    Command_Rectangle_Outline() { type = COMMAND_RECTANGLE_OUTLINE; }
+            f32 x, y;
+            f32 radius;
+        }circle;
+        
+        struct {
 #define BYTES_PER_RECTANGLE_OUTLINE (10*sizeof(f32))
-    f32 x, y;
-    f32 width, height;
-    f32 border_size;
-    f32 corner_radius;
-};
-
-struct Font;
-
-struct Command_Glyph : Command {
-    Command_Glyph() { type = COMMAND_GLYPH; }
+            f32 x, y;
+            f32 width, height;
+            f32 border_size;
+            f32 corner_radius;
+        }rectangle_outline;
+        
+        struct {
 #define BYTES_PER_GLYPH (12*sizeof(f32))
-    f32 x, y;
-    f32 width, height;
-    f32 u, v;
-    f32 u_width, v_height; 
-    Font* font;
+            f32 x, y;
+            f32 width, height;
+            f32 u, v;
+            f32 u_width, v_height; 
+        } glyph;
+        
+    };
 };
 
 struct Font {
@@ -168,7 +163,6 @@ global struct {
     // NOTE(Oliver): this should probably just be static
     // we do have a max draw value anyway
     //Array<Command*> commands;
-    Arena commands;
     Command* head = nullptr;
     Command* tail = nullptr;
     
@@ -179,6 +173,15 @@ global struct {
     Arena shape_attribs;
     Arena frame_arena;
 } renderer;
+
+internal Command*
+make_command(Command_Type type){
+    Command* command = (Command*)arena_allocate(&renderer.frame_arena, sizeof(Command));
+    command->type = type;
+    command->next = nullptr;
+    command->previous = nullptr;
+    return command;
+}
 
 internal Font
 init_font(char* font_name, int font_size){
@@ -226,7 +229,7 @@ init_font(char* font_name, int font_size){
     return result;
 }
 
-#define make_command(type) (type*) new (arena_allocate(&renderer.commands, sizeof(type))) type()
+
 
 internal void
 insert_command(Command* next_command){
@@ -308,12 +311,12 @@ get_program_circle() {
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF){
     
-    auto* rectangle = make_command(Command_Rectangle);
-    rectangle->x = x;
-    rectangle->y = y;
-    rectangle->width = width;
-    rectangle->height = height;
-    rectangle->corner_radius = radius;
+    auto rectangle = make_command(COMMAND_RECTANGLE);
+    rectangle->rectangle.x = x;
+    rectangle->rectangle.y = y;
+    rectangle->rectangle.width = width;
+    rectangle->rectangle.height = height;
+    rectangle->rectangle.corner_radius = radius;
     rectangle->colour.packed = colour;
     insert_command(rectangle);
 }
@@ -321,13 +324,13 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xF
 internal inline void
 push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
     
-    auto rectangle = make_command(Command_Rectangle_Outline);
-    rectangle->x = x;
-    rectangle->y = y;
-    rectangle->width = width;
-    rectangle->height = height;
-    rectangle->border_size = border;
-    rectangle->corner_radius = radius;
+    auto rectangle = make_command(COMMAND_RECTANGLE_OUTLINE);
+    rectangle->rectangle_outline.x = x;
+    rectangle->rectangle_outline.y = y;
+    rectangle->rectangle_outline.width = width;
+    rectangle->rectangle_outline.height = height;
+    rectangle->rectangle_outline.border_size = border;
+    rectangle->rectangle_outline.corner_radius = radius;
     rectangle->colour.packed = colour;
     insert_command(rectangle);
 }
@@ -335,10 +338,10 @@ push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radi
 internal inline void
 push_circle(f32 x, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
     
-    auto circle = make_command(Command_Circle);
-    circle->x = x;
-    circle->y = y;
-    circle->radius = radius;
+    auto circle = make_command(COMMAND_CIRCLE);
+    circle->circle.x = x;
+    circle->circle.y = y;
+    circle->circle.radius = radius;
     circle->colour.packed = colour;
     insert_command(circle);
 }
@@ -356,15 +359,15 @@ push_glyph(stbtt_aligned_quad quad, u32 colour){
     s0 = quad.s0; s1 = quad.s1;
     t0 = quad.t0; t1 = quad.t1;
     
-    auto glyph = make_command(Command_Glyph);
-    glyph->x = x0;
-    glyph->y = y0;
-    glyph->width = x1 - x0;
-    glyph->height = y1 - y0;
-    glyph->u = s0;
-    glyph->v = t0;
-    glyph->u_width = s1 - s0;
-    glyph->v_height = t1 - t0;
+    auto glyph = make_command(COMMAND_GLYPH);
+    glyph->glyph.x = x0;
+    glyph->glyph.y = y0;
+    glyph->glyph.width = x1 - x0;
+    glyph->glyph.height = y1 - y0;
+    glyph->glyph.u = s0;
+    glyph->glyph.v = t0;
+    glyph->glyph.u_width = s1 - s0;
+    glyph->glyph.v_height = t1 - t0;
     glyph->colour.packed = colour;
     insert_command(glyph);
 }
@@ -926,13 +929,13 @@ process_and_draw_commands(){
                 f32* attribs = rectangles;
                 for(Command* _command = command; _command && _command->type == previous_command->type; 
                     _command = _command->next){
-                    auto rectangle = reinterpret_cast<Command_Rectangle*>(_command);
+                    auto rectangle = _command;
                     for(int i = 0; i < 6; i++){
-                        *attribs++ = rectangle->x;
-                        *attribs++ = rectangle->y;
-                        *attribs++ = rectangle->width;
-                        *attribs++ = rectangle->height;
-                        *attribs++ = rectangle->corner_radius;
+                        *attribs++ = rectangle->rectangle.x;
+                        *attribs++ = rectangle->rectangle.y;
+                        *attribs++ = rectangle->rectangle.width;
+                        *attribs++ = rectangle->rectangle.height;
+                        *attribs++ = rectangle->rectangle.corner_radius;
                         *attribs++ = (rectangle->colour.a/255.0f);
                         *attribs++ = (rectangle->colour.b/255.0f);
                         *attribs++ = (rectangle->colour.g/255.0f);
@@ -940,7 +943,6 @@ process_and_draw_commands(){
                         
                     }
                     num_verts += 6;
-                    previous_command = command;
                 }
                 // NOTE(Oliver): draw filled rects data
                 {
@@ -968,13 +970,13 @@ process_and_draw_commands(){
                 for(Command* _command = command; _command && _command->type == previous_command->type; 
                     _command = _command->next){
                     for(int i = 0; i < 6; i++){
-                        auto rectangle = reinterpret_cast<Command_Rectangle_Outline*>(_command); 
-                        *attribs++ = rectangle->x;
-                        *attribs++ = rectangle->y;
-                        *attribs++ = rectangle->width;
-                        *attribs++ = rectangle->height;
-                        *attribs++ = rectangle->border_size;
-                        *attribs++ = rectangle->corner_radius;
+                        auto rectangle = _command; 
+                        *attribs++ = rectangle->rectangle_outline.x;
+                        *attribs++ = rectangle->rectangle_outline.y;
+                        *attribs++ = rectangle->rectangle_outline.width;
+                        *attribs++ = rectangle->rectangle_outline.height;
+                        *attribs++ = rectangle->rectangle_outline.border_size;
+                        *attribs++ = rectangle->rectangle_outline.corner_radius;
                         *attribs++ = (rectangle->colour.a/255.0f);
                         *attribs++ = (rectangle->colour.b/255.0f);
                         *attribs++ = (rectangle->colour.g/255.0f);
@@ -1004,16 +1006,16 @@ process_and_draw_commands(){
             }break;
 #if 0
             case COMMAND_CIRCLE:{
-                auto circle = reinterpret_cast<Command_Circle*>(command); 
+                auto circle = _command; 
                 
                 for(int i = 0; i < 6; i++){
-                    *circle_attribs++ = circle->x;
-                    *circle_attribs++ = circle->y;
-                    *circle_attribs++ = circle->radius;
-                    *circle_attribs++ = circle->colour.a/255.0f;
-                    *circle_attribs++ = circle->colour.b/255.0f;
-                    *circle_attribs++ = circle->colour.g/255.0f;
-                    *circle_attribs++ = circle->colour.r/255.0f;
+                    *circle_attribs++ = circle->circle.x;
+                    *circle_attribs++ = circle->circle.y;
+                    *circle_attribs++ = circle->circle.radius;
+                    *circle_attribs++ = circle->->colour.a/255.0f;
+                    *circle_attribs++ = circle->->colour.b/255.0f;
+                    *circle_attribs++ = circle->->colour.g/255.0f;
+                    *circle_attribs++ = circle->->colour.r/255.0f;
                 }
                 num_circle_verts += 6;
             }break;
@@ -1025,16 +1027,16 @@ process_and_draw_commands(){
                     _command->type == previous_command->type ? 
                     (previous_command = _command) : 0; 
                     _command = _command->next){
-                    auto glyph = reinterpret_cast<Command_Glyph*>(_command);
+                    auto glyph = _command;
                     for(int i = 0; i < 6; i++){
-                        *attribs++ = glyph->x;
-                        *attribs++ = glyph->y;
-                        *attribs++ = glyph->width;
-                        *attribs++ = glyph->height;
-                        *attribs++ = glyph->u;
-                        *attribs++ = glyph->v;
-                        *attribs++ = glyph->u_width;
-                        *attribs++ = glyph->v_height;
+                        *attribs++ = glyph->glyph.x;
+                        *attribs++ = glyph->glyph.y;
+                        *attribs++ = glyph->glyph.width;
+                        *attribs++ = glyph->glyph.height;
+                        *attribs++ = glyph->glyph.u;
+                        *attribs++ = glyph->glyph.v;
+                        *attribs++ = glyph->glyph.u_width;
+                        *attribs++ = glyph->glyph.v_height;
                         *attribs++ = glyph->colour.a/255.0f;
                         *attribs++ = glyph->colour.b/255.0f;
                         *attribs++ = glyph->colour.g/255.0f;
@@ -1119,7 +1121,6 @@ internal void
 opengl_start_frame() {
     OPTICK_EVENT();
     
-    arena_reset(&renderer.commands);
     arena_reset(&renderer.shape_attribs);
     arena_reset(&renderer.frame_arena);
     

@@ -378,23 +378,6 @@ struct Pool {
         free_head = node;
     }
     
-    void reset(){
-        for(auto block = first; block; block = block->next){
-            void* start = block->memory;
-            void* end = &block->memory[block->size-1];
-            
-            //active->clear(chunk_size);
-            for(int i = 0; i < active->size/chunk_size; i++){
-                void* pointer = &block->memory[i * chunk_size];
-                Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
-                node->next = free_head;
-                free_head = node;
-            }
-            
-        }
-        
-    }
-    
     void clear_all(){
         for(auto block = first; block; block = block->next){
             free(block);
@@ -413,6 +396,23 @@ make_pool(u64 size) {
     result.free_head = nullptr;
     
     return result;
+}
+
+void pool_reset(Pool* pool){
+    for(auto block = pool->first; block; block = block->next){
+        void* start = block->memory;
+        void* end = &block->memory[block->size-1];
+        
+        //active->clear(chunk_size);
+        for(int i = 0; i < pool->active->size/pool->chunk_size; i++){
+            void* pointer = &block->memory[i * pool->chunk_size];
+            Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+            node->next = pool->free_head;
+            pool->free_head = node;
+        }
+        
+    }
+    
 }
 
 

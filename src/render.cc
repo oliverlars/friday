@@ -38,47 +38,6 @@ get_friday_y(){
     return friday.y;
 }
 
-// NOTE(Oliver): 0xAABBGGRR 
-union Colour {
-    u32 packed;
-    struct {
-        u8 a;
-        u8 b;
-        u8 g;
-        u8 r;
-    };
-};
-
-struct Theme {
-    Colour base;
-    Colour base_margin;
-    Colour menu;
-    Colour text;
-    Colour text_light;
-    Colour text_comment;
-    Colour text_function;
-    Colour text_type;
-    Colour cursor;
-    Colour error;
-};
-
-global Theme theme;
-
-internal void
-load_theme_ayu(){
-    
-    theme.base.packed = 0x0f1419ff;
-    theme.base_margin.packed = 0x0a0e12ff;
-    theme.menu.packed = 0x13181dff;
-    theme.text.packed = 0xFFFFFFff;
-    theme.text_light.packed = 0x262c33ff;
-    theme.text_comment.packed = 0xffc2d94d;
-    theme.text_function.packed = 0xff5ac2ff;
-    theme.text_type.packed = 0xffff29719;
-    theme.cursor.packed = 0xe08c17ff;
-    theme.error.packed = 0xffcc3333;
-}
-
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
@@ -236,7 +195,6 @@ init_font(char* font_name, int font_size){
 }
 
 
-
 internal void
 insert_command(Command* next_command){
     if(renderer.head){
@@ -315,7 +273,7 @@ get_program_circle() {
 }
 
 internal inline void
-push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF){
+push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour){
     
     auto rectangle = make_command(COMMAND_RECTANGLE);
     rectangle->rectangle.x = x;
@@ -1171,13 +1129,6 @@ draw_string(String8 string, u32 colour = 0xFFFFFFFF){
     friday.x_offset += get_text_width(string);
 }
 
-internal bool
-is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
-    return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
-        platform.mouse_y <= (y + height) && platform.mouse_y >= y;
-}
-
-
 internal void
 edit_node(Node* node){
     if(platform.has_text_input){
@@ -1329,13 +1280,18 @@ scope_insert(){
 }
 
 internal bool
-draw_menu(String8* strings, u64 num_rows, int* selected){
+draw_menu(char* label, String8* strings, u64 num_rows, int* selected){
+    
     if(!friday.is_menu_open) return false;
+    
+    auto id = gen_unique_id(label);
+    
+    f32 line_height = renderer.fonts[0].line_height;
     f32 height = 40;
     f32 size_x = 200;
     f32 size_y = num_rows*height;
     f32 x = friday.menu_x;
-    f32 y = friday.menu_y-size_y;
+    f32 y = friday.menu_y-size_y+line_height;
     
     for(int i = 0; i < num_rows; i++){
         f32 text_width = get_text_width(strings[i]);
@@ -1347,22 +1303,23 @@ draw_menu(String8* strings, u64 num_rows, int* selected){
     
     for(int i = 0; i < num_rows; i++){
         String8 string = strings[i];
-        
-        f32 line_height = renderer.fonts[0].line_height;
-        push_rectangle(x,y + i*height, size_x, height, 0.0, theme.menu.packed);
+        f32 offset = i*height;
+        push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
         u32 text_colour = theme.text_light.packed;
         
-        if(is_mouse_in_rect(x, y + i*height, size_x, height)){
+        if(is_mouse_in_rect(x, y + offset, size_x, height)){
             if(platform.mouse_left_clicked){
                 if(selected){
                     *selected = i;
                 }
-                result = true;
                 friday.is_menu_open = false;
             }
-            push_rectangle(x, y+ i*height, 
+            push_rectangle(x, y+ offset, 
                            size_x, height, 0.0,
                            theme.base_margin.packed);
+            push_rectangle(x, y+ offset, 
+                           5, height, 0.0,
+                           theme.cursor.packed);
             text_colour = theme.cursor.packed;
         }
         
@@ -1474,17 +1431,51 @@ render_graph(Node* root){
         
         case NODE_SCOPE: {
             auto scope = &root->scope;
-            
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
                 render_graph(stmt);
                 if(platform.mouse_left_clicked && scope_insert()){
                     friday.is_menu_open = 1;
                     should_insert = 1;
-                    friday.active_node = stmt;
+                    friday.menu_node = stmt;
                     friday.menu_x = get_friday_x();
                     friday.menu_y = get_friday_y();
                 }
             }
+            String8 node_types[3];
+            Arena* arena = &renderer.frame_arena;
+            node_types[0] = make_string(arena, "function");
+            node_types[1] = make_string(arena, "struct");
+            node_types[2] = make_string(arena, "declaration");
+            int selected;
+            if(draw_menu("node menu", node_types, 3, &selected)){
+                Pool* pool = &friday.node_pool;
+                Arena* perm_arena = &platform.permanent_arena;
+                Node* active = friday.menu_node;
+                switch(selected){
+                    case 0:{
+                        Node* node = make_node(pool, NODE_FUNCTION);
+                        node->name = make_string(perm_arena, "new func");
+                        node->next = active->next;
+                        active->next = node;
+                    }break;
+                    
+                    case 1:{
+                        Node* node = make_node(pool, NODE_STRUCT);
+                        node->name = make_string(perm_arena, "new struct");
+                        node->next = active->next;
+                        active->next = node;
+                    }break;
+                    
+                    case 3:{
+                        Node* node = make_node(pool, NODE_DECLARATION);
+                        node->name = make_string(perm_arena, "new declaration");
+                        node->declaration.is_initialised = false;
+                        node->next = active->next;
+                        active->next = node;
+                    }break;
+                }
+            }
+            
         }break;
         
         case NODE_FUNCTION: {
@@ -1500,6 +1491,7 @@ render_graph(Node* root){
                 friday.menu_x = get_friday_x();
                 friday.menu_y = get_friday_y();
             }
+            
             render_graph(root->function.scope);
             draw_misc("}");
             new_line();
@@ -1511,138 +1503,5 @@ render_graph(Node* root){
         }break;
         
     }
-    
-    if(0 && friday.is_menu_open){
-        int num_elements = 7;
-        f32 height = 40;
-        f32 size_x = 200;
-        f32 size_y = (num_elements)*height;
-        f32 x = friday.menu_x;
-        f32 y = friday.menu_y-size_y;
-        
-        push_rectangle(x,y, size_x, size_y, 0.0, theme.menu.packed);
-        Node* node_list[12] = {};
-        find_node_types(node_list, 7, NODE_STRUCT);
-        
-        for(int i = 0; i < num_elements; i++){
-            String8 string;
-            if(node_list[6-i]){
-                string = node_list[6-i]->name;
-            }else{
-                continue;
-            }
-            
-            //String8 string = make_string(&renderer.frame_arena, "test");
-            f32 line_height = renderer.fonts[0].line_height;
-            if(is_mouse_in_rect(x, y + i*height, 
-                                size_x, height)){
-                if(platform.mouse_left_clicked){
-                    friday.menu_node->declaration.type_usage->type_usage.type_reference =
-                        node_list[6-i];
-                    friday.is_menu_open = 0;
-                }
-                push_rectangle(x, y+ i*height, 
-                               size_x, height, 0.0,
-                               theme.base_margin.packed);
-                push_string8(x+10, y + i*height+line_height/2, string,
-                             theme.cursor.packed);
-            }else{
-                push_string8(x+10, y + i*height+line_height/2, string,
-                             theme.text_light.packed);
-            }
-        }
-        
-    }
-    
-    Node* create_node = nullptr;
-    
-    if(0 && friday.is_menu_open){
-        
-        String8 node_list[3] = {};
-        node_list[0] = make_string(&renderer.frame_arena, "struct");
-        node_list[1] = make_string(&renderer.frame_arena, "declaration");
-        node_list[2] = make_string(&renderer.frame_arena, "function");
-        
-        int selected;
-        draw_menu(node_list, 3, &selected);
-#if 0
-        int num_elements = 7;
-        f32 height = 40;
-        f32 size_x = 200;
-        f32 size_y = (num_elements)*height;
-        f32 x = friday.menu_x;
-        f32 y = friday.menu_y-size_y;
-        
-        push_rectangle(x,y, size_x, size_y, 0.0, theme.menu.packed);
-        
-        String8 node_list[12] = {};
-        node_list[0] = make_string(&renderer.frame_arena, "struct");
-        node_list[1] = make_string(&renderer.frame_arena, "declaration");
-        node_list[2] = make_string(&renderer.frame_arena, "function");
-        
-        //create rectangles here instead of predefining size before
-        for(int i = 0; i < 3; i++){
-            String8 string;
-            string = node_list[i];
-            
-            //String8 string = make_string(&renderer.frame_arena, "test");
-            f32 line_height = renderer.fonts[0].line_height;
-            if(is_mouse_in_rect(x, y + i*height, 
-                                size_x, height)){
-                if(platform.mouse_left_clicked){
-                    friday.is_menu_open = 0;
-                    switch(i){
-                        case 0:{
-                            create_node = make_node(&friday.node_pool, NODE_STRUCT);
-                            create_node->name = make_string(&platform.permanent_arena,
-                                                            "new struct");
-                        }break;
-                        case 1:{
-                            create_node = make_node(&friday.node_pool, NODE_DECLARATION);
-                            create_node->name = make_string(&platform.permanent_arena,
-                                                            "new decl");
-                            create_node->declaration.type_usage = nullptr;
-                        }break;
-                        case 2: {
-                            create_node = make_node(&friday.node_pool, NODE_FUNCTION);
-                            create_node->name = make_string(&platform.permanent_arena,
-                                                            "new func");
-                            create_node->function.scope = make_node(&friday.node_pool,
-                                                                    NODE_SCOPE);
-                            create_node->function.scope->scope.statements = nullptr;
-                        }break;
-                        
-                    }
-                    
-                    create_node->next = friday.active_node->next;
-                    friday.active_node->next = create_node;
-                    platform.mouse_left_clicked = 0;
-                    should_insert = 0;
-                }
-                
-                push_rectangle(x, y+ i*height, 
-                               size_x, height, 0.0,
-                               theme.base_margin.packed);
-                push_string8(x+10, y + i*height+line_height/2, string,
-                             theme.cursor.packed);
-                
-            }else{
-                push_string8(x+10, y + i*height+line_height/2, string,
-                             theme.text_light.packed);
-            }
-        }
-#endif
-    }
-    
-    if(should_insert && !platform.mouse_left_clicked){
-        Pool* pool = &friday.node_pool;
-#if 0
-        Node* node = make_node(pool, NODE_STRUCT);
-        node->name = make_string(&platform.permanent_arena, "new struct");
-        node->_struct.members = nullptr;
-#endif
-        
-    }
-    
     
 }

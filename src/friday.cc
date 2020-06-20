@@ -12,6 +12,7 @@
 #include "../ext/stb_truetype.h"
 #include <string.h>
 #include "graph.cc"
+#include "ui.cc"
 #include "render.cc"
 
 global SDL_Window* global_window;
@@ -33,8 +34,8 @@ main(int argc, char** args){
     void* permanent_memory = VirtualAlloc(0, Gigabytes(1), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     platform.permanent_arena = make_arena(Gigabytes(1), permanent_memory);
     
-    void* temporary_memory = VirtualAlloc(0, Megabytes(16), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    platform.temporary_arena = make_arena(Megabytes(16), temporary_memory);
+    void* temporary_memory = VirtualAlloc(0, Megabytes(64), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    platform.temporary_arena = make_arena(Megabytes(64), temporary_memory);
     
     
     b32 running = true;
@@ -129,6 +130,10 @@ main(int argc, char** args){
     SDL_StartTextInput();
     platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
                                                 256);
+    
+    ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192);
+    
+    bool previous_mouse_left_clicked = 0;
     while(running){
         OPTICK_FRAME("MainThread");
         
@@ -150,7 +155,20 @@ main(int argc, char** args){
                        platform.width-offset*2, platform.height-offset*2, 0.1,
                        theme.base.packed);
         
-        render_graph(scope);
+        global u32 box1 = 0xFF0000FF;
+        global u32 box2 = 0x00FF00FF;
+        
+        button(350, 350, 100, 100,box1, []{
+                   box1 = 0xFF0000FF;
+                   box2 = 0x00FF00FF;
+               });
+        
+        button(350, 350, 50, 50, box2, []{
+                   box1 = 0x00FF00FF;
+                   box2 = 0xFF0000FF;
+               });
+        process_widgets_and_handle_events();
+        //render_graph(scope);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here
@@ -172,7 +190,10 @@ main(int argc, char** args){
             if(event.type == SDL_MOUSEBUTTONDOWN){
                 if(event.button.button == SDL_BUTTON_LEFT){
                     if(event.button.clicks == 1){
-                        platform.mouse_left_clicked = 1;
+                        if(1 || !previous_mouse_left_clicked){
+                            platform.mouse_left_clicked = 1;
+                            OutputDebugStringA("Clicked\n");
+                        }
                     }else if(event.button.clicks == 2){
                         platform.mouse_left_double_clicked = 1;
                     }
@@ -191,7 +212,6 @@ main(int argc, char** args){
                     platform.mouse_left_double_clicked = 0;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
-                    platform.mouse_right_clicked = 0;
                 }
             }
             if(event.type == SDL_KEYDOWN){
@@ -207,6 +227,7 @@ main(int argc, char** args){
                 
             }
         }
+        previous_mouse_left_clicked = platform.mouse_left_clicked;
         
         SDL_GL_SwapWindow(global_window);
         

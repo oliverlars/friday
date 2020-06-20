@@ -467,7 +467,10 @@ struct {
     Arena temporary_arena;
     
     f32 mouse_x, mouse_y;
+    
     bool mouse_left_clicked;
+    bool mouse_left_down;
+    
     bool mouse_middle_clicked;
     bool mouse_right_clicked;
     bool mouse_left_double_clicked;

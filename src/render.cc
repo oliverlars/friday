@@ -1,6 +1,12 @@
 
 // NOTE(Oliver): this is global state for the render pass
 // may not be needed, we'll see
+
+enum Menu_Type {
+    MENU_TYPE_USAGE,
+    MENU_CREATE_NODE
+};
+
 struct {
     int x;
     int y;
@@ -15,10 +21,10 @@ struct {
     
     Pool node_pool;
     
-    
     f32 menu_x, menu_y;
-    bool create_node_menu;
+    bool is_menu_open;
     Node* menu_node;
+    
 } friday;
 
 // NOTE(Oliver): probably should do this better
@@ -911,7 +917,7 @@ process_and_draw_commands(){
     
     f32* rectangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE);
     f32* rectangle_outlines = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
-    
+    f32* circles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_CIRCLE);
     f32* glyphs = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_GLYPH);
     
     
@@ -922,13 +928,12 @@ process_and_draw_commands(){
         
         switch(command->type){
             case COMMAND_RECTANGLE:{
-                // NOTE(Oliver): there is probably a better way of doing this
-                // but we need to upload attributes per vert so we need to 
-                // duplicate them in the array
+                
                 int num_verts = 0;
                 f32* attribs = rectangles;
                 for(Command* _command = command; _command && _command->type == previous_command->type; 
                     _command = _command->next){
+                    
                     auto rectangle = _command;
                     for(int i = 0; i < 6; i++){
                         *attribs++ = rectangle->rectangle.x;
@@ -1004,22 +1009,47 @@ process_and_draw_commands(){
                 }
                 
             }break;
-#if 0
+            
             case COMMAND_CIRCLE:{
-                auto circle = _command; 
-                
-                for(int i = 0; i < 6; i++){
-                    *circle_attribs++ = circle->circle.x;
-                    *circle_attribs++ = circle->circle.y;
-                    *circle_attribs++ = circle->circle.radius;
-                    *circle_attribs++ = circle->->colour.a/255.0f;
-                    *circle_attribs++ = circle->->colour.b/255.0f;
-                    *circle_attribs++ = circle->->colour.g/255.0f;
-                    *circle_attribs++ = circle->->colour.r/255.0f;
+                f32* attribs = circles;
+                int num_verts = 0;
+                for(Command* _command = command; _command && 
+                    _command->type == previous_command->type ? 
+                    (previous_command = _command) : 0; 
+                    _command = _command->next){
+                    auto circle = _command; 
+                    for(int i = 0; i < 6; i++){
+                        *attribs++ = circle->circle.x;
+                        *attribs++ = circle->circle.y;
+                        *attribs++ = circle->circle.radius;
+                        *attribs++ = circle->colour.a/255.0f;
+                        *attribs++ = circle->colour.b/255.0f;
+                        *attribs++ = circle->colour.g/255.0f;
+                        *attribs++ = circle->colour.r/255.0f;
+                    }
+                    num_verts += 6;
+                    
                 }
-                num_circle_verts += 6;
+                
+                // NOTE(Oliver): draw circle data
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW,
+                                    attribs);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(get_program_circle());
+                    
+                    float resolution[2] = {platform.width, platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
+                    
+                    glBindVertexArray(get_vao_circle());
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
+                }
             }break;
-#endif
+            
             case COMMAND_GLYPH: {
                 f32* attribs = glyphs;
                 int num_verts = 0;
@@ -1075,45 +1105,7 @@ process_and_draw_commands(){
         command = previous_command;
         
     }
-#if 0
-    // NOTE(Oliver): draw rectangle outlines
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_outline());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        MAX_DRAW,
-                        rectangle_outline_attribs_start);
-        
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        
-        glUseProgram(get_program_rectangle_outline());
-        
-        float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 1, resolution);
-        
-        glBindVertexArray(get_vao_rectangle_outline());
-        glDrawArrays(GL_TRIANGLES, 0, num_rectangle_outline_verts);
-        glUseProgram(0);
-    }
     
-    // NOTE(Oliver): draw circle data
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                        MAX_DRAW,
-                        circle_attribs_start);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        
-        glUseProgram(get_program_circle());
-        
-        float resolution[2] = {platform.width, platform.height};
-        glUniform2fv(renderer.resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
-        
-        glBindVertexArray(get_vao_circle());
-        glDrawArrays(GL_TRIANGLES, 0, num_circle_verts);
-        glUseProgram(0);
-    }
-    // NOTE(Oliver): draw glyph data
-#endif
 }
 
 
@@ -1282,9 +1274,9 @@ draw_leaf(Node* leaf, bool* right_clicked = nullptr){
             friday.cursor_index = leaf->name.length;
         }
         
-        if(platform.mouse_right_clicked && !friday.create_node_menu){
+        if(platform.mouse_right_clicked && !friday.is_menu_open){
             friday.active_node = leaf;
-            friday.create_node_menu = 1;
+            friday.is_menu_open = 1;
             friday.menu_x = x;
             friday.menu_y = y-10;
             platform.mouse_right_clicked = 0;
@@ -1323,6 +1315,62 @@ draw_insertable(){
     f32 width = 100.0f; // TODO(Oliver): make this not magic
     f32 height = renderer.fonts[0].line_height;
     return is_mouse_in_rect(x, y, width, height);
+}
+
+global bool should_insert;
+internal bool
+scope_insert(){
+    f32 x = get_friday_x();
+    f32 y = get_friday_y();
+    f32 width = 100.0f; // TODO(Oliver): make this not magic
+    f32 height = renderer.fonts[0].line_height;
+    y = get_friday_y()+height;
+    return is_mouse_in_rect(x, y, width, height);
+}
+
+internal bool
+draw_menu(String8* strings, u64 num_rows, int* selected){
+    if(!friday.is_menu_open) return false;
+    f32 height = 40;
+    f32 size_x = 200;
+    f32 size_y = num_rows*height;
+    f32 x = friday.menu_x;
+    f32 y = friday.menu_y-size_y;
+    
+    for(int i = 0; i < num_rows; i++){
+        f32 text_width = get_text_width(strings[i]);
+        text_width *= 1.2;
+        size_x = text_width >= size_x ? text_width : size_x;
+    }
+    
+    bool result = false;
+    
+    for(int i = 0; i < num_rows; i++){
+        String8 string = strings[i];
+        
+        f32 line_height = renderer.fonts[0].line_height;
+        push_rectangle(x,y + i*height, size_x, height, 0.0, theme.menu.packed);
+        u32 text_colour = theme.text_light.packed;
+        
+        if(is_mouse_in_rect(x, y + i*height, size_x, height)){
+            if(platform.mouse_left_clicked){
+                if(selected){
+                    *selected = i;
+                }
+                result = true;
+                friday.is_menu_open = false;
+            }
+            push_rectangle(x, y+ i*height, 
+                           size_x, height, 0.0,
+                           theme.base_margin.packed);
+            text_colour = theme.cursor.packed;
+        }
+        
+        push_string8(x+10, y + i*height+line_height/2, string,
+                     text_colour);
+    }
+    
+    return result;
 }
 
 internal void
@@ -1367,7 +1415,7 @@ render_graph(Node* root){
                 render_graph(member);
                 new_line();
             }
-            if(draw_insertable() && platform.mouse_left_double_clicked){
+            if(draw_insertable() && platform.mouse_left_clicked){
                 Node* member = _struct->members;
                 Pool* pool = &friday.node_pool;
                 if(member){
@@ -1397,8 +1445,6 @@ render_graph(Node* root){
             draw_misc(" :");
             static f32 width = 0.0f;
             if(is_mouse_in_rect(friday.x + friday.x_offset-20, friday.y-20, 40, 40)){
-                width = exp(1.1f + width);
-                width = width > 20 ? 20 : width;
                 if(platform.mouse_left_clicked && !root->declaration.type_usage){
                     Pool* pool = &friday.node_pool;
                     root->declaration.type_usage = make_node(pool, NODE_TYPE_USAGE);
@@ -1419,19 +1465,45 @@ render_graph(Node* root){
                 space();
             }
             //friday.x += width;
-            draw_misc("= ");
-            render_graph(decl);
-            draw_misc(";");
+            if(root->declaration.is_initialised){
+                draw_misc("= ");
+                render_graph(decl);
+                
+            }
         }break;
         
         case NODE_SCOPE: {
             auto scope = &root->scope;
+            
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
                 render_graph(stmt);
+                if(platform.mouse_left_clicked && scope_insert()){
+                    friday.is_menu_open = 1;
+                    should_insert = 1;
+                    friday.active_node = stmt;
+                    friday.menu_x = get_friday_x();
+                    friday.menu_y = get_friday_y();
+                }
             }
         }break;
         
         case NODE_FUNCTION: {
+            draw_leaf(root);
+            draw_misc(" :: () {");
+            indent();
+            new_line();
+            new_line();
+            if(platform.mouse_left_clicked && scope_insert()){
+                friday.is_menu_open = 1;
+                should_insert = 1;
+                friday.active_node = nullptr;
+                friday.menu_x = get_friday_x();
+                friday.menu_y = get_friday_y();
+            }
+            render_graph(root->function.scope);
+            draw_misc("}");
+            new_line();
+            new_line();
         }break;
         
         case NODE_CALL: {
@@ -1440,7 +1512,7 @@ render_graph(Node* root){
         
     }
     
-    if(friday.create_node_menu ){
+    if(0 && friday.is_menu_open){
         int num_elements = 7;
         f32 height = 40;
         f32 size_x = 200;
@@ -1451,10 +1523,11 @@ render_graph(Node* root){
         push_rectangle(x,y, size_x, size_y, 0.0, theme.menu.packed);
         Node* node_list[12] = {};
         find_node_types(node_list, 7, NODE_STRUCT);
+        
         for(int i = 0; i < num_elements; i++){
             String8 string;
-            if(node_list[i]){
-                string = node_list[i]->name;
+            if(node_list[6-i]){
+                string = node_list[6-i]->name;
             }else{
                 continue;
             }
@@ -1465,8 +1538,8 @@ render_graph(Node* root){
                                 size_x, height)){
                 if(platform.mouse_left_clicked){
                     friday.menu_node->declaration.type_usage->type_usage.type_reference =
-                        node_list[i];
-                    friday.create_node_menu = 0;
+                        node_list[6-i];
+                    friday.is_menu_open = 0;
                 }
                 push_rectangle(x, y+ i*height, 
                                size_x, height, 0.0,
@@ -1480,5 +1553,96 @@ render_graph(Node* root){
         }
         
     }
+    
+    Node* create_node = nullptr;
+    
+    if(0 && friday.is_menu_open){
+        
+        String8 node_list[3] = {};
+        node_list[0] = make_string(&renderer.frame_arena, "struct");
+        node_list[1] = make_string(&renderer.frame_arena, "declaration");
+        node_list[2] = make_string(&renderer.frame_arena, "function");
+        
+        int selected;
+        draw_menu(node_list, 3, &selected);
+#if 0
+        int num_elements = 7;
+        f32 height = 40;
+        f32 size_x = 200;
+        f32 size_y = (num_elements)*height;
+        f32 x = friday.menu_x;
+        f32 y = friday.menu_y-size_y;
+        
+        push_rectangle(x,y, size_x, size_y, 0.0, theme.menu.packed);
+        
+        String8 node_list[12] = {};
+        node_list[0] = make_string(&renderer.frame_arena, "struct");
+        node_list[1] = make_string(&renderer.frame_arena, "declaration");
+        node_list[2] = make_string(&renderer.frame_arena, "function");
+        
+        //create rectangles here instead of predefining size before
+        for(int i = 0; i < 3; i++){
+            String8 string;
+            string = node_list[i];
+            
+            //String8 string = make_string(&renderer.frame_arena, "test");
+            f32 line_height = renderer.fonts[0].line_height;
+            if(is_mouse_in_rect(x, y + i*height, 
+                                size_x, height)){
+                if(platform.mouse_left_clicked){
+                    friday.is_menu_open = 0;
+                    switch(i){
+                        case 0:{
+                            create_node = make_node(&friday.node_pool, NODE_STRUCT);
+                            create_node->name = make_string(&platform.permanent_arena,
+                                                            "new struct");
+                        }break;
+                        case 1:{
+                            create_node = make_node(&friday.node_pool, NODE_DECLARATION);
+                            create_node->name = make_string(&platform.permanent_arena,
+                                                            "new decl");
+                            create_node->declaration.type_usage = nullptr;
+                        }break;
+                        case 2: {
+                            create_node = make_node(&friday.node_pool, NODE_FUNCTION);
+                            create_node->name = make_string(&platform.permanent_arena,
+                                                            "new func");
+                            create_node->function.scope = make_node(&friday.node_pool,
+                                                                    NODE_SCOPE);
+                            create_node->function.scope->scope.statements = nullptr;
+                        }break;
+                        
+                    }
+                    
+                    create_node->next = friday.active_node->next;
+                    friday.active_node->next = create_node;
+                    platform.mouse_left_clicked = 0;
+                    should_insert = 0;
+                }
+                
+                push_rectangle(x, y+ i*height, 
+                               size_x, height, 0.0,
+                               theme.base_margin.packed);
+                push_string8(x+10, y + i*height+line_height/2, string,
+                             theme.cursor.packed);
+                
+            }else{
+                push_string8(x+10, y + i*height+line_height/2, string,
+                             theme.text_light.packed);
+            }
+        }
+#endif
+    }
+    
+    if(should_insert && !platform.mouse_left_clicked){
+        Pool* pool = &friday.node_pool;
+#if 0
+        Node* node = make_node(pool, NODE_STRUCT);
+        node->name = make_string(&platform.permanent_arena, "new struct");
+        node->_struct.members = nullptr;
+#endif
+        
+    }
+    
     
 }

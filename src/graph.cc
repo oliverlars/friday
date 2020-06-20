@@ -76,6 +76,7 @@ struct Node {
         struct {
             Node* declaration;
             Node* type_usage;
+            bool is_initialised = false;
         } declaration;
         
         struct {

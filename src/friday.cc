@@ -93,6 +93,7 @@ main(int argc, char** args){
     auto right = &binary->binary.right->literal;
     decl->declaration.declaration = binary;
     decl->name = make_string(&platform.permanent_arena, "potato");
+    decl->declaration.is_initialised = true;
     
     Node* _struct = make_node(pool, NODE_STRUCT);
     _struct->name = make_string(&platform.permanent_arena, "mat4x4");
@@ -126,6 +127,8 @@ main(int argc, char** args){
     assert(theme.base.b == 0x19);
     assert(theme.base.a == 0xFF);
     SDL_StartTextInput();
+    platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
+                                                256);
     while(running){
         OPTICK_FRAME("MainThread");
         
@@ -137,7 +140,6 @@ main(int argc, char** args){
         u32 mouse_state = SDL_GetMouseState(&x, &y);
         platform.mouse_x = x;
         platform.mouse_y = platform.height - y;
-        platform.mouse_left_clicked = mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT);
         
         f32 offset = 5;
         left->_int = tick;
@@ -158,11 +160,9 @@ main(int argc, char** args){
         // in the nvidia control panel is what
         // fixed it
         // fuck you opengl
-        platform.mouse_left_double_clicked = 0;
         platform.mouse_move = 0;
         platform.has_text_input = 0;
-        platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
-                                                    256);
+        
         
         char* text_input = platform.text_input;
         while(SDL_PollEvent(&event)){
@@ -173,14 +173,25 @@ main(int argc, char** args){
                 if(event.button.button == SDL_BUTTON_LEFT){
                     if(event.button.clicks == 1){
                         platform.mouse_left_clicked = 1;
-                    }else {
+                    }else if(event.button.clicks == 2){
                         platform.mouse_left_double_clicked = 1;
                     }
+                    
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
                     if(event.button.clicks == 1){
                         platform.mouse_right_clicked = 1;
                     }
+                }
+            }
+            if(event.type == SDL_MOUSEBUTTONUP){
+                if(event.button.button == SDL_BUTTON_LEFT){
+                    platform.mouse_left_clicked = 0;
+                    platform.mouse_left_down = 0;
+                    platform.mouse_left_double_clicked = 0;
+                }
+                if(event.button.button == SDL_BUTTON_RIGHT){
+                    platform.mouse_right_clicked = 0;
                 }
             }
             if(event.type == SDL_KEYDOWN){

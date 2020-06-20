@@ -24,7 +24,7 @@ struct {
     f32 menu_x, menu_y;
     bool is_menu_open;
     Node* menu_node;
-    
+    int selected;
 } friday;
 
 // NOTE(Oliver): probably should do this better
@@ -410,6 +410,61 @@ get_text_width(String8 string){
     return result*renderer.fonts[0].scale;
 }
 
+
+internal bool
+boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)()){
+    
+    if(!friday.is_menu_open) return false;
+    
+    auto id = gen_unique_id(label);
+    
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 height = 40;
+    f32 size_x = 200;
+    f32 size_y = num_rows*height;
+    f32 x = friday.menu_x;
+    f32 y = friday.menu_y-size_y+line_height;
+    
+    for(int i = 0; i < num_rows; i++){
+        f32 text_width = get_text_width(strings[i]);
+        text_width *= 1.2;
+        size_x = text_width >= size_x ? text_width : size_x;
+        
+    }
+    
+    auto menu_widget = _push_widget(x, y, size_x, size_y, id);
+    menu_widget->callback = callback;
+    
+    bool result = false;
+    
+    for(int i = 0; i < num_rows; i++){
+        String8 string = strings[i];
+        f32 offset = i*height;
+        push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
+        u32 text_colour = theme.text_light.packed;
+        
+        if(is_mouse_in_rect(x, y + offset, size_x, height)){
+            if(platform.mouse_left_clicked){
+                friday.selected = i;
+                friday.is_menu_open = false;
+            }
+            push_rectangle(x, y+ offset, 
+                           size_x, height, 0.0,
+                           theme.base_margin.packed);
+            push_rectangle(x, y+ offset, 
+                           5, height, 0.0,
+                           theme.cursor.packed);
+            text_colour = theme.cursor.packed;
+        }
+        
+        push_string8(x+10, y + i*height+line_height/2, string,
+                     text_colour);
+    }
+    
+    return result;
+}
+
+
 internal void
 init_opengl_renderer(){
     
@@ -632,7 +687,7 @@ init_shaders(){
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4(vec2(1.2, 1.4)*dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy *= (vec4(1.2*dim/resolution, 0, 1)).xy;\n"
             "screen_position.xy += 2*(vec4((pos+dim/2)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
@@ -651,7 +706,7 @@ init_shaders(){
             "uniform vec2 in_position;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r){\n"
-            "return length(max(abs(p)-b,0.0))-r;\n"
+            "return length(max(abs(p)-b+r,0.0))-r;\n"
             "}\n"
             
             "void main(){\n"
@@ -720,8 +775,8 @@ init_shaders(){
             "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
             "float border_ = min(b.y,b.x)*border;\n"
             "float border_percent = border*min(b.y,b.x)/max(b.y,b.x);\n"
-            "float inner = length(max(abs(p)-(b-border_),0.0))-r*(1.0-border);\n"
-            "float outer = length(max(abs(p)-b,0.0))-r;\n"
+            "float inner = length(max(abs(p)-(b-border_)+r,0.0))-r*(1.0-border);\n"
+            "float outer = length(max(abs(p)-b+r,0.0))-r;\n"
             "return max(-inner, outer);\n"
             "}\n"
             
@@ -1204,21 +1259,30 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
 }
 
 internal void
-draw_leaf(Node* leaf, bool* right_clicked = nullptr){
+boss_draw_leaf(char* label, Node* leaf,
+               void(*callback)()){
+    
+    auto id = gen_unique_id(label);
+    
     f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
-    f32 width = text_width+ 2*offset;
+    f32 width = text_width+ offset;
     f32 line_height = renderer.fonts[0].line_height;
     f32 height = line_height;
-    f32 x = get_friday_x() - offset;
+    f32 x = get_friday_x() - offset/2;
     f32 y = get_friday_y() - line_height*0.25;
+    
+    auto widget = _push_widget(x, y, width, height, id);
+    widget->callback = callback;
     
     u32 text_colour = theme.text.packed;
     
     
     if(is_mouse_in_rect(x, y, width, height)){
-        push_rectangle(x, y, width, height, 0.2, theme.cursor.packed);
-        text_colour = theme.base.packed;
+        if(id == ui_state.hover_id){
+            push_rectangle(x, y, width, height, 0.1, theme.cursor.packed);
+            text_colour = theme.base.packed;
+        }
         if(platform.mouse_left_double_clicked){
             friday.active_node = leaf;
             platform.mouse_left_double_clicked = 0;
@@ -1231,17 +1295,15 @@ draw_leaf(Node* leaf, bool* right_clicked = nullptr){
             friday.menu_x = x;
             friday.menu_y = y-10;
             platform.mouse_right_clicked = 0;
-            if(right_clicked){
-                *right_clicked = 1;
-            }
         }
         
     }
+    
     if(friday.active_node == leaf){
         String8 cursor_string = leaf->name;
         cursor_string.length = friday.cursor_index;
         f32 cursor_pos = get_text_width(cursor_string);
-        push_rectangle(3+x+cursor_pos, y, 3, height, 0.2, theme.cursor.packed);
+        push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
         edit_node(leaf);
     }
     
@@ -1279,57 +1341,6 @@ scope_insert(){
     return is_mouse_in_rect(x, y, width, height);
 }
 
-internal bool
-draw_menu(char* label, String8* strings, u64 num_rows, int* selected){
-    
-    if(!friday.is_menu_open) return false;
-    
-    auto id = gen_unique_id(label);
-    
-    f32 line_height = renderer.fonts[0].line_height;
-    f32 height = 40;
-    f32 size_x = 200;
-    f32 size_y = num_rows*height;
-    f32 x = friday.menu_x;
-    f32 y = friday.menu_y-size_y+line_height;
-    
-    for(int i = 0; i < num_rows; i++){
-        f32 text_width = get_text_width(strings[i]);
-        text_width *= 1.2;
-        size_x = text_width >= size_x ? text_width : size_x;
-    }
-    
-    bool result = false;
-    
-    for(int i = 0; i < num_rows; i++){
-        String8 string = strings[i];
-        f32 offset = i*height;
-        push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
-        u32 text_colour = theme.text_light.packed;
-        
-        if(is_mouse_in_rect(x, y + offset, size_x, height)){
-            if(platform.mouse_left_clicked){
-                if(selected){
-                    *selected = i;
-                }
-                friday.is_menu_open = false;
-            }
-            push_rectangle(x, y+ offset, 
-                           size_x, height, 0.0,
-                           theme.base_margin.packed);
-            push_rectangle(x, y+ offset, 
-                           5, height, 0.0,
-                           theme.cursor.packed);
-            text_colour = theme.cursor.packed;
-        }
-        
-        push_string8(x+10, y + i*height+line_height/2, string,
-                     text_colour);
-    }
-    
-    return result;
-}
-
 internal void
 render_graph(Node* root){
     if(!root) return;
@@ -1364,7 +1375,7 @@ render_graph(Node* root){
         case NODE_STRUCT: {
             friday.test_node = root;
             auto _struct = &root->_struct;
-            draw_leaf(root);
+            boss_draw_leaf("struct name", root, []{});
             draw_misc(" :: struct {");
             new_line();
             for(Node* member = _struct->members; member; member = member->next){
@@ -1397,7 +1408,7 @@ render_graph(Node* root){
         
         case NODE_DECLARATION: {
             auto decl = root->declaration.declaration;
-            draw_leaf(root);
+            boss_draw_leaf("declaration name", root, []{});
             //draw_string(root->name);
             draw_misc(" :");
             static f32 width = 0.0f;
@@ -1414,11 +1425,9 @@ render_graph(Node* root){
             if(root->declaration.type_usage){
                 space();
                 bool right_clicked = 0;
-                draw_leaf(root->declaration.type_usage->type_usage.type_reference, 
-                          &right_clicked);
-                if(right_clicked){
-                    friday.menu_node = root;
-                }
+                boss_draw_leaf("decl name", 
+                               root->declaration.type_usage->type_usage.type_reference, 
+                               []{});
                 space();
             }
             //friday.x += width;
@@ -1441,17 +1450,18 @@ render_graph(Node* root){
                     friday.menu_y = get_friday_y();
                 }
             }
+            
             String8 node_types[3];
             Arena* arena = &renderer.frame_arena;
             node_types[0] = make_string(arena, "function");
             node_types[1] = make_string(arena, "struct");
             node_types[2] = make_string(arena, "declaration");
-            int selected;
-            if(draw_menu("node menu", node_types, 3, &selected)){
+            
+            auto callback = []{
                 Pool* pool = &friday.node_pool;
                 Arena* perm_arena = &platform.permanent_arena;
                 Node* active = friday.menu_node;
-                switch(selected){
+                switch(friday.selected){
                     case 0:{
                         Node* node = make_node(pool, NODE_FUNCTION);
                         node->name = make_string(perm_arena, "new func");
@@ -1474,12 +1484,15 @@ render_graph(Node* root){
                         active->next = node;
                     }break;
                 }
-            }
+            };
+            
+            boss_draw_menu("node menu", node_types, 3, callback);
+            
             
         }break;
         
         case NODE_FUNCTION: {
-            draw_leaf(root);
+            boss_draw_leaf("function name", root, []{});
             draw_misc(" :: () {");
             indent();
             new_line();

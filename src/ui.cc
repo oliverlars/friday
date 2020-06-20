@@ -32,8 +32,20 @@ gen_unique_id(char* label){
     return (UI_ID)id;
 }
 
+
+internal UI_ID
+gen_unique_id(String8 label){
+    
+    u64 id = (u64)(void*)label.text;
+    for(int i = 0; i < label.length; i++){
+        id += (u64)(void*)label.text[i];
+    }
+    
+    return (UI_ID)id;
+}
+
 internal Widget* 
-push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id){
+_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id){
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
     widget->x = x;
     widget->y = y;
@@ -56,6 +68,7 @@ push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id){
     return widget;
 }
 
+
 internal bool
 is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
     return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
@@ -68,14 +81,13 @@ process_widgets_and_handle_events(){
     
     Widget* active = nullptr;
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
-        char buffer[256];
-        snprintf(buffer, 256, "%f %f %f %f %f %f\n", 
-                 widget->x, widget->y, widget->width, widget->height,
-                 platform.mouse_x, platform.mouse_y);
-        OutputDebugStringA(buffer);
-        if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
-            OutputDebugStringA("SWITCHED");
-            active = widget;
+        if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)
+           ){
+            ui_state.hover_id = widget->id;
+            if(platform.mouse_left_clicked){
+                active = widget;
+                ui_state.clicked_id = widget->id;
+            }
         }
     }
     
@@ -93,9 +105,9 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xF
 
 internal void 
 button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)()){
-    auto widget = push_widget(x, y, width, height, gen_unique_id("Test"));
+    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"));
     widget->callback = callback;
-    push_rectangle(x, y, width, height, 0.0f, colour);
+    push_rectangle(x, y, width, height, 0.2, colour);
 }
 
 

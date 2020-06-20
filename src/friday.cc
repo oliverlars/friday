@@ -161,14 +161,17 @@ main(int argc, char** args){
         button(350, 350, 100, 100,box1, []{
                    box1 = 0xFF0000FF;
                    box2 = 0x00FF00FF;
+                   OutputDebugStringA("BOX1\n");
                });
+        
         
         button(350, 350, 50, 50, box2, []{
                    box1 = 0x00FF00FF;
                    box2 = 0xFF0000FF;
+                   OutputDebugStringA("BOX2\n");
                });
         process_widgets_and_handle_events();
-        //render_graph(scope);
+        render_graph(scope);
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here

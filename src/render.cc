@@ -412,7 +412,7 @@ get_text_width(String8 string){
 
 
 internal bool
-boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)()){
+boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)(void* parameters)){
     
     if(!friday.is_menu_open) return false;
     
@@ -432,8 +432,7 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)()){
         
     }
     
-    auto menu_widget = _push_widget(x, y, size_x, size_y, id);
-    menu_widget->callback = callback;
+    auto menu_widget = _push_widget(x, y, size_x, size_y, id, callback);
     
     bool result = false;
     
@@ -1260,7 +1259,7 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
 
 internal void
 boss_draw_leaf(char* label, Node* leaf,
-               void(*callback)()){
+               void(*callback)(void* parameters)){
     
     auto id = gen_unique_id(label);
     
@@ -1272,8 +1271,7 @@ boss_draw_leaf(char* label, Node* leaf,
     f32 x = get_friday_x() - offset/2;
     f32 y = get_friday_y() - line_height*0.25;
     
-    auto widget = _push_widget(x, y, width, height, id);
-    widget->callback = callback;
+    auto widget = _push_widget(x, y, width, height, id, callback);
     
     u32 text_colour = theme.text.packed;
     
@@ -1331,14 +1329,18 @@ draw_insertable(){
 }
 
 global bool should_insert;
-internal bool
-scope_insert(){
+internal void
+scope_insert(char* label, void(*callback)(void* parameters)){
     f32 x = get_friday_x();
     f32 y = get_friday_y();
     f32 width = 100.0f; // TODO(Oliver): make this not magic
     f32 height = renderer.fonts[0].line_height;
     y = get_friday_y()+height;
-    return is_mouse_in_rect(x, y, width, height);
+    
+    auto id = gen_unique_id(label);
+    
+    auto widget = _push_widget(x, y, width, height, id, callback, true);
+    
 }
 
 internal void
@@ -1375,7 +1377,7 @@ render_graph(Node* root){
         case NODE_STRUCT: {
             friday.test_node = root;
             auto _struct = &root->_struct;
-            boss_draw_leaf("struct name", root, []{});
+            boss_draw_leaf("struct name", root, [](void* parameters){});
             draw_misc(" :: struct {");
             new_line();
             for(Node* member = _struct->members; member; member = member->next){
@@ -1408,7 +1410,7 @@ render_graph(Node* root){
         
         case NODE_DECLARATION: {
             auto decl = root->declaration.declaration;
-            boss_draw_leaf("declaration name", root, []{});
+            boss_draw_leaf("declaration name", root, [](void* parameters){});
             //draw_string(root->name);
             draw_misc(" :");
             static f32 width = 0.0f;
@@ -1427,7 +1429,7 @@ render_graph(Node* root){
                 bool right_clicked = 0;
                 boss_draw_leaf("decl name", 
                                root->declaration.type_usage->type_usage.type_reference, 
-                               []{});
+                               [](void* parameter){});
                 space();
             }
             //friday.x += width;
@@ -1442,13 +1444,18 @@ render_graph(Node* root){
             auto scope = &root->scope;
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
                 render_graph(stmt);
-                if(platform.mouse_left_clicked && scope_insert()){
+                auto callback = [](void* parameters) {
+                    
+                    Node* stmt = *(Node**)parameters;
                     friday.is_menu_open = 1;
                     should_insert = 1;
                     friday.menu_node = stmt;
                     friday.menu_x = get_friday_x();
                     friday.menu_y = get_friday_y();
-                }
+                };
+                boss_start_params();
+                boss_push_param_node(stmt);
+                scope_insert("scope insert", callback);
             }
             
             String8 node_types[3];
@@ -1457,7 +1464,7 @@ render_graph(Node* root){
             node_types[1] = make_string(arena, "struct");
             node_types[2] = make_string(arena, "declaration");
             
-            auto callback = []{
+            auto callback = [](void* parameters){
                 Pool* pool = &friday.node_pool;
                 Arena* perm_arena = &platform.permanent_arena;
                 Node* active = friday.menu_node;
@@ -1492,12 +1499,12 @@ render_graph(Node* root){
         }break;
         
         case NODE_FUNCTION: {
-            boss_draw_leaf("function name", root, []{});
+            boss_draw_leaf("function name", root, [](void* parameters){});
             draw_misc(" :: () {");
             indent();
             new_line();
             new_line();
-            if(platform.mouse_left_clicked && scope_insert()){
+            if(platform.mouse_left_clicked){
                 friday.is_menu_open = 1;
                 should_insert = 1;
                 friday.active_node = nullptr;

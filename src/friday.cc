@@ -158,14 +158,14 @@ main(int argc, char** args){
         global u32 box1 = 0xFF0000FF;
         global u32 box2 = 0x00FF00FF;
         
-        button(350, 350, 100, 100,box1, []{
+        button(350, 350, 100, 100,box1, [](void* parameters){
                    box1 = 0xFF0000FF;
                    box2 = 0x00FF00FF;
                    OutputDebugStringA("BOX1\n");
                });
         
         
-        button(350, 350, 50, 50, box2, []{
+        button(350, 350, 50, 50, box2, [](void* parameters){
                    box1 = 0x00FF00FF;
                    box2 = 0xFF0000FF;
                    OutputDebugStringA("BOX2\n");
@@ -192,13 +192,9 @@ main(int argc, char** args){
             }
             if(event.type == SDL_MOUSEBUTTONDOWN){
                 if(event.button.button == SDL_BUTTON_LEFT){
-                    if(event.button.clicks == 1){
-                        if(1 || !previous_mouse_left_clicked){
-                            platform.mouse_left_clicked = 1;
-                            OutputDebugStringA("Clicked\n");
-                        }
-                    }else if(event.button.clicks == 2){
-                        platform.mouse_left_double_clicked = 1;
+                    if(1 || !previous_mouse_left_clicked){
+                        platform.mouse_left_clicked = 1;
+                        OutputDebugStringA("Clicked\n");
                     }
                     
                 }

@@ -7,8 +7,9 @@ struct Widget {
     UI_ID id;
     Widget* next;
     Widget* last;
-    void(*callback)();
     
+    void* parameters;
+    void(*callback)(void* parameters);
 };
 
 global struct {
@@ -17,7 +18,28 @@ global struct {
     UI_ID clicked_id;
     
     Arena frame_arena;
+    Arena parameter_arena;
 } ui_state;
+
+global void* current_parameter_list;
+global void* push_parameter_list;
+
+const int MAX_PARAM_SIZE = 128;
+
+internal void
+boss_start_params(){
+    current_parameter_list = arena_allocate(&ui_state.parameter_arena, MAX_PARAM_SIZE);
+    push_parameter_list = current_parameter_list;
+}
+
+struct Node;
+
+internal void
+boss_push_param_node(Node* node){
+    auto param = (Node**)push_parameter_list;
+    *param = node;
+}
+
 
 internal UI_ID
 gen_unique_id(char* label){
@@ -45,7 +67,9 @@ gen_unique_id(String8 label){
 }
 
 internal Widget* 
-_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id){
+_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
+             void(*callback)(void* parameters),
+             bool has_parameters = false){
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
     widget->x = x;
     widget->y = y;
@@ -53,6 +77,10 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id){
     widget->height = height;
     widget->id = id;
     widget->next = nullptr;
+    widget->callback = callback;
+    if(has_parameters){
+        widget->parameters = current_parameter_list;
+    }
     
     if(ui_state.widgets){
         Widget* widgets;
@@ -92,7 +120,7 @@ process_widgets_and_handle_events(){
     }
     
     if(active){
-        active->callback();
+        active->callback(active->parameters);
     }
     
     arena_reset(&ui_state.frame_arena);
@@ -104,8 +132,9 @@ internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF);
 
 internal void 
-button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)()){
-    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"));
+button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)(void*
+                                                                        parameters)){
+    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"), callback);
     widget->callback = callback;
     push_rectangle(x, y, width, height, 0.2, colour);
 }

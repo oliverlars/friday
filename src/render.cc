@@ -410,13 +410,8 @@ get_text_width(String8 string){
     return result*renderer.fonts[0].scale;
 }
 
-
-internal bool
+internal void
 boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)(void* parameters)){
-    
-    if(!friday.is_menu_open) return false;
-    
-    auto id = gen_unique_id(label);
     
     f32 line_height = renderer.fonts[0].line_height;
     f32 height = 40;
@@ -431,20 +426,24 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)(void
         size_x = text_width >= size_x ? text_width : size_x;
         
     }
+    auto menu_id = gen_unique_id(label);
+    auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, callback);
     
-    auto menu_widget = _push_widget(x, y, size_x, size_y, id, callback);
     
-    bool result = false;
     
     for(int i = 0; i < num_rows; i++){
+        
         String8 string = strings[i];
         f32 offset = i*height;
         push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
         u32 text_colour = theme.text_light.packed;
         
+        
         if(is_mouse_in_rect(x, y + offset, size_x, height)){
             if(platform.mouse_left_clicked){
+                
                 friday.selected = i;
+                
                 friday.is_menu_open = false;
             }
             push_rectangle(x, y+ offset, 
@@ -460,7 +459,6 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, void(*callback)(void
                      text_colour);
     }
     
-    return result;
 }
 
 
@@ -1447,14 +1445,22 @@ render_graph(Node* root){
                 auto callback = [](void* parameters) {
                     
                     Node* stmt = *(Node**)parameters;
+                    parameters = (void*)((Node**)parameters + sizeof(Node*));
+                    
+                    f32 x = *(f32*)parameters;
+                    parameters = (void*)((f32*)parameters + sizeof(f32));
+                    
+                    f32 y = *(f32*)parameters;
                     friday.is_menu_open = 1;
                     should_insert = 1;
                     friday.menu_node = stmt;
-                    friday.menu_x = get_friday_x();
-                    friday.menu_y = get_friday_y();
+                    friday.menu_x = x;
+                    friday.menu_y = y;
                 };
                 boss_start_params();
                 boss_push_param_node(stmt);
+                boss_push_param_f32(get_friday_x());
+                boss_push_param_f32(get_friday_y());
                 scope_insert("scope insert", callback);
             }
             
@@ -1479,11 +1485,12 @@ render_graph(Node* root){
                     case 1:{
                         Node* node = make_node(pool, NODE_STRUCT);
                         node->name = make_string(perm_arena, "new struct");
+                        node->_struct.members = nullptr;
                         node->next = active->next;
                         active->next = node;
                     }break;
                     
-                    case 3:{
+                    case 2:{
                         Node* node = make_node(pool, NODE_DECLARATION);
                         node->name = make_string(perm_arena, "new declaration");
                         node->declaration.is_initialised = false;
@@ -1493,7 +1500,9 @@ render_graph(Node* root){
                 }
             };
             
-            boss_draw_menu("node menu", node_types, 3, callback);
+            if(friday.is_menu_open){
+                boss_draw_menu("node menu", node_types, 3, callback);
+            }
             
             
         }break;
@@ -1504,7 +1513,7 @@ render_graph(Node* root){
             indent();
             new_line();
             new_line();
-            if(platform.mouse_left_clicked){
+            if(0 && platform.mouse_left_clicked){
                 friday.is_menu_open = 1;
                 should_insert = 1;
                 friday.active_node = nullptr;

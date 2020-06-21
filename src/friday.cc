@@ -170,8 +170,8 @@ main(int argc, char** args){
                    box2 = 0xFF0000FF;
                    OutputDebugStringA("BOX2\n");
                });
-        process_widgets_and_handle_events();
         render_graph(scope);
+        process_widgets_and_handle_events();
         opengl_end_frame();
         
         // NOTE(Oliver): supposedley this goes here
@@ -183,6 +183,7 @@ main(int argc, char** args){
         // fuck you opengl
         platform.mouse_move = 0;
         platform.has_text_input = 0;
+        platform.mouse_left_clicked = 0;
         
         
         char* text_input = platform.text_input;
@@ -192,11 +193,7 @@ main(int argc, char** args){
             }
             if(event.type == SDL_MOUSEBUTTONDOWN){
                 if(event.button.button == SDL_BUTTON_LEFT){
-                    if(1 || !previous_mouse_left_clicked){
-                        platform.mouse_left_clicked = 1;
-                        OutputDebugStringA("Clicked\n");
-                    }
-                    
+                    platform.mouse_left_down = 1;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
                     if(event.button.clicks == 1){
@@ -206,7 +203,10 @@ main(int argc, char** args){
             }
             if(event.type == SDL_MOUSEBUTTONUP){
                 if(event.button.button == SDL_BUTTON_LEFT){
-                    platform.mouse_left_clicked = 0;
+                    if(platform.mouse_left_down){
+                        platform.mouse_left_clicked = 1;
+                    }
+                    platform.mouse_left_up = 1;
                     platform.mouse_left_down = 0;
                     platform.mouse_left_double_clicked = 0;
                 }
@@ -226,7 +226,6 @@ main(int argc, char** args){
                 
             }
         }
-        previous_mouse_left_clicked = platform.mouse_left_clicked;
         
         SDL_GL_SwapWindow(global_window);
         

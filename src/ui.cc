@@ -1,4 +1,3 @@
-
 typedef u64 UI_ID;
 
 struct Widget {
@@ -28,7 +27,7 @@ const int MAX_PARAM_SIZE = 128;
 
 internal void
 boss_start_params(){
-    current_parameter_list = arena_allocate(&ui_state.parameter_arena, MAX_PARAM_SIZE);
+    current_parameter_list = arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
     push_parameter_list = current_parameter_list;
 }
 
@@ -38,6 +37,15 @@ internal void
 boss_push_param_node(Node* node){
     auto param = (Node**)push_parameter_list;
     *param = node;
+    push_parameter_list = (void*)((Node**)push_parameter_list + sizeof(Node*));
+    
+}
+
+internal void
+boss_push_param_f32(f32 value){
+    auto param = (f32*)push_parameter_list;
+    *param = value;
+    push_parameter_list = (void*)((f32*)push_parameter_list + sizeof(f32));
 }
 
 

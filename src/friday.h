@@ -470,6 +470,8 @@ struct {
     f32 mouse_x, mouse_y;
     
     bool mouse_left_clicked;
+    
+    bool mouse_left_up;
     bool mouse_left_down;
     
     bool mouse_middle_clicked;

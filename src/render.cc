@@ -1170,6 +1170,11 @@ indent(){
 }
 
 internal void
+pop_indent(){
+    friday.x_offset -= 40;
+}
+
+internal void
 space() {
     friday.x_offset += 10;
 }
@@ -1338,6 +1343,8 @@ draw_insertable(String8 label, void(*callback)(u8* parameters)){
     f32 width = 100.0f; // TODO(Oliver): make this not magic
     f32 height = renderer.fonts[0].line_height;
     
+    //push_rectangle(x, y, width, height, 0.2, 0xFF0000FF);
+    
     auto id = gen_unique_id(label);
     
     auto widget = _push_widget(x, y, width, height, id, callback, true);
@@ -1419,24 +1426,25 @@ render_graph(Node* root){
                 }
                 
             };
-            if(!_struct->members){
-                boss_start_params();
-                boss_push_param_node(root);
-                boss_push_param_node(_struct->members);
-                draw_insertable(root->name, callback);
-            }
+            
             for(Node* member = _struct->members; member; member = member->next){
                 indent();
                 
                 render_graph(member);
-                boss_start_params();
-                boss_push_param_node(root);
-                boss_push_param_node(member);
-                draw_insertable(member->name, callback);
+                
                 pop_line();
             }
+            if(!_struct->members){
+                indent();
+            }
+            boss_start_params();
+            boss_push_param_node(root);
+            boss_push_param_node(_struct->members);
+            draw_insertable(make_string(&renderer.frame_arena,"insertable"), callback);
             
-            new_line();
+            if(!_struct->members){
+                new_line();
+            }
             draw_misc("}");
             new_line();
             new_line();

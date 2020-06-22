@@ -12,6 +12,8 @@ enum Node_Type {
     NODE_DECLARATION,
     NODE_IDENTIFIER,
     NODE_FUNCTION,
+    NODE_CONDITIONAL,
+    NODE_FOR,
     NODE_CALL,
 };
 
@@ -87,6 +89,20 @@ struct Node {
         struct {
             Node* statements;
         } scope;
+        
+        struct {
+            Node* condition;
+            Node* scope;
+            Node* else_if;
+            Node* _else;
+        } conditional;
+        
+        struct {
+            Node* init;
+            Node* condition;
+            Node* inc;
+            Node* scope;
+        }_for;
         
         struct {
             Node* who_called_me;

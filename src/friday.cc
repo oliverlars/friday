@@ -155,21 +155,6 @@ main(int argc, char** args){
                        platform.width-offset*2, platform.height-offset*2, 0.1,
                        theme.base.packed);
         
-        global u32 box1 = 0xFF0000FF;
-        global u32 box2 = 0x00FF00FF;
-        
-        button(350, 350, 100, 100,box1, [](void* parameters){
-                   box1 = 0xFF0000FF;
-                   box2 = 0x00FF00FF;
-                   OutputDebugStringA("BOX1\n");
-               });
-        
-        
-        button(350, 350, 50, 50, box2, [](void* parameters){
-                   box1 = 0x00FF00FF;
-                   box2 = 0xFF0000FF;
-                   OutputDebugStringA("BOX2\n");
-               });
         render_graph(scope);
         process_widgets_and_handle_events();
         opengl_end_frame();

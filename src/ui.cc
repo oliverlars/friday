@@ -7,8 +7,8 @@ struct Widget {
     Widget* next;
     Widget* last;
     
-    void* parameters;
-    void(*callback)(void* parameters);
+    u8* parameters;
+    void(*callback)(u8* parameters);
 };
 
 global struct {
@@ -20,14 +20,14 @@ global struct {
     Arena parameter_arena;
 } ui_state;
 
-global void* current_parameter_list;
-global void* push_parameter_list;
+global u8* current_parameter_list;
+global u8* push_parameter_list;
 
 const int MAX_PARAM_SIZE = 128;
 
 internal void
 boss_start_params(){
-    current_parameter_list = arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
+    current_parameter_list = (u8*)arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
     push_parameter_list = current_parameter_list;
 }
 
@@ -37,7 +37,7 @@ internal void
 boss_push_param_node(Node* node){
     auto param = (Node**)push_parameter_list;
     *param = node;
-    push_parameter_list = (void*)((Node**)push_parameter_list + sizeof(Node*));
+    push_parameter_list = push_parameter_list + sizeof(Node*);
     
 }
 
@@ -45,7 +45,7 @@ internal void
 boss_push_param_f32(f32 value){
     auto param = (f32*)push_parameter_list;
     *param = value;
-    push_parameter_list = (void*)((f32*)push_parameter_list + sizeof(f32));
+    push_parameter_list = push_parameter_list + sizeof(f32);
 }
 
 
@@ -76,7 +76,7 @@ gen_unique_id(String8 label){
 
 internal Widget* 
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
-             void(*callback)(void* parameters),
+             void(*callback)(u8* parameters),
              bool has_parameters = false){
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
     widget->x = x;
@@ -116,15 +116,19 @@ internal void
 process_widgets_and_handle_events(){
     
     Widget* active = nullptr;
+    bool hovered = false;
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
-        if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)
-           ){
+        if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
+            hovered = true;
             ui_state.hover_id = widget->id;
             if(platform.mouse_left_clicked){
                 active = widget;
                 ui_state.clicked_id = widget->id;
             }
         }
+    }
+    if(!hovered){
+        ui_state.hover_id = -1;
     }
     
     if(active){
@@ -140,7 +144,7 @@ internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF);
 
 internal void 
-button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)(void*
+button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)(u8*
                                                                         parameters)){
     auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"), callback);
     widget->callback = callback;

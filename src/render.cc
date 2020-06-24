@@ -1127,10 +1127,14 @@ opengl_start_frame() {
     arena_reset(&renderer.shape_attribs);
     arena_reset(&renderer.frame_arena);
     
+    arena_reset(&ui_state.frame_arena);
+    arena_reset(&ui_state.parameter_arena);
+    ui_state.widgets = nullptr;
+    
     renderer.head = nullptr;
     renderer.tail = nullptr;
     
-    friday.x = 640;
+    friday.x = 320;
     friday.y = 600;
     friday.x_offset = 0;
     
@@ -1198,6 +1202,7 @@ edit_node(Node* node){
         insert_in_string(&node->name, platform.text_input, friday.cursor_index);
         friday.cursor_index += strlen(platform.text_input);
         platform.has_text_input = 0;
+        OutputDebugStringA(platform.text_input);
     }
     
     if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
@@ -1411,11 +1416,8 @@ render_graph(Node* root){
             new_line();
             
             auto callback = [](u8* parameters) {
-                
-                Node* _struct = *(Node**)parameters;
-                parameters = parameters + sizeof(Node*);
-                Node* member = *(Node**)parameters;
-                parameters = parameters + sizeof(Node*);
+                auto _struct = get_arg(parameters, Node*);
+                auto member = get_arg(parameters, Node*);
                 
                 //Node* member = _struct->members;
                 Pool* pool = &friday.node_pool;
@@ -1457,18 +1459,32 @@ render_graph(Node* root){
         case NODE_DECLARATION: {
             auto decl = root->declaration.declaration;
             auto type_usage = root->declaration.type_usage;
-            Closure closure = {};
-            boss_draw_leaf(root, closure);
-            draw_misc(" :");
+            Closure closure = make_closure(nullptr, 0);
             
-            if(root->declaration.type_usage){
+            boss_draw_leaf(root, closure);
+            if(!root->declaration.type_usage){
+                auto callback = [](u8* p){
+                    auto root = get_arg(p, Node*);
+                    auto decl = &root->declaration;
+                    decl->type_usage = make_node(&friday.node_pool, NODE_TYPE_USAGE);
+                    Node* node_list[10];
+                    find_node_types(node_list, 10, NODE_STRUCT);
+                    
+                    decl->type_usage->type_usage.type_reference = node_list[0];
+                };
+                
+                closure = make_closure(callback, 1, arg(root));
+                draw_insertable(root->name, closure);
+                draw_misc(" :");
+            }else {
+                
                 space();
-                bool right_clicked = 0;
+                draw_misc(" :");
                 boss_draw_leaf(type_usage->type_usage.type_reference, 
                                closure);
                 space();
             }
-            //friday.x += width;
+            
             draw_misc("= ");
             if(root->declaration.is_initialised){
                 render_graph(decl);
@@ -1476,6 +1492,7 @@ render_graph(Node* root){
             }else {
                 draw_misc("void");
             }
+            
             new_line();
             new_line();
         }break;
@@ -1483,14 +1500,10 @@ render_graph(Node* root){
         case NODE_SCOPE: {
             auto scope = &root->scope;
             auto statement_callback = [](u8* parameters) {
+                auto stmt = get_arg(parameters, Node*);
+                auto x = get_arg(parameters, f32);
+                auto y = get_arg(parameters, f32);
                 
-                Node* stmt = *(Node**)parameters;
-                parameters = parameters + sizeof(Node*);
-                
-                f32 x = *(f32*)parameters;
-                parameters = parameters + sizeof(f32);
-                
-                f32 y = *(f32*)parameters;
                 friday.is_menu_open = 1;
                 should_insert = 1;
                 friday.menu_node = stmt;
@@ -1500,20 +1513,14 @@ render_graph(Node* root){
             
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
                 render_graph(stmt);
-                int x = get_friday_x();
-                int y = get_friday_y();
+                f32 _x = get_friday_x();
+                f32 _y = get_friday_y();
                 Closure closure = make_closure(statement_callback,
                                                3,
                                                arg(stmt), 
-                                               arg(x),
-                                               arg(y));
+                                               arg(_x),
+                                               arg(_y));
                 
-#if 0 
-                boss_start_params();
-                boss_push_param_node(stmt);
-                boss_push_param_f32(get_friday_x());
-                boss_push_param_f32(get_friday_y());
-#endif
                 scope_insert(root->name, closure);
             }
             

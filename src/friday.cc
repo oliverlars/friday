@@ -128,10 +128,8 @@ main(int argc, char** args){
     assert(theme.base.b == 0x19);
     assert(theme.base.a == 0xFF);
     SDL_StartTextInput();
-    platform.text_input = (char*)arena_allocate(&platform.temporary_arena,
-                                                256);
     
-    ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192);
+    ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
     bool previous_mouse_left_clicked = 0;
     while(running){
@@ -170,6 +168,9 @@ main(int argc, char** args){
         platform.has_text_input = 0;
         platform.mouse_left_clicked = 0;
         
+        
+        platform.text_input = (char*)arena_allocate(&renderer.frame_arena,
+                                                    256);
         
         char* text_input = platform.text_input;
         while(SDL_PollEvent(&event)){

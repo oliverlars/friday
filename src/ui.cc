@@ -28,7 +28,7 @@ global struct {
 
 struct Arg_Type {
     u8* arg;
-    int size;
+    u64 size;
 };
 
 Arg_Type
@@ -39,7 +39,7 @@ make_arg_type(u8* arg, int size){
     return result;
 }
 
-#define MAX_PARAM_SIZE 128
+#define MAX_PARAM_SIZE 512
 
 #define arg(x) make_arg_type((unsigned char*)&x, sizeof(x))
 #define get_arg(params, type) *((type*)params); params += sizeof(type)
@@ -49,7 +49,7 @@ internal Closure
 make_closure(void(*callback)(unsigned char* parameters), int num, ...) {
     
     Closure closure;
-    closure.parameters = (u8*)arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
+    closure.parameters = (u8*)arena_allocate(&ui_state.parameter_arena, MAX_PARAM_SIZE);
     closure.callback = callback;
     va_list args;
     
@@ -62,6 +62,7 @@ make_closure(void(*callback)(unsigned char* parameters), int num, ...) {
         memcpy(closure.parameters + offset, arg_type.arg, arg_type.size);
         offset += arg_type.size;
     }
+    
     va_end(args);
     
     return closure;
@@ -91,7 +92,9 @@ gen_unique_id(String8 label){
 internal Widget* 
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
              Closure closure, bool has_parameters = false){
-    auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
+    
+    //auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
+    auto widget = (Widget*)malloc(sizeof(Widget));
     widget->x = x;
     widget->y = y;
     widget->width = width;
@@ -142,24 +145,12 @@ process_widgets_and_handle_events(){
     }
     
     if(active){
-        active->closure.callback(active->closure.parameters);
+        if(active->closure.callback){
+            active->closure.callback(active->closure.parameters);
+        }
     }
     
-    arena_reset(&ui_state.frame_arena);
-    ui_state.widgets = nullptr;
-    
 }
-
-internal inline void
-push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF);
-
-internal void 
-button(f32 x, f32 y, f32 width, f32 height, u32 colour, Closure closure){
-    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"), closure);
-    widget->closure = closure;
-    push_rectangle(x, y, width, height, 0.2, colour);
-}
-
 
 // NOTE(Oliver): 0xAABBGGRR 
 union Colour {

@@ -1,5 +1,11 @@
 typedef u64 UI_ID;
 
+
+struct Closure {
+    u8* parameters;
+    void(*callback)(u8* parameters);
+};
+
 struct Widget {
     f32 x, y;
     f32 width, height;
@@ -7,8 +13,8 @@ struct Widget {
     Widget* next;
     Widget* last;
     
-    u8* parameters;
-    void(*callback)(u8* parameters);
+    
+    Closure closure;
 };
 
 global struct {
@@ -20,34 +26,46 @@ global struct {
     Arena parameter_arena;
 } ui_state;
 
-global u8* current_parameter_list;
-global u8* push_parameter_list;
+struct Arg_Type {
+    u8* arg;
+    int size;
+};
 
-const int MAX_PARAM_SIZE = 128;
-
-internal void
-boss_start_params(){
-    current_parameter_list = (u8*)arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
-    push_parameter_list = current_parameter_list;
+Arg_Type
+make_arg_type(u8* arg, int size){
+    Arg_Type result;
+    result.arg = arg;
+    result.size = size;
+    return result;
 }
 
-struct Node;
+#define MAX_PARAM_SIZE 128
 
-internal void
-boss_push_param_node(Node* node){
-    auto param = (Node**)push_parameter_list;
-    *param = node;
-    push_parameter_list = push_parameter_list + sizeof(Node*);
+#define arg(x) make_arg_type((unsigned char*)&x, sizeof(x))
+#define get_arg(params, type) *((type*)params); params += sizeof(type)
+
+
+internal Closure 
+make_closure(void(*callback)(unsigned char* parameters), int num, ...) {
     
+    Closure closure;
+    closure.parameters = (u8*)arena_allocate(&ui_state.frame_arena, MAX_PARAM_SIZE);
+    closure.callback = callback;
+    va_list args;
+    
+    va_start(args, num);
+    
+    Arg_Type arg_type;
+    int offset = 0;
+    for (int i = 0; i < num; i++) {
+        arg_type = va_arg(args, Arg_Type);
+        memcpy(closure.parameters + offset, arg_type.arg, arg_type.size);
+        offset += arg_type.size;
+    }
+    va_end(args);
+    
+    return closure;
 }
-
-internal void
-boss_push_param_f32(f32 value){
-    auto param = (f32*)push_parameter_list;
-    *param = value;
-    push_parameter_list = push_parameter_list + sizeof(f32);
-}
-
 
 internal UI_ID
 gen_unique_id(char* label){
@@ -67,17 +85,12 @@ internal UI_ID
 gen_unique_id(String8 label){
     
     u64 id = (u64)(void*)label.text;
-    for(int i = 0; i < label.length; i++){
-        id += (u64)(void*)label.text[i];
-    }
-    
     return (UI_ID)id;
 }
 
 internal Widget* 
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
-             void(*callback)(u8* parameters),
-             bool has_parameters = false){
+             Closure closure, bool has_parameters = false){
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
     widget->x = x;
     widget->y = y;
@@ -85,10 +98,7 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     widget->height = height;
     widget->id = id;
     widget->next = nullptr;
-    widget->callback = callback;
-    if(has_parameters){
-        widget->parameters = current_parameter_list;
-    }
+    widget->closure = closure;
     
     if(ui_state.widgets){
         Widget* widgets;
@@ -132,7 +142,7 @@ process_widgets_and_handle_events(){
     }
     
     if(active){
-        active->callback(active->parameters);
+        active->closure.callback(active->closure.parameters);
     }
     
     arena_reset(&ui_state.frame_arena);
@@ -144,10 +154,9 @@ internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour = 0xFF00FFFF);
 
 internal void 
-button(f32 x, f32 y, f32 width, f32 height, u32 colour, void(*callback)(u8*
-                                                                        parameters)){
-    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"), callback);
-    widget->callback = callback;
+button(f32 x, f32 y, f32 width, f32 height, u32 colour, Closure closure){
+    auto widget = _push_widget(x, y, width, height, gen_unique_id("Test"), closure);
+    widget->closure = closure;
     push_rectangle(x, y, width, height, 0.2, colour);
 }
 

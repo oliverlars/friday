@@ -210,6 +210,9 @@ main(int argc, char** args){
                 platform.mouse_move = 1;
                 
             }
+            if(event.type == SDL_MOUSEWHEEL){
+                friday.y_offset += -event.wheel.y*50;
+            }
         }
         
         SDL_GL_SwapWindow(global_window);

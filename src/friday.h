@@ -260,6 +260,22 @@ struct String8 {
     }
 };
 
+internal bool
+string_eq(String8 a, char* b){
+    if(!a.text || !a.length) return false;
+    if(!b || !(*b)) return false;
+    int b_length = strlen(b);
+    int min_length = a.length > b_length ? b_length : a.length;
+    
+    for(int i = 0; i < min_length; i++){
+        if(a[i] != b[i]){
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 internal void
 insert_in_string(String8* string, char* insertable, u64 index){
     if(!insertable) return;

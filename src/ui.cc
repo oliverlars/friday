@@ -94,7 +94,7 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
              Closure closure, bool has_parameters = false){
     
     //auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
-    auto widget = (Widget*)malloc(sizeof(Widget));
+    auto widget = (Widget*)calloc(1, sizeof(Widget));
     widget->x = x;
     widget->y = y;
     widget->width = width;
@@ -184,8 +184,8 @@ load_theme_ayu(){
     theme.base.packed = 0x0f1419ff;
     theme.base_margin.packed = 0x0a0e12ff;
     theme.menu.packed = 0x13181dff;
-    theme.text.packed = 0xFFFFFFff;
-    theme.text_light.packed = 0x262c33ff;
+    theme.text.packed = 0xffffffff;
+    theme.text_light.packed = 0x475259ff;
     theme.text_comment.packed = 0xffc2d94d;
     theme.text_function.packed = 0xff5ac2ff;
     theme.text_type.packed = 0xffff29719;

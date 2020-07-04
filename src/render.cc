@@ -26,6 +26,8 @@ struct {
     bool is_menu_open;
     Node* menu_node;
     int selected;
+    
+    int LOD;
 } friday;
 
 // NOTE(Oliver): probably should do this better
@@ -1152,8 +1154,16 @@ opengl_end_frame() {
                  1);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    process_and_draw_commands();
+    if(platform.keys_pressed[SDL_SCANCODE_1]){
+        friday.LOD = 1;
+        platform.keys_pressed[SDL_SCANCODE_1] = 0;
+    }
+    if(platform.keys_pressed[SDL_SCANCODE_2]){
+        friday.LOD = 2;
+        platform.keys_pressed[SDL_SCANCODE_2] = 0;
+    }
     
+    process_and_draw_commands();
     
     glUseProgram(0);
 }
@@ -1203,6 +1213,7 @@ edit_node(Node* node){
         friday.cursor_index += strlen(platform.text_input);
         platform.has_text_input = 0;
         OutputDebugStringA(platform.text_input);
+        OutputDebugStringA("\n");
     }
     
     if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
@@ -1434,22 +1445,27 @@ render_graph(Node* root){
                 }
                 
             };
-            
-            for(Node* member = _struct->members; member; member = member->next){
+            if(friday.LOD == 2){
                 indent();
-                
-                render_graph(member);
-                
-                pop_line();
-            }
-            if(!_struct->members){
-                indent();
-            }
-            Closure closure = make_closure(callback, 2, arg(root), arg(_struct->members));
-            draw_insertable(make_string(&renderer.frame_arena,"insertable"), closure);
-            
-            if(!_struct->members){
+                draw_misc("...");
                 new_line();
+            }else{
+                for(Node* member = _struct->members; member; member = member->next){
+                    indent();
+                    
+                    render_graph(member);
+                    
+                    pop_line();
+                }
+                if(!_struct->members){
+                    indent();
+                }
+                Closure closure = make_closure(callback, 2, arg(root), arg(_struct->members));
+                draw_insertable(make_string(&renderer.frame_arena,"insertable"), closure);
+                
+                if(!_struct->members){
+                    new_line();
+                }
             }
             draw_misc("}");
             new_line();
@@ -1498,6 +1514,10 @@ render_graph(Node* root){
         }break;
         
         case NODE_SCOPE: {
+            if(friday.LOD == 2 && root != friday.program_root){
+                draw_misc("...");
+                break;
+            }
             auto scope = &root->scope;
             auto statement_callback = [](u8* parameters) {
                 auto stmt = get_arg(parameters, Node*);
@@ -1594,4 +1614,25 @@ render_graph(Node* root){
         
     }
     
+}
+
+internal void
+display_modes(){
+    
+    return;
+    
+    f32 number_of_modes = 4;
+    
+    f32 mode_size = 60;
+    f32 padding = 10;
+    f32 offset = mode_size;
+    
+    f32 x = platform.width;
+    f32 y = platform.height;
+    
+    for(int i = 0; i < number_of_modes; i++){
+        push_rectangle(x-offset*2,y - (mode_size*number_of_modes) + (mode_size+padding)*i, 
+                       mode_size, mode_size, 
+                       0.3, theme.base_margin.packed);
+    }
 }

@@ -112,6 +112,7 @@ main(int argc, char** args){
     scope->scope.statements = _struct;
     scope->scope.statements->next = _struct2;
     scope->scope.statements->next->next = decl;
+    scope->name = make_string(&platform.permanent_arena, "global");
     
     friday.program_root = scope;
     
@@ -154,6 +155,7 @@ main(int argc, char** args){
                        theme.base.packed);
         
         render_graph(scope);
+        display_modes();
         process_widgets_and_handle_events();
         opengl_end_frame();
         
@@ -168,9 +170,8 @@ main(int argc, char** args){
         platform.has_text_input = 0;
         platform.mouse_left_clicked = 0;
         
-        
-        platform.text_input = (char*)arena_allocate(&renderer.frame_arena,
-                                                    256);
+        free(platform.text_input);
+        platform.text_input = (char*)calloc(1, 256);
         
         char* text_input = platform.text_input;
         while(SDL_PollEvent(&event)){

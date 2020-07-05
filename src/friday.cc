@@ -10,6 +10,9 @@
 #include "opengl.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../ext/stb_truetype.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../ext/stb_image.h"
+
 #include <string.h>
 #include "graph.cc"
 #include "ui.cc"
@@ -132,6 +135,8 @@ main(int argc, char** args){
     
     ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
+    Bitmap bitmap = make_bitmap("logo.png");
+    
     bool previous_mouse_left_clicked = 0;
     while(running){
         OPTICK_FRAME("MainThread");
@@ -155,6 +160,7 @@ main(int argc, char** args){
                        theme.base.packed);
         
         render_graph(scope);
+        push_rectangle_textured(50,50, 326/2, 100/2, 0.1, bitmap);
         display_modes();
         process_widgets_and_handle_events();
         opengl_end_frame();

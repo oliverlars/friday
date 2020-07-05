@@ -2,6 +2,36 @@
 // NOTE(Oliver): this is global state for the render pass
 // may not be needed, we'll see
 
+struct Bitmap {
+    int width, height;
+    u8* data;
+    int channel_count;
+    GLuint texture;
+};
+
+internal Bitmap 
+make_bitmap(char* filename){
+    int x, y, n;
+    u8* data = stbi_load(filename, &x, &y, &n, 0);
+    
+    Bitmap result;
+    result.data = data;
+    result.width = x;
+    result.height = y;
+    result.channel_count = n;
+    
+    glGenTextures(1, &result.texture);
+    glBindTexture(GL_TEXTURE_2D, result.texture);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result.width,
+                 result.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 result.data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    return result;
+}
+
 enum Menu_Type {
     MENU_TYPE_USAGE,
     MENU_CREATE_NODE
@@ -27,6 +57,11 @@ struct {
     Node* menu_node;
     int selected;
     
+    int minimap_x;
+    int minimap_y;
+    int minimap_x_offset;
+    int minimap_y_offset;
+    
     int LOD;
 } friday;
 
@@ -41,11 +76,23 @@ get_friday_y(){
     return friday.y + friday.y_offset;
 }
 
+// NOTE(Oliver): probably should do this better
+internal inline int
+get_friday_minimap_x(){
+    return friday.minimap_x + friday.minimap_x_offset;
+}
+
+internal inline int
+get_friday_minimap_y(){
+    return friday.minimap_y + friday.minimap_y_offset;
+}
+
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
     COMMAND_RECTANGLE_OUTLINE,
     COMMAND_GLYPH,
+    COMMAND_RECTANGLE_TEXTURED,
     
     COMMAND_COUNT
 };
@@ -93,6 +140,16 @@ struct Command {
             f32 u_width, v_height; 
         } glyph;
         
+        struct {
+#define BYTES_PER_RECTANGLE_TEXTURED (8*sizeof(f32))
+            f32 x, y;
+            f32 width, height;
+            f32 corner_radius;
+            f32 u, v;
+            f32 u_width, v_height;
+            
+            Bitmap bitmap;
+        }rectangle_textured;
     };
 };
 
@@ -275,6 +332,21 @@ get_program_circle() {
     return renderer.programs[COMMAND_CIRCLE];
 }
 
+internal inline GLuint
+get_vao_rectangle_textured() {
+    return renderer.vaos[COMMAND_RECTANGLE_TEXTURED];
+}
+
+internal inline GLuint
+get_buffer_rectangle_textured() {
+    return renderer.buffers[COMMAND_RECTANGLE_TEXTURED];
+}
+
+internal inline GLuint
+get_program_rectangle_textured() {
+    return renderer.programs[COMMAND_RECTANGLE_TEXTURED];
+}
+
 internal inline void
 push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour){
     
@@ -337,6 +409,23 @@ push_glyph(stbtt_aligned_quad quad, u32 colour){
     glyph->glyph.v_height = t1 - t0;
     glyph->colour.packed = colour;
     insert_command(glyph);
+}
+
+internal inline void
+push_rectangle_textured(f32 x, f32 y, f32 width, f32 height, f32 radius, Bitmap bitmap){
+    
+    auto rectangle = make_command(COMMAND_RECTANGLE_TEXTURED);
+    rectangle->rectangle_textured.x = x;
+    rectangle->rectangle_textured.y = y;
+    rectangle->rectangle_textured.width = width;
+    rectangle->rectangle_textured.height = height;
+    rectangle->rectangle_textured.corner_radius = radius;
+    rectangle->rectangle_textured.u = 0;
+    rectangle->rectangle_textured.v = 0;
+    rectangle->rectangle_textured.u_width = width;
+    rectangle->rectangle_textured.v_height = height;
+    rectangle->rectangle_textured.bitmap = bitmap;
+    insert_command(rectangle);
 }
 
 internal void
@@ -607,6 +696,39 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(colour);
         glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
                               BYTES_PER_GLYPH, reinterpret_cast<void*>(sizeof(f32)*8));
+        
+    }
+    
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE_TEXTURED]);
+        glBindVertexArray(get_vao_rectangle_textured());
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_RECTANGLE_TEXTURED]);
+        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_textured());
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        GLuint pos_dim = 2;
+        GLuint uv = 4;
+        GLuint uv_dim = 6;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(pos_dim);
+        glVertexAttribPointer(pos_dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(uv);
+        glVertexAttribPointer(uv, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*4));
+        
+        glEnableVertexAttribArray(uv_dim);
+        glVertexAttribPointer(uv_dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*6));
         
     }
     
@@ -920,6 +1042,55 @@ init_shaders(){
         glBindTexture(GL_TEXTURE_2D, 0);
         
     }
+    // NOTE(Oliver): init rectangle textured shader
+    {
+        GLchar* rectangle_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in vec2 pos; \n"
+            "layout(location = 2) in vec2 pos_dim; \n"
+            "layout(location = 4) in vec2 uv;\n"
+            "layout(location = 6) in vec2 uv_dim; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            "out vec2 frag_pos;\n"
+            "out vec2 frag_uv;\n"
+            "out vec4 frag_colour;\n"
+            
+            "void main(){\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));\n"
+            "vec2 uvs[] = vec2[](vec2(0,1), vec2(1,1), vec2(1,0),\n"
+            "vec2(0, 1), vec2(0,0), vec2(1,0));\n"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4((pos_dim)/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+pos_dim/2)/resolution,0,1)).xy -1;\n"
+            "frag_uv = uvs[gl_VertexID % 6];\n"
+            //"frag_uv *= uv_dim;\n"
+            //"frag_uv += uv;\n"
+            "gl_Position = screen_position;\n"
+            "frag_pos = pos;\n"
+            "}\n";
+        
+        GLchar* rectangle_fs =  
+            "#version 330 core\n"
+            "in vec2 frag_pos; \n"
+            "in vec2 frag_uv; \n"
+            "in vec2 frag_dim; \n"
+            "out vec4 colour;\n"
+            "uniform sampler2D atlas;\n"
+            
+            "void main(){\n"
+            "colour = texture(atlas, frag_uv);\n"
+            "}\n";
+        
+        GLuint program = make_program(rectangle_vs, rectangle_fs);
+        
+        renderer.resolution_uniforms[COMMAND_RECTANGLE_TEXTURED] = glGetUniformLocation(program, "resolution");
+        
+        renderer.programs[COMMAND_RECTANGLE_TEXTURED] = program;
+        
+    }
     
 }
 
@@ -932,6 +1103,7 @@ process_and_draw_commands(){
     f32* rectangle_outlines = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
     f32* circles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_CIRCLE);
     f32* glyphs = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_GLYPH);
+    f32* rectangles_textured = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
     
     
     // TODO(Oliver): batch these in chunks to preserve draw order!
@@ -1114,6 +1286,47 @@ process_and_draw_commands(){
                     glUseProgram(0);
                 }
             }break;
+            
+            case COMMAND_RECTANGLE_TEXTURED: {
+                f32* attribs = rectangles_textured;
+                
+                auto rectangle = command;
+                for(int i = 0; i < 6; i++){
+                    *attribs++ = rectangle->rectangle_textured.x;
+                    *attribs++ = rectangle->rectangle_textured.y;
+                    *attribs++ = rectangle->rectangle_textured.width;
+                    *attribs++ = rectangle->rectangle_textured.height;
+                    *attribs++ = rectangle->rectangle_textured.u;
+                    *attribs++ = rectangle->rectangle_textured.v;
+                    *attribs++ = rectangle->rectangle_textured.u_width;
+                    *attribs++ = rectangle->rectangle_textured.v_height;
+                }
+                
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_textured());
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED,
+                                    rectangles_textured);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(get_program_rectangle_textured());
+                    
+                    float resolution[2] = {platform.width, platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_TEXTURED], 1, resolution);
+                    
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, rectangle->rectangle_textured.bitmap.texture);
+                    
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                    
+                    glBindVertexArray(get_vao_rectangle_textured());
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                    glUseProgram(0);
+                }
+            }break;
         }
         command = previous_command;
         
@@ -1129,7 +1342,7 @@ opengl_start_frame() {
     arena_reset(&renderer.shape_attribs);
     arena_reset(&renderer.frame_arena);
     
-    arena_reset(&ui_state.frame_arena);
+    //arena_reset(&ui_state.frame_arena);
     arena_reset(&ui_state.parameter_arena);
     ui_state.widgets = nullptr;
     
@@ -1139,6 +1352,10 @@ opengl_start_frame() {
     friday.x = 320;
     friday.y = 600;
     friday.x_offset = 0;
+    
+    friday.minimap_x = 600;
+    friday.minimap_y = 700;
+    friday.minimap_x_offset = 0;
     
 }
 
@@ -1424,32 +1641,30 @@ render_graph(Node* root){
             Closure _closure = {};
             boss_draw_leaf(root, _closure);
             draw_misc(" :: struct {");
-            new_line();
-            
-            auto callback = [](u8* parameters) {
-                auto _struct = get_arg(parameters, Node*);
-                auto member = get_arg(parameters, Node*);
-                
-                //Node* member = _struct->members;
-                Pool* pool = &friday.node_pool;
-                if(member){
-                    for(member; member->next; member = member->next){}
-                    member->next = make_node(pool, NODE_DECLARATION);
-                    member->next->name = make_string(&platform.permanent_arena,
-                                                     "new");
-                    
-                }else{
-                    _struct->_struct.members = make_node(pool, NODE_DECLARATION);
-                    _struct->_struct.members->name = make_string(&platform.permanent_arena,
-                                                                 "new");
-                }
-                
-            };
             if(friday.LOD == 2){
-                indent();
-                draw_misc("...");
-                new_line();
+                draw_misc(" ... ");
+                draw_misc("}");
             }else{
+                new_line();
+                auto callback = [](u8* parameters) {
+                    auto _struct = get_arg(parameters, Node*);
+                    auto member = get_arg(parameters, Node*);
+                    
+                    //Node* member = _struct->members;
+                    Pool* pool = &friday.node_pool;
+                    if(member){
+                        for(member; member->next; member = member->next){}
+                        member->next = make_node(pool, NODE_DECLARATION);
+                        member->next->name = make_string(&platform.permanent_arena,
+                                                         "new");
+                        
+                    }else{
+                        _struct->_struct.members = make_node(pool, NODE_DECLARATION);
+                        _struct->_struct.members->name = make_string(&platform.permanent_arena,
+                                                                     "new");
+                    }
+                    
+                };
                 for(Node* member = _struct->members; member; member = member->next){
                     indent();
                     
@@ -1466,8 +1681,9 @@ render_graph(Node* root){
                 if(!_struct->members){
                     new_line();
                 }
+                
+                draw_misc("}");
             }
-            draw_misc("}");
             new_line();
             new_line();
         }break;
@@ -1606,6 +1822,43 @@ render_graph(Node* root){
             draw_misc("}");
             new_line();
             new_line();
+        }break;
+        
+        case NODE_CALL: {
+            
+        }break;
+        
+    }
+    
+}
+
+internal void
+render_minimap(Node* root){
+    if(!root) return;
+    switch(root->type){
+        
+        case NODE_BINARY:{
+            
+        }break;
+        
+        case NODE_LITERAL:{
+            
+        }break;
+        
+        case NODE_STRUCT: {
+            
+        }break;
+        
+        case NODE_DECLARATION: {
+            
+        }break;
+        
+        case NODE_SCOPE: {
+            
+        }break;
+        
+        case NODE_FUNCTION: {
+            
         }break;
         
         case NODE_CALL: {

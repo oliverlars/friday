@@ -13,8 +13,10 @@ struct Widget {
     Widget* next;
     Widget* last;
     
-    
     Closure closure;
+    
+    Closure right_click;
+    Closure middle_click;
 };
 
 global struct {
@@ -130,13 +132,29 @@ process_widgets_and_handle_events(){
     
     Widget* active = nullptr;
     bool hovered = false;
+    
+    enum Click_Type {
+        CLICK_LEFT,
+        CLICK_LEFT_DOUBLE,
+        CLICK_RIGHT,
+        CLICK_MIDDLE,
+    };
+    Click_Type click_type;
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
             ui_state.hover_id = widget->id;
+            
             if(platform.mouse_left_clicked){
                 active = widget;
                 ui_state.clicked_id = widget->id;
+                click_type = CLICK_LEFT;
+            }else if(platform.mouse_right_clicked){
+                active = widget;
+                click_type = CLICK_RIGHT;
+            }else if(platform.mouse_left_double_clicked){
+                active = widget;
+                click_type = CLICK_LEFT_DOUBLE;
             }
         }
     }

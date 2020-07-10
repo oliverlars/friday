@@ -149,13 +149,16 @@ process_widgets_and_handle_events(){
                 active = widget;
                 ui_state.clicked_id = widget->id;
                 click_type = CLICK_LEFT;
-            }else if(platform.mouse_right_clicked){
+            }
+#if 0
+            else if(platform.mouse_right_clicked){
                 active = widget;
                 click_type = CLICK_RIGHT;
             }else if(platform.mouse_left_double_clicked){
                 active = widget;
                 click_type = CLICK_LEFT_DOUBLE;
             }
+#endif
         }
     }
     if(!hovered){
@@ -170,6 +173,39 @@ process_widgets_and_handle_events(){
     
 }
 
+struct Panel {
+    f32 percent = 1.0f;
+    Panel* hsplit = nullptr;
+    Panel* vsplit = nullptr;
+};
+
+internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
+
+
+internal void 
+draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
+    if(root->hsplit){
+        push_rectangle(posx, posy, width, height*(1-root->hsplit->percent), 0.05, colour);
+        
+        draw_panels(root->hsplit, 
+                    posx, posy+height*(1 - root->hsplit->percent)+5, 
+                    width, height*root->hsplit->percent-10, colour);
+        
+    }else if(root->vsplit){
+        push_rectangle(posx, posy, width*(1-root->vsplit->percent), height, 0.05, colour);
+        
+        draw_panels(root->vsplit, 
+                    posx + width*(1- root->vsplit->percent)+5, posy, 
+                    width*root->vsplit->percent-10, height, colour);
+        
+    }else {
+        push_rectangle(posx, posy, width,height, 0.05, colour);
+    }
+    
+}
+
+
+
 // NOTE(Oliver): 0xAABBGGRR 
 union Colour {
     u32 packed;
@@ -182,14 +218,25 @@ union Colour {
 };
 
 struct Theme {
-    Colour base;
-    Colour base_margin;
+    Colour background;
+    Colour panel;
+    
+    Colour tab;
+    Colour tab_pressed;
+    
+    Colour icon;
+    
+    
     Colour menu;
+    
     Colour text;
-    Colour text_light;
+    
     Colour text_comment;
     Colour text_function;
     Colour text_type;
+    Colour text_literal;
+    Colour text_misc;
+    
     Colour cursor;
     Colour error;
 };
@@ -199,11 +246,10 @@ global Theme theme;
 internal void
 load_theme_ayu(){
     
-    theme.base.packed = 0x0f1419ff;
-    theme.base_margin.packed = 0x0a0e12ff;
+    theme.background.packed = 0x070707ff;
+    theme.panel.packed = 0x161925ff;
     theme.menu.packed = 0x13181dff;
-    theme.text.packed = 0xffffffff;
-    theme.text_light.packed = 0x475259ff;
+    theme.text.packed = 0xE7E7E7ff;
     theme.text_comment.packed = 0xffc2d94d;
     theme.text_function.packed = 0xff5ac2ff;
     theme.text_type.packed = 0xffff29719;

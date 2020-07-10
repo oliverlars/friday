@@ -23,6 +23,11 @@ make_bitmap(char* filename){
     glGenTextures(1, &result.texture);
     glBindTexture(GL_TEXTURE_2D, result.texture);
     
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result.width,
                  result.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  result.data);
@@ -528,7 +533,7 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
         String8 string = strings[i];
         f32 offset = i*height;
         push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
-        u32 text_colour = theme.text_light.packed;
+        u32 text_colour = theme.text.packed;
         
         
         if(is_mouse_in_rect(x, y + offset, size_x, height)){
@@ -540,7 +545,7 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
             }
             push_rectangle(x, y+ offset, 
                            size_x, height, 0.0,
-                           theme.base_margin.packed);
+                           theme.panel.packed);
             push_rectangle(x, y+ offset, 
                            2, height, 0.0,
                            theme.cursor.packed);
@@ -1081,7 +1086,16 @@ init_shaders(){
             "uniform sampler2D atlas;\n"
             
             "void main(){\n"
-            "colour = texture(atlas, frag_uv);\n"
+            "vec4 value = vec4(0);\n"
+            "int count = 0;\n"
+            "for(float i = -0.015; i < 0.015; i +=0.0025){\n"
+            "for(float j = -0.015; j < 0.015; j += 0.0025){\n"
+            "count += 1;\n"
+            "value += texture(atlas, frag_uv + vec2(i,j));\n"
+            "}\n"
+            "}\n"
+            "value /= count;\n"
+            "colour = value;\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -1365,9 +1379,9 @@ opengl_end_frame() {
     
     
     glViewport(0, 0, platform.width, platform.height);
-    glClearColor(theme.base_margin.r/255.0f,
-                 theme.base_margin.g/255.0f,
-                 theme.base_margin.b/255.0f,
+    glClearColor(theme.background.r/255.0f,
+                 theme.background.g/255.0f,
+                 theme.background.b/255.0f,
                  1);
     glClear(GL_COLOR_BUFFER_BIT);
     
@@ -1515,7 +1529,7 @@ _highlight_word(Node* leaf){
     
     
     push_rectangle(x, y, width, height, 0.1, theme.cursor.packed);
-    text_colour = theme.base.packed;
+    text_colour = theme.background.packed;
     draw_string(leaf->name, text_colour);
     
 }
@@ -1565,12 +1579,12 @@ boss_draw_leaf(Node* leaf,
 
 internal void
 draw_misc(char* string){
-    draw_string(string, theme.text_light.packed);
+    draw_string(string, theme.text.packed);
 }
 
 internal void
 draw_misc(String8 string){
-    draw_string(string, theme.text_light.packed);
+    draw_string(string, theme.text.packed);
 }
 
 internal void
@@ -1886,6 +1900,23 @@ display_modes(){
     for(int i = 0; i < number_of_modes; i++){
         push_rectangle(x-offset*2,y - (mode_size*number_of_modes) + (mode_size+padding)*i, 
                        mode_size, mode_size, 
-                       0.3, theme.base_margin.packed);
+                       0.3, theme.background.packed);
     }
+}
+
+
+Bitmap bitmap;
+
+internal void
+draw_menu_bar(){
+    int size = 30;
+    int x = 0;
+    push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 0.1, theme.panel.packed);
+    push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 0.5, bitmap);
+    
+    char* file = "File"; 
+    push_string(x+=get_text_width(file), platform.height-size/2-renderer.fonts[0].line_height/2, 
+                file, theme.text.packed);
+    
+    //push_string("File");
 }

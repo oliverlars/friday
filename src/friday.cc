@@ -126,16 +126,24 @@ main(int argc, char** args){
     f32* example = (f32*)arena_allocate(&test, 50);
     *example++ = 5;
     
+    bitmap = make_bitmap("logo5.png");
+    
     load_theme_ayu();
-    assert(theme.base.r == 0x0F);
-    assert(theme.base.g == 0x14);
-    assert(theme.base.b == 0x19);
-    assert(theme.base.a == 0xFF);
     SDL_StartTextInput();
     
     ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
-    Bitmap bitmap = make_bitmap("logo.png");
+    Panel* root = new Panel;
+    root->percent = 1.0f;
+    
+    root->vsplit = new Panel;
+    root->vsplit->percent = 0.5f;
+    
+    root->vsplit->vsplit = new Panel;
+    root->vsplit->vsplit->percent = 0.5f;
+    
+    root->vsplit->vsplit->hsplit = new Panel;
+    root->vsplit->vsplit->hsplit->percent = 0.5f;
     
     bool previous_mouse_left_clicked = 0;
     while(running){
@@ -154,14 +162,18 @@ main(int argc, char** args){
         left->_int = tick;
         right->_int = tick;
         
-        //background
-        push_rectangle(offset, offset, 
-                       platform.width-offset*2, platform.height-offset*2, 0.1,
-                       theme.base.packed);
+        //code panel
+#if 0
         
+        push_rectangle(offset, offset, 
+                       platform.width-offset*2, platform.height-offset*2 -30, 0.02,
+                       theme.panel.packed);
         render_graph(scope);
-        push_rectangle_textured(50,50, 326/2, 100/2, 0.1, bitmap);
+        draw_menu_bar();
         display_modes();
+#endif
+        srand(5345);
+        draw_panels(root, 5, 5, platform.width-10, platform.height-10, theme.panel.packed);
         process_widgets_and_handle_events();
         opengl_end_frame();
         

@@ -173,10 +173,16 @@ process_widgets_and_handle_events(){
     
 }
 
+enum Panel_Type {
+    PANEL_VERTICAL,
+    PANEL_HORIZONTAL,
+    PANEL_ROOT,
+};
+
 struct Panel {
-    f32 percent = 1.0f;
-    Panel* hsplit = nullptr;
-    Panel* vsplit = nullptr;
+    Panel_Type type;
+    f32 split_ratio;
+    Panel* children[2];
 };
 
 internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
@@ -184,22 +190,53 @@ internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u3
 
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
-    if(root->hsplit){
-        push_rectangle(posx, posy, width, height*(1-root->hsplit->percent), 0.05, colour);
+    if(!root) return;
+    
+    f32 new_width = width;
+    f32 new_height = height;
+    f32 new_posx = posx;
+    f32 new_posy = posy;
+    
+    for(int i = 0; i < 2; i++){
         
-        draw_panels(root->hsplit, 
-                    posx, posy+height*(1 - root->hsplit->percent)+5, 
-                    width, height*root->hsplit->percent-10, colour);
-        
-    }else if(root->vsplit){
-        push_rectangle(posx, posy, width*(1-root->vsplit->percent), height, 0.05, colour);
-        
-        draw_panels(root->vsplit, 
-                    posx + width*(1- root->vsplit->percent)+5, posy, 
-                    width*root->vsplit->percent-10, height, colour);
-        
+        if(root->children[i]){
+            switch(root->children[i]->type){
+                case PANEL_HORIZONTAL:{
+                    new_height *= root->children[i]->split_ratio;
+                    new_posy += new_height;
+                    draw_panels(root->children[i], posx, new_posy+5, new_width, height-new_height-10, colour);
+                }break;
+                case PANEL_VERTICAL:{
+                    new_width *= root->children[i]->split_ratio;
+                    new_posx += new_width;
+                    draw_panels(root->children[i], new_posx+5, posy, width-new_width-10, new_height, colour);
+                }break;
+            }
+        }
+        new_posx = 0;
+        new_posy = 0;
+    }
+    push_rectangle(posx,posy, new_width-10, new_height-10, 0.05, colour);
+    return;
+    
+}
+
+internal void 
+split_panel(Panel* panel, f32 split_ratio, Panel_Type type){
+    if(!panel) return;
+    
+    if(panel->children[0] && panel->children[1]){
+        return;
+    }else if(panel->children[0]){
+        //panel->children[1] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+        panel->children[1] = (Panel*)calloc(1, sizeof(Panel));
+        panel->children[1]->split_ratio = split_ratio;
+        panel->children[1]->type = type;
     }else {
-        push_rectangle(posx, posy, width,height, 0.05, colour);
+        //panel->children[0] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+        panel->children[0] = (Panel*)calloc(1, sizeof(Panel));
+        panel->children[0]->split_ratio = split_ratio;
+        panel->children[0]->type = type;
     }
     
 }

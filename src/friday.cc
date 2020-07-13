@@ -133,17 +133,14 @@ main(int argc, char** args){
     
     ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
-    Panel* root = new Panel;
-    root->percent = 1.0f;
+    Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+    root->split_ratio = 1.0f;
     
-    root->vsplit = new Panel;
-    root->vsplit->percent = 0.5f;
+    split_panel(root, 0.2, PANEL_HORIZONTAL);
+    split_panel(root->children[0], 0.5, PANEL_VERTICAL);
+    split_panel(root, 0.7, PANEL_VERTICAL);
+    split_panel(root->children[1], 0.7, PANEL_VERTICAL);
     
-    root->vsplit->vsplit = new Panel;
-    root->vsplit->vsplit->percent = 0.5f;
-    
-    root->vsplit->vsplit->hsplit = new Panel;
-    root->vsplit->vsplit->hsplit->percent = 0.5f;
     
     bool previous_mouse_left_clicked = 0;
     while(running){
@@ -173,7 +170,7 @@ main(int argc, char** args){
         display_modes();
 #endif
         srand(5345);
-        draw_panels(root, 5, 5, platform.width-10, platform.height-10, theme.panel.packed);
+        draw_panels(root, 5, 5, platform.width, platform.height, theme.panel.packed);
         process_widgets_and_handle_events();
         opengl_end_frame();
         

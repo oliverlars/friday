@@ -137,9 +137,7 @@ main(int argc, char** args){
     root->split_ratio = 1.0f;
     
     split_panel(root, 0.2, PANEL_HORIZONTAL);
-    split_panel(root->children[0], 0.5, PANEL_VERTICAL);
-    split_panel(root, 0.7, PANEL_VERTICAL);
-    split_panel(root->children[1], 0.7, PANEL_VERTICAL);
+    split_panel(root->children[0], 0.8, PANEL_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;
@@ -160,17 +158,16 @@ main(int argc, char** args){
         right->_int = tick;
         
         //code panel
-#if 0
+        draw_panels(root, 0, 0, platform.width, platform.height-35, theme.panel.packed);
         
-        push_rectangle(offset, offset, 
-                       platform.width-offset*2, platform.height-offset*2 -30, 0.02,
-                       theme.panel.packed);
+#if 1
+        
         render_graph(scope);
         draw_menu_bar();
         display_modes();
 #endif
-        srand(5345);
-        draw_panels(root, 5, 5, platform.width, platform.height, theme.panel.packed);
+        
+        
         process_widgets_and_handle_events();
         opengl_end_frame();
         

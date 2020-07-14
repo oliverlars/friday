@@ -187,6 +187,7 @@ struct Panel {
 
 internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
 
+#define PANEL_BORDER 5
 
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
@@ -204,19 +205,20 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
                 case PANEL_HORIZONTAL:{
                     new_height *= root->children[i]->split_ratio;
                     new_posy += new_height;
-                    draw_panels(root->children[i], posx, new_posy+5, new_width, height-new_height-10, colour);
+                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
                 }break;
                 case PANEL_VERTICAL:{
                     new_width *= root->children[i]->split_ratio;
                     new_posx += new_width;
-                    draw_panels(root->children[i], new_posx+5, posy, width-new_width-10, new_height, colour);
+                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
                 }break;
             }
         }
         new_posx = 0;
         new_posy = 0;
     }
-    push_rectangle(posx,posy, new_width-10, new_height-10, 0.05, colour);
+    push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
+                   new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
     return;
     
 }

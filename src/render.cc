@@ -837,7 +837,7 @@ init_shaders(){
             "}\n"
             
             "void main(){\n"
-            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2);\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius);\n"
             "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"

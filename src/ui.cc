@@ -277,7 +277,10 @@ struct Theme {
     Colour text_misc;
     
     Colour cursor;
+    
     Colour error;
+    
+    Colour view_button;
 };
 
 global Theme theme;
@@ -294,4 +297,6 @@ load_theme_ayu(){
     theme.text_type.packed = 0xffff29719;
     theme.cursor.packed = 0xe08c17ff;
     theme.error.packed = 0xffcc3333;
+    
+    theme.view_button.packed = 0x0D1012ff;
 }

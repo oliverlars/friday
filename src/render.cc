@@ -146,7 +146,7 @@ struct Command {
         } glyph;
         
         struct {
-#define BYTES_PER_RECTANGLE_TEXTURED (8*sizeof(f32))
+#define BYTES_PER_RECTANGLE_TEXTURED (9*sizeof(f32))
             f32 x, y;
             f32 width, height;
             f32 corner_radius;
@@ -716,8 +716,9 @@ init_opengl_renderer(){
         
         GLuint pos = 0;
         GLuint pos_dim = 2;
-        GLuint uv = 4;
-        GLuint uv_dim = 6;
+        GLuint radius = 4;
+        GLuint uv = 5;
+        GLuint uv_dim = 7;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -727,13 +728,17 @@ init_opengl_renderer(){
         glVertexAttribPointer(pos_dim, 2, GL_FLOAT, false, 
                               BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*2));
         
+        glEnableVertexAttribArray(radius);
+        glVertexAttribPointer(radius, 1, GL_FLOAT, false, 
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*4));
+        
         glEnableVertexAttribArray(uv);
         glVertexAttribPointer(uv, 2, GL_FLOAT, false, 
-                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*4));
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*5));
         
         glEnableVertexAttribArray(uv_dim);
         glVertexAttribPointer(uv_dim, 2, GL_FLOAT, false, 
-                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*6));
+                              BYTES_PER_RECTANGLE_TEXTURED, reinterpret_cast<void*>(sizeof(f32)*7));
         
     }
     
@@ -1053,13 +1058,16 @@ init_shaders(){
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in vec2 pos_dim; \n"
-            "layout(location = 4) in vec2 uv;\n"
-            "layout(location = 6) in vec2 uv_dim; \n"
+            "layout(location = 4) in float radius; \n"
+            "layout(location = 5) in vec2 uv;\n"
+            "layout(location = 7) in vec2 uv_dim; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
             "out vec2 frag_pos;\n"
             "out vec2 frag_uv;\n"
+            "out vec2 frag_dim;\n"
+            "out float frag_radius;\n"
             "out vec4 frag_colour;\n"
             
             "void main(){\n"
@@ -1073,8 +1081,10 @@ init_shaders(){
             "frag_uv = uvs[gl_VertexID % 6];\n"
             //"frag_uv *= uv_dim;\n"
             //"frag_uv += uv;\n"
+            "frag_radius = radius;\n"
             "gl_Position = screen_position;\n"
             "frag_pos = pos;\n"
+            "frag_dim = pos_dim;\n"
             "}\n";
         
         GLchar* rectangle_fs =  
@@ -1082,10 +1092,17 @@ init_shaders(){
             "in vec2 frag_pos; \n"
             "in vec2 frag_uv; \n"
             "in vec2 frag_dim; \n"
+            "in float frag_radius;\n"
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             
+            "float box_no_pointy(vec2 p, vec2 b, float r){\n"
+            "return length(max(abs(p)-b+r,0.0))-r;\n"
+            "}\n"
+            
             "void main(){\n"
+            "float dist = box_no_pointy(gl_FragCoord.xy - (frag_pos + frag_dim/2), frag_dim/2, frag_radius);\n"
+            "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
             "vec4 value = vec4(0);\n"
             "int count = 0;\n"
             "for(float i = -0.015; i < 0.015; i +=0.0025){\n"
@@ -1095,7 +1112,7 @@ init_shaders(){
             "}\n"
             "}\n"
             "value /= count;\n"
-            "colour = value;\n"
+            "colour = vec4(value.rgb, min(alpha, value.a));\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -1310,6 +1327,7 @@ process_and_draw_commands(){
                     *attribs++ = rectangle->rectangle_textured.y;
                     *attribs++ = rectangle->rectangle_textured.width;
                     *attribs++ = rectangle->rectangle_textured.height;
+                    *attribs++ = rectangle->rectangle_textured.corner_radius;
                     *attribs++ = rectangle->rectangle_textured.u;
                     *attribs++ = rectangle->rectangle_textured.v;
                     *attribs++ = rectangle->rectangle_textured.u_width;
@@ -1906,17 +1924,48 @@ display_modes(){
 
 
 Bitmap bitmap;
+Bitmap move_icon;
+Bitmap add_icon;
+Bitmap options_icon;
+Bitmap bin_icon;
 
 internal void
 draw_menu_bar(){
     int size = 30;
     int x = 0;
-    push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 0.1, theme.panel.packed);
-    push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 0.5, bitmap);
+    push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
+    push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 1, bitmap);
     
     char* file = "File"; 
     push_string(x+=get_text_width(file), platform.height-size/2-renderer.fonts[0].line_height/2, 
                 file, theme.text.packed);
     
-    //push_string("File");
+}
+
+internal void
+draw_status_bar(){
+    int size = 30;
+    int x = 0;
+    push_rectangle(x += 5, 0, platform.width-10, size, 0, theme.panel.packed);
+    
+    char* file = "active node: "; 
+    push_string(x+=5, size/2-renderer.fonts[0].line_height/2, 
+                file, theme.text.packed);
+    
+}
+
+internal void
+draw_view_buttons(){
+    f32 size = 60;
+    f32 x = 30;
+    f32 spacing = 15;
+    f32 y = platform.height - 150;
+    
+    Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
+    for(int i = 0; i < 4; i++){
+        push_rectangle(x, y, size, size, 5, theme.view_button.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 5, icons[i]);
+        y -= size + spacing;
+    }
+    
 }

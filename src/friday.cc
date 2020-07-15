@@ -127,6 +127,10 @@ main(int argc, char** args){
     *example++ = 5;
     
     bitmap = make_bitmap("logo5.png");
+    move_icon = make_bitmap("move_icon.png");
+    add_icon = make_bitmap("add_icon.png");
+    options_icon = make_bitmap("options_icon.png");
+    bin_icon = make_bitmap("bin_icon.png");
     
     load_theme_ayu();
     SDL_StartTextInput();
@@ -136,8 +140,7 @@ main(int argc, char** args){
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->split_ratio = 1.0f;
     
-    split_panel(root, 0.2, PANEL_HORIZONTAL);
-    split_panel(root->children[0], 0.8, PANEL_VERTICAL);
+    split_panel(root, 0.75, PANEL_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;
@@ -158,12 +161,14 @@ main(int argc, char** args){
         right->_int = tick;
         
         //code panel
-        draw_panels(root, 0, 0, platform.width, platform.height-35, theme.panel.packed);
-        
+        draw_panels(root, 0, 35, platform.width, platform.height-70, theme.panel.packed);
+        draw_view_buttons();
 #if 1
         
         render_graph(scope);
         draw_menu_bar();
+        draw_status_bar();
+        
         display_modes();
 #endif
         

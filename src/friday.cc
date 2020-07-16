@@ -183,7 +183,7 @@ main(int argc, char** args){
         // in the nvidia control panel is what
         // fixed it
         // fuck you opengl
-        platform.mouse_move = 0;
+        platform.mouse_drag = 0;
         platform.has_text_input = 0;
         platform.mouse_left_clicked = 0;
         
@@ -197,6 +197,10 @@ main(int argc, char** args){
             }
             if(event.type == SDL_MOUSEBUTTONDOWN){
                 if(event.button.button == SDL_BUTTON_LEFT){
+                    if(!platform.mouse_drag){
+                        platform.mouse_drag_x = platform.mouse_x;
+                        platform.mouse_drag_y = platform.mouse_y;
+                    }
                     platform.mouse_left_down = 1;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
@@ -212,6 +216,8 @@ main(int argc, char** args){
                     }
                     platform.mouse_left_up = 1;
                     platform.mouse_left_down = 0;
+                    platform.mouse_drag = 0;
+                    panel_resize = 0;
                     platform.mouse_left_double_clicked = 0;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
@@ -226,8 +232,9 @@ main(int argc, char** args){
                 *text_input++ = *event.text.text;
             }
             if(event.type == SDL_MOUSEMOTION){
-                platform.mouse_move = 1;
-                
+                if(platform.mouse_left_down){
+                    platform.mouse_drag = 1;
+                }
             }
             if(event.type == SDL_MOUSEWHEEL){
                 friday.y_offset += -event.wheel.y*50;

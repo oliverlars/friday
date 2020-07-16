@@ -494,7 +494,7 @@ struct {
     bool mouse_right_clicked;
     bool mouse_left_double_clicked;
     
-    bool mouse_move;
+    bool mouse_drag;
     f32 mouse_drag_x;
     f32 mouse_drag_y;
     

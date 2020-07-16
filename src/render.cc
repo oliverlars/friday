@@ -1394,6 +1394,7 @@ opengl_start_frame() {
 internal void
 opengl_end_frame() {
     OPTICK_EVENT();
+    panel_hover = 0;
     
     
     glViewport(0, 0, platform.width, platform.height);

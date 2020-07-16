@@ -192,12 +192,33 @@ internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u3
 static bool panel_hover = 0;
 static bool panel_resize = 0;
 Panel* active_panel = nullptr;
+static f32 old_width = 0;
 static f32 split_ratio = 0;
+
 internal bool
 is_mouse_dragged(f32 x, f32 y, f32 width, f32 height){
     return platform.mouse_drag && platform.mouse_drag_x >= x && platform.mouse_drag_x <= x + width &&
         platform.mouse_drag_y >= y && platform.mouse_drag_y <= y + height;
     
+}
+
+internal void
+process_panels(Panel* root, f32 delta_split){
+    if(!root) return;
+    for(int i = 0; i < 2;i++){
+        if(root->children[i]){
+            switch(root->children[i]->type){
+                case PANEL_HORIZONTAL:{
+                    root->children[i]->split_ratio = delta_split;
+                    process_panels(root->children[i], delta_split);
+                }break;
+                case PANEL_VERTICAL:{
+                    root->children[i]->split_ratio -= delta_split;
+                    process_panels(root->children[i], delta_split);
+                }break;
+            }
+        }
+    }
 }
 
 internal void 
@@ -228,9 +249,12 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         new_posx = 0;
         new_posy = 0;
     }
+    
     //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
-    if(is_mouse_dragged(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER)){
+    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
         panel_resize = 1;
+        old_width = width;
+        active_panel = root;
         split_ratio = root->split_ratio;
         SDL_Cursor* cursor;
         cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
@@ -244,9 +268,12 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
         SDL_SetCursor(cursor);
     }else if(panel_resize){
-        f32 delta = 0;
-        delta = 1 - platform.mouse_x/platform.mouse_drag_x;
-        root->split_ratio = split_ratio - delta;
+        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
+        if(root == active_panel){
+            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
+        }else {
+            root->split_ratio = clampf(split_ratio - delta, 0, 1);
+        }
     }
     
     push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 

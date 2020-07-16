@@ -140,7 +140,8 @@ main(int argc, char** args){
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->split_ratio = 1.0f;
     
-    split_panel(root, 0.75, PANEL_VERTICAL);
+    split_panel(root, 0.5, PANEL_VERTICAL);
+    split_panel(root->children[0], 0.5, PANEL_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;

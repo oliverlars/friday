@@ -504,3 +504,10 @@ struct {
     char* text_input;
     
 } platform;
+
+internal f32
+clampf(f32 value, f32 min, f32 max){
+    if(value < min) return min;
+    if(value > max) return max;
+    return value;
+}

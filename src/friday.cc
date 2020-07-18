@@ -141,7 +141,6 @@ main(int argc, char** args){
     root->split_ratio = 1.0f;
     
     split_panel(root, 0.5, PANEL_VERTICAL);
-    split_panel(root->children[0], 0.5, PANEL_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;

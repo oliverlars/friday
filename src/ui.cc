@@ -351,8 +351,10 @@ load_theme_ayu(){
     theme.menu.packed = 0x13181dff;
     theme.text.packed = 0xE7E7E7ff;
     theme.text_comment.packed = 0xffc2d94d;
-    theme.text_function.packed = 0xff5ac2ff;
-    theme.text_type.packed = 0xffff29719;
+    theme.text_literal.packed = 0x31A231ff;
+    theme.text_function.packed = 0x21AFD4ff;
+    theme.text_type.packed = 0xDC593Fff;
+    theme.text_misc.packed = 0x646464ff;
     theme.cursor.packed = 0xe08c17ff;
     theme.error.packed = 0xffcc3333;
     

@@ -1554,7 +1554,7 @@ _highlight_word(Node* leaf){
 }
 
 internal void
-boss_edit_name(Node* leaf){
+boss_edit_name(Node* leaf, u32 colour = theme.text.packed){
     
     f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
@@ -1571,14 +1571,14 @@ boss_edit_name(Node* leaf){
         push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
         edit_node(leaf);
     }
-    draw_string(leaf->name,theme.text.packed);
+    draw_string(leaf->name,colour);
     
     
 }
 
 internal void
 boss_draw_leaf(Node* leaf,
-               Closure closure){
+               Closure closure, u32 colour = theme.text.packed){
     
     auto id = gen_unique_id(leaf->name);
     auto widget = _push_widget(get_friday_x(), get_friday_y(), 
@@ -1587,23 +1587,23 @@ boss_draw_leaf(Node* leaf,
     if(id == ui_state.clicked_id){
         friday.active_node = leaf;
         friday.cursor_index = leaf->name.length;
-        boss_edit_name(leaf);
+        boss_edit_name(leaf, colour);
     }else if(id == ui_state.hover_id){
         _highlight_word(leaf);
     }else{
-        draw_string(leaf->name, theme.text.packed);
+        draw_string(leaf->name, colour);
     }
     
 }
 
 internal void
-draw_misc(char* string){
-    draw_string(string, theme.text.packed);
+draw_misc(char* string, u32 colour = theme.text.packed){
+    draw_string(string, colour);
 }
 
 internal void
-draw_misc(String8 string){
-    draw_string(string, theme.text.packed);
+draw_misc(String8 string, u32 colour = theme.text.packed ){
+    draw_string(string, colour);
 }
 
 internal void
@@ -1665,15 +1665,17 @@ render_graph(Node* root){
             auto literal = &root->literal;
             char* string = (char*)arena_allocate(arena, 256);
             snprintf(string, 256, "%d", literal->_int);
-            draw_string(string);
+            draw_string(string, theme.text_literal.packed);
         }break;
         
         case NODE_STRUCT: {
             friday.test_node = root;
             auto _struct = &root->_struct;
             Closure _closure = {};
-            boss_draw_leaf(root, _closure);
-            draw_misc(" :: struct {");
+            boss_draw_leaf(root, _closure, theme.text_type.packed);
+            draw_misc(" ::", theme.text_misc.packed);
+            draw_misc(" struct ");
+            draw_misc("{", theme.text_misc.packed);
             if(friday.LOD == 2){
                 draw_misc(" ... ");
                 draw_misc("}");
@@ -1715,7 +1717,7 @@ render_graph(Node* root){
                     new_line();
                 }
                 
-                draw_misc("}");
+                draw_misc("}", theme.text_misc.packed);
             }
             new_line();
             new_line();
@@ -1740,22 +1742,22 @@ render_graph(Node* root){
                 
                 closure = make_closure(callback, 1, arg(root));
                 draw_insertable(root->name, closure);
-                draw_misc(" :");
+                draw_misc(" :", theme.text_misc.packed);
             }else {
                 
                 space();
-                draw_misc(" :");
+                draw_misc(" :", theme.text_misc.packed);
                 boss_draw_leaf(type_usage->type_usage.type_reference, 
-                               closure);
+                               closure, theme.text_type.packed);
                 space();
             }
             
-            draw_misc("= ");
+            draw_misc("= ", theme.text_misc.packed);
             if(root->declaration.is_initialised){
                 render_graph(decl);
                 
             }else {
-                draw_misc("void");
+                draw_misc("void", theme.text_misc.packed);
             }
             
             new_line();
@@ -1838,7 +1840,7 @@ render_graph(Node* root){
         
         case NODE_FUNCTION: {
             Closure closure = {};
-            boss_draw_leaf(root, closure);
+            boss_draw_leaf(root, closure, theme.text_function.packed);
             draw_misc(" :: () {");
             indent();
             new_line();

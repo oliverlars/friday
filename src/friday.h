@@ -490,6 +490,9 @@ struct {
     bool mouse_left_up;
     bool mouse_left_down;
     
+    bool mouse_middle_up;
+    bool mouse_middle_down;
+    
     bool mouse_middle_clicked;
     bool mouse_right_clicked;
     bool mouse_left_double_clicked;

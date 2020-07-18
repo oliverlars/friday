@@ -147,6 +147,7 @@ main(int argc, char** args){
     while(running){
         OPTICK_FRAME("MainThread");
         
+        
         opengl_start_frame();
         
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
@@ -163,15 +164,18 @@ main(int argc, char** args){
         //code panel
         draw_panels(root, 0, 35, platform.width, platform.height-70, theme.panel.packed);
         draw_view_buttons();
-#if 1
         
         render_graph(scope);
         draw_menu_bar();
         draw_status_bar();
         
         display_modes();
-#endif
         
+        
+        if(platform.mouse_middle_down && platform.mouse_drag){
+            friday.delta_x = platform.mouse_x - platform.mouse_drag_x;
+            friday.delta_y = platform.mouse_y - platform.mouse_drag_y;
+        }
         
         process_widgets_and_handle_events();
         opengl_end_frame();
@@ -203,10 +207,20 @@ main(int argc, char** args){
                     }
                     platform.mouse_left_down = 1;
                 }
+                
                 if(event.button.button == SDL_BUTTON_RIGHT){
                     if(event.button.clicks == 1){
                         platform.mouse_right_clicked = 1;
                     }
+                }
+                
+                if(event.button.button == SDL_BUTTON_MIDDLE){
+                    if(!platform.mouse_drag){
+                        platform.mouse_drag_x = platform.mouse_x;
+                        platform.mouse_drag_y = platform.mouse_y;
+                    }
+                    platform.mouse_middle_down = 1;
+                    
                 }
             }
             if(event.type == SDL_MOUSEBUTTONUP){
@@ -222,6 +236,23 @@ main(int argc, char** args){
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
                 }
+                if(event.button.button == SDL_BUTTON_MIDDLE){
+                    if(platform.mouse_middle_down){
+                        platform.mouse_middle_clicked = 1;
+                    }
+                    platform.mouse_middle_up = 1;
+                    platform.mouse_middle_down = 0;
+                    if(platform.mouse_drag){
+                        friday.pan_offset_x += friday.delta_x;
+                        friday.pan_offset_y += friday.delta_y;
+                        friday.delta_x = 0;
+                        friday.delta_y = 0;
+                    }
+                    platform.mouse_drag = 0;
+                    
+                }
+                platform.mouse_drag = 0;
+                
             }
             if(event.type == SDL_KEYDOWN){
                 SDL_Keycode key = event.key.keysym.sym;
@@ -235,6 +266,9 @@ main(int argc, char** args){
                 if(platform.mouse_left_down){
                     platform.mouse_drag = 1;
                 }
+                if(platform.mouse_middle_down){
+                    platform.mouse_drag = 1;
+                }
             }
             if(event.type == SDL_MOUSEWHEEL){
                 friday.y_offset += -event.wheel.y*50;
@@ -242,7 +276,6 @@ main(int argc, char** args){
         }
         
         SDL_GL_SwapWindow(global_window);
-        
         tick++;
     }
     

@@ -48,6 +48,12 @@ struct {
     int x_offset;
     int y_offset;
     
+    int pan_offset_x;
+    int pan_offset_y;
+    
+    int delta_x;
+    int delta_y;
+    
     int cursor_index;
     Node* active_node;
     
@@ -73,12 +79,12 @@ struct {
 // NOTE(Oliver): probably should do this better
 internal inline int
 get_friday_x(){
-    return friday.x + friday.x_offset;
+    return friday.x + friday.x_offset + friday.pan_offset_x + friday.delta_x;
 }
 
 internal inline int
 get_friday_y(){
-    return friday.y + friday.y_offset;
+    return friday.y + friday.y_offset + friday.pan_offset_y + friday.delta_y;
 }
 
 // NOTE(Oliver): probably should do this better
@@ -1388,6 +1394,7 @@ opengl_start_frame() {
     friday.minimap_x = 600;
     friday.minimap_y = 700;
     friday.minimap_x_offset = 0;
+    
     
 }
 

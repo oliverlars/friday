@@ -140,7 +140,7 @@ main(int argc, char** args){
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->split_ratio = 1.0f;
     
-    split_panel(root, 0.5, PANEL_VERTICAL);
+    split_panel(root, 0.5, PANEL_SPLIT_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;
@@ -162,7 +162,7 @@ main(int argc, char** args){
         right->_int = tick;
         
         //code panel
-        draw_panels(root, 0, 35, platform.width, platform.height-70, theme.panel.packed);
+        draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
         draw_view_buttons();
         
         render_graph(scope);
@@ -230,7 +230,6 @@ main(int argc, char** args){
                     }
                     platform.mouse_left_up = 1;
                     platform.mouse_left_down = 0;
-                    platform.mouse_drag = 0;
                     panel_resize = 0;
                     platform.mouse_left_double_clicked = 0;
                 }
@@ -248,10 +247,8 @@ main(int argc, char** args){
                         friday.delta_x = 0;
                         friday.delta_y = 0;
                     }
-                    platform.mouse_drag = 0;
                     
                 }
-                platform.mouse_drag = 0;
                 
             }
             if(event.type == SDL_KEYDOWN){

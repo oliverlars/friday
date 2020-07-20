@@ -1,6 +1,69 @@
 typedef u64 UI_ID;
 
 
+
+
+// NOTE(Oliver): 0xAABBGGRR 
+union Colour {
+    u32 packed;
+    struct {
+        u8 a;
+        u8 b;
+        u8 g;
+        u8 r;
+    };
+};
+
+struct Theme {
+    Colour background;
+    Colour panel;
+    
+    Colour tab;
+    Colour tab_pressed;
+    
+    Colour icon;
+    
+    Colour button_highlight;
+    
+    Colour menu;
+    
+    Colour text;
+    
+    Colour text_comment;
+    Colour text_function;
+    Colour text_type;
+    Colour text_literal;
+    Colour text_misc;
+    
+    Colour cursor;
+    
+    Colour error;
+    
+    Colour view_button;
+};
+
+global Theme theme;
+
+internal void
+load_theme_ayu(){
+    
+    theme.background.packed = 0x070707ff;
+    theme.panel.packed = 0x161925ff;
+    theme.menu.packed = 0x0D1012ff;
+    theme.text.packed = 0xE7E7E7ff;
+    theme.text_comment.packed = 0xffc2d94d;
+    theme.text_literal.packed = 0x31A231ff;
+    theme.text_function.packed = 0x21AFD4ff;
+    theme.text_type.packed = 0xDC593Fff;
+    theme.text_misc.packed = 0x646464ff;
+    theme.cursor.packed = 0xe08c17ff;
+    theme.error.packed = 0xffcc3333;
+    
+    theme.view_button.packed = 0x0D1012ff;
+    theme.button_highlight.packed = 0x292D3Dff;
+    
+}
+
 struct Closure {
     u8* parameters;
     void(*callback)(u8* parameters);
@@ -173,14 +236,18 @@ process_widgets_and_handle_events(){
     
 }
 
+enum Panel_Split_Type {
+    PANEL_SPLIT_VERTICAL,
+    PANEL_SPLIT_HORIZONTAL,
+};
+
 enum Panel_Type {
-    PANEL_VERTICAL,
-    PANEL_HORIZONTAL,
-    PANEL_ROOT,
+    PANEL_EDITOR,
+    PANEL_PROPERTIES,
 };
 
 struct Panel {
-    Panel_Type type;
+    Panel_Split_Type type;
     f32 split_ratio;
     Panel* children[2];
 };
@@ -208,11 +275,11 @@ process_panels(Panel* root, f32 delta_split){
     for(int i = 0; i < 2;i++){
         if(root->children[i]){
             switch(root->children[i]->type){
-                case PANEL_HORIZONTAL:{
+                case PANEL_SPLIT_HORIZONTAL:{
                     root->children[i]->split_ratio = delta_split;
                     process_panels(root->children[i], delta_split);
                 }break;
-                case PANEL_VERTICAL:{
+                case PANEL_SPLIT_VERTICAL:{
                     root->children[i]->split_ratio -= delta_split;
                     process_panels(root->children[i], delta_split);
                 }break;
@@ -234,12 +301,12 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         
         if(root->children[i]){
             switch(root->children[i]->type){
-                case PANEL_HORIZONTAL:{
+                case PANEL_SPLIT_HORIZONTAL:{
                     new_height *= root->children[i]->split_ratio;
                     new_posy += new_height;
                     draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
                 }break;
-                case PANEL_VERTICAL:{
+                case PANEL_SPLIT_VERTICAL:{
                     new_width *= root->children[i]->split_ratio;
                     new_posx += new_width;
                     draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
@@ -276,13 +343,14 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         }
     }
     
+    
     push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
                    new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
     
 }
 
 internal void 
-split_panel(Panel* panel, f32 split_ratio, Panel_Type type){
+split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type type){
     if(!panel) return;
     
     if(panel->children[0] && panel->children[1]){
@@ -299,64 +367,4 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Type type){
         panel->children[0]->type = type;
     }
     
-}
-
-
-
-// NOTE(Oliver): 0xAABBGGRR 
-union Colour {
-    u32 packed;
-    struct {
-        u8 a;
-        u8 b;
-        u8 g;
-        u8 r;
-    };
-};
-
-struct Theme {
-    Colour background;
-    Colour panel;
-    
-    Colour tab;
-    Colour tab_pressed;
-    
-    Colour icon;
-    
-    
-    Colour menu;
-    
-    Colour text;
-    
-    Colour text_comment;
-    Colour text_function;
-    Colour text_type;
-    Colour text_literal;
-    Colour text_misc;
-    
-    Colour cursor;
-    
-    Colour error;
-    
-    Colour view_button;
-};
-
-global Theme theme;
-
-internal void
-load_theme_ayu(){
-    
-    theme.background.packed = 0x070707ff;
-    theme.panel.packed = 0x161925ff;
-    theme.menu.packed = 0x13181dff;
-    theme.text.packed = 0xE7E7E7ff;
-    theme.text_comment.packed = 0xffc2d94d;
-    theme.text_literal.packed = 0x31A231ff;
-    theme.text_function.packed = 0x21AFD4ff;
-    theme.text_type.packed = 0xDC593Fff;
-    theme.text_misc.packed = 0x646464ff;
-    theme.cursor.packed = 0xe08c17ff;
-    theme.error.packed = 0xffcc3333;
-    
-    theme.view_button.packed = 0x0D1012ff;
 }

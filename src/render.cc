@@ -514,15 +514,13 @@ get_text_width(String8 string){
 }
 
 internal void
-boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
+draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
     
     f32 line_height = renderer.fonts[0].line_height;
     f32 height = 40;
     f32 size_x = 200;
     f32 size_y = num_rows*height;
-    f32 x = friday.menu_x;
-    f32 y = friday.menu_y-size_y+line_height;
-    
+    y = y-size_y+line_height;
     for(int i = 0; i < num_rows; i++){
         f32 text_width = get_text_width(strings[i]);
         text_width *= 1.2;
@@ -533,12 +531,13 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
     auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, closure);
     
     
+    push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
     
     for(int i = 0; i < num_rows; i++){
         
         String8 string = strings[i];
         f32 offset = i*height;
-        push_rectangle(x,y + offset, size_x, height, 0.0, theme.menu.packed);
+        push_rectangle(x,y + offset, size_x, height, 10, theme.menu.packed);
         u32 text_colour = theme.text.packed;
         
         
@@ -550,8 +549,8 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
                 friday.is_menu_open = false;
             }
             push_rectangle(x, y+ offset, 
-                           size_x, height, 0.0,
-                           theme.panel.packed);
+                           size_x, height, 10.0,
+                           theme.menu.packed);
             push_rectangle(x, y+ offset, 
                            2, height, 0.0,
                            theme.cursor.packed);
@@ -562,6 +561,11 @@ boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
                      text_colour);
     }
     
+}
+
+internal void
+boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
+    draw_menu(friday.menu_x, friday.menu_y, label, strings, num_rows, closure);
 }
 
 
@@ -1554,7 +1558,7 @@ _highlight_word(Node* leaf){
     
     
     
-    push_rectangle(x, y, width, height, 0.1, theme.cursor.packed);
+    push_rectangle(x, y, width, height, 10, theme.cursor.packed);
     text_colour = theme.background.packed;
     draw_string(leaf->name, text_colour);
     
@@ -1684,8 +1688,8 @@ render_graph(Node* root){
             draw_misc(" struct ");
             draw_misc("{", theme.text_misc.packed);
             if(friday.LOD == 2){
-                draw_misc(" ... ");
-                draw_misc("}");
+                draw_misc(" ... ", theme.text_misc.packed);
+                draw_misc("}", theme.text_misc.packed);
             }else{
                 new_line();
                 auto callback = [](u8* parameters) {
@@ -1848,7 +1852,11 @@ render_graph(Node* root){
         case NODE_FUNCTION: {
             Closure closure = {};
             boss_draw_leaf(root, closure, theme.text_function.packed);
-            draw_misc(" :: () {");
+            if(friday.LOD == 2){
+                draw_misc(" :: () { ... }", theme.text_misc.packed);
+            }else {
+                draw_misc(" :: () {", theme.text_misc.packed);
+            }
             indent();
             new_line();
             new_line();
@@ -1861,7 +1869,9 @@ render_graph(Node* root){
             }
             
             render_graph(root->function.scope);
-            draw_misc("}");
+            if(friday.LOD != 2){
+                draw_misc("}", theme.text_misc.packed);
+            }
             new_line();
             new_line();
         }break;
@@ -1933,30 +1943,92 @@ display_modes(){
 }
 
 
+internal void
+button(f32 x, f32 y, char* text, Closure closure){
+    auto id = gen_unique_id(text);
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+                               id, closure);
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 border = 5.0f;
+    if(id == ui_state.clicked_id){
+        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
+                       theme.button_highlight.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else if(id == ui_state.hover_id){
+        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
+                       theme.button_highlight.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else{
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }
+}
+
 Bitmap bitmap;
 Bitmap move_icon;
 Bitmap add_icon;
 Bitmap options_icon;
 Bitmap bin_icon;
 
+global bool file_menu_open = 0;
+global bool edit_menu_open = 0;
+global bool help_menu_open = 0;
+
 internal void
 draw_menu_bar(){
-    int size = 30;
+    int size = 40;
     int x = 0;
     push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
     push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 1, bitmap);
     
-    char* file = "File"; 
-    push_string(x+=get_text_width(file), platform.height-size/2-renderer.fonts[0].line_height/2, 
-                file, theme.text.packed);
+    f32 gap = 30.0f;
+    {
+        char* file = "File"; 
+        auto file_menu_callback = [](u8* parameters){
+            file_menu_open = 1;
+        };
+        Closure file_menu = make_closure(file_menu_callback, 0);
+        button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
+        
+    }
     
+    {
+        auto edit_menu_callback = [](u8* parameters){
+            edit_menu_open = 1;
+        };
+        char* edit = "Edit"; 
+        Closure edit_menu = make_closure(edit_menu_callback, 0);
+        button(x+=get_text_width(edit)+gap, platform.height-size+5, edit, edit_menu);
+    }
+    
+    {
+        auto help_menu_callback = [](u8* parameters){
+            help_menu_open = 1;
+        };
+        char* help = "Help"; 
+        Closure help_menu = make_closure(help_menu_callback, 0);
+        button(x+=get_text_width(help)+gap, platform.height-size+5, help, help_menu);
+    }
+    
+    
+    if(file_menu_open){
+        String8 items[4] = {};
+        Arena* arena = &renderer.frame_arena;
+        items[3] = make_string(arena, "New");
+        items[2] = make_string(arena, "Open");
+        items[1] = make_string(arena, "Open Recent");
+        items[0] = make_string(arena, "Save");
+        Closure empty;
+        draw_menu(5+get_text_width("File"), platform.height-size-40, "file_menu",
+                  items, 4, empty);
+        
+    }
 }
 
 internal void
 draw_status_bar(){
-    int size = 30;
+    int size = 40;
     int x = 0;
-    push_rectangle(x += 5, 0, platform.width-10, size, 0, theme.panel.packed);
+    push_rectangle(x += 5, -size, platform.width-10, size*2, 10, theme.panel.packed);
     
     char* file = "active node: "; 
     push_string(x+=5, size/2-renderer.fonts[0].line_height/2, 
@@ -1973,7 +2045,7 @@ draw_view_buttons(){
     
     Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
     for(int i = 0; i < 4; i++){
-        push_rectangle(x, y, size, size, 5, theme.view_button.packed);
+        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 5, icons[i]);
         y -= size + spacing;
     }

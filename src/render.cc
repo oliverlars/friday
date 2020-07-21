@@ -1943,7 +1943,7 @@ display_modes(){
 }
 
 
-internal void
+internal UI_ID
 button(f32 x, f32 y, char* text, Closure closure){
     auto id = gen_unique_id(text);
     auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
@@ -1961,6 +1961,8 @@ button(f32 x, f32 y, char* text, Closure closure){
     }else{
         push_string(x, y+line_height/4, text, theme.text.packed);
     }
+    
+    return id;
 }
 
 Bitmap bitmap;
@@ -1969,9 +1971,7 @@ Bitmap add_icon;
 Bitmap options_icon;
 Bitmap bin_icon;
 
-global bool file_menu_open = 0;
-global bool edit_menu_open = 0;
-global bool help_menu_open = 0;
+global bool menu_open = 0;
 
 internal void
 draw_menu_bar(){
@@ -1980,37 +1980,46 @@ draw_menu_bar(){
     push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
     push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 1, bitmap);
     
+    UI_ID file_id, edit_id, help_id;
+    
+    f32 file_x;
+    f32 edit_x;
+    f32 help_x;
+    
     f32 gap = 30.0f;
     {
         char* file = "File"; 
         auto file_menu_callback = [](u8* parameters){
-            file_menu_open = 1;
+            menu_open = 1;
         };
         Closure file_menu = make_closure(file_menu_callback, 0);
-        button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
+        file_id = button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
+        file_x = x;
         
     }
     
     {
         auto edit_menu_callback = [](u8* parameters){
-            edit_menu_open = 1;
+            menu_open = 1;
         };
         char* edit = "Edit"; 
         Closure edit_menu = make_closure(edit_menu_callback, 0);
-        button(x+=get_text_width(edit)+gap, platform.height-size+5, edit, edit_menu);
+        edit_id = button(x+=get_text_width(edit)+gap, platform.height-size+5, edit, edit_menu);
+        edit_x = x;
     }
     
     {
         auto help_menu_callback = [](u8* parameters){
-            help_menu_open = 1;
+            menu_open = 1;
         };
         char* help = "Help"; 
         Closure help_menu = make_closure(help_menu_callback, 0);
-        button(x+=get_text_width(help)+gap, platform.height-size+5, help, help_menu);
+        help_id = button(x+=get_text_width(help)+gap, platform.height-size+5, help, help_menu);
+        help_x = x;
     }
     
     
-    if(file_menu_open){
+    if(menu_open && file_id == ui_state.clicked_id){
         String8 items[4] = {};
         Arena* arena = &renderer.frame_arena;
         items[3] = make_string(arena, "New");
@@ -2018,10 +2027,36 @@ draw_menu_bar(){
         items[1] = make_string(arena, "Open Recent");
         items[0] = make_string(arena, "Save");
         Closure empty;
-        draw_menu(5+get_text_width("File"), platform.height-size-40, "file_menu",
+        draw_menu(file_x, platform.height-size-40, "file_menu",
                   items, 4, empty);
         
     }
+    
+    if(menu_open && edit_id == ui_state.clicked_id){
+        String8 items[5] = {};
+        Arena* arena = &renderer.frame_arena;
+        items[4] = make_string(arena, "Undo");
+        items[3] = make_string(arena, "Redo");
+        items[2] = make_string(arena, "Undo History");
+        items[1] = make_string(arena, "Repeat");
+        items[0] = make_string(arena, "Preferences");
+        Closure empty;
+        draw_menu(edit_x, platform.height-size-40, "file_menu",
+                  items, 5, empty);
+        
+    }
+    
+    if(menu_open && help_id == ui_state.clicked_id){
+        String8 items[2] = {};
+        Arena* arena = &renderer.frame_arena;
+        items[1] = make_string(arena, "About");
+        items[0] = make_string(arena, "Splash Screen");
+        Closure empty;
+        draw_menu(help_x, platform.height-size-40, "help_menu",
+                  items, 2, empty);
+        
+    }
+    
 }
 
 internal void

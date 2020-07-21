@@ -291,7 +291,7 @@ process_panels(Panel* root, f32 delta_split){
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
     if(!root) return;
-    
+    auto id = gen_unique_id("panel");
     f32 new_width = width;
     f32 new_height = height;
     f32 new_posx = posx;
@@ -342,8 +342,13 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
             root->split_ratio = clampf(split_ratio - delta, 0, 1);
         }
     }
-    
-    
+    auto callback = [](u8* parameters){
+        return;
+    };
+    Closure closure = make_closure(callback, 0);
+    auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
+                               new_width-PANEL_BORDER*2, new_width-PANEL_BORDER*2, id,
+                               closure);
     push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
                    new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
     

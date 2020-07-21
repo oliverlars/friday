@@ -1647,6 +1647,10 @@ scope_insert(String8 label, Closure closure){
     y = get_friday_y()+height;
     
     auto id = gen_unique_id(label);
+    if(ui_state.hover_id == id){
+        push_string(friday.x-get_text_width("insert!")-10.0f, 
+                    y, "--->", 0x00FF00FF);
+    }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
     
@@ -1796,8 +1800,8 @@ render_graph(Node* root){
                 friday.menu_x = x;
                 friday.menu_y = y;
             };
-            
-            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
+            int append = 0;
+            for(Node* stmt = scope->statements; stmt; stmt = stmt->next, append++){
                 render_graph(stmt);
                 f32 _x = get_friday_x();
                 f32 _y = get_friday_y();
@@ -1806,8 +1810,9 @@ render_graph(Node* root){
                                                arg(stmt), 
                                                arg(_x),
                                                arg(_y));
-                
-                scope_insert(root->name, closure);
+                String8 label = make_string(&renderer.frame_arena, "scope");
+                snprintf(label.text, 256, "scope%d", append);
+                scope_insert(label, closure);
             }
             
             String8 node_types[3];

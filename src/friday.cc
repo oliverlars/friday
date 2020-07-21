@@ -140,13 +140,12 @@ main(int argc, char** args){
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->split_ratio = 1.0f;
     
-    split_panel(root, 0.5, PANEL_SPLIT_VERTICAL);
+    split_panel(root, 0.75, PANEL_SPLIT_VERTICAL);
     
     
     bool previous_mouse_left_clicked = 0;
     while(running){
         OPTICK_FRAME("MainThread");
-        
         
         opengl_start_frame();
         

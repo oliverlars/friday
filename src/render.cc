@@ -1965,6 +1965,26 @@ button(f32 x, f32 y, char* text, Closure closure){
     return id;
 }
 
+internal UI_ID
+icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
+    auto id = gen_unique_id(label);
+    auto widget = _push_widget(x, y, size, size, id, closure);
+    
+    f32 line_height = renderer.fonts[0].line_height;
+    if(id == ui_state.clicked_id){
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else if(id == ui_state.hover_id){
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else{
+        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }
+    
+    return id;
+}
+
 Bitmap bitmap;
 Bitmap move_icon;
 Bitmap add_icon;
@@ -2079,9 +2099,15 @@ draw_view_buttons(){
     f32 y = platform.height - 150;
     
     Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
+    char* icon_labels[4] = {"move_icon", "add_icon", "options_icon", "bin_icon"};
     for(int i = 0; i < 4; i++){
+#if 0
         push_rectangle(x, y, size, size, 10, theme.view_button.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 5, icons[i]);
+#endif
+        auto callback = [](u8* parameters){};
+        Closure closure = make_closure(callback, 0);
+        icon_button(icon_labels[i], x, y, size, icons[i], closure);
         y -= size + spacing;
     }
     

@@ -1628,6 +1628,10 @@ draw_insertable(String8 label, Closure closure){
     //push_rectangle(x, y, width, height, 0.2, 0xFF0000FF);
     
     auto id = gen_unique_id(label);
+    if(ui_state.hover_id == id){
+        push_string(friday.x-get_text_width("insert!")-10.0f, 
+                    get_friday_y(), "--->", 0x00FF00FF);
+    }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
 }

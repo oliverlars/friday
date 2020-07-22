@@ -1648,10 +1648,8 @@ draw_insertable(String8 label, Closure closure){
     
     auto id = gen_unique_id(label);
     if(ui_state.hover_id == id){
-        friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 0.1f);
-        friday.cursor_y += lerp(friday.cursor_y, get_friday_y(), 0.1f);
-        push_rectangle_textured(friday.cursor_x, friday.cursor_y-height/2, 
-                                height*1.5, height*1.5,0, cursor_bitmap);
+        friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
+        friday.cursor_target_y = get_friday_y();
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
@@ -1669,11 +1667,8 @@ scope_insert(String8 label, Closure closure){
     
     auto id = gen_unique_id(label);
     if(ui_state.hover_id == id){
-        friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 1.0f);
-        friday.cursor_y += lerp(friday.cursor_y, y, 1.0f);
-        push_rectangle_textured(friday.cursor_x, friday.cursor_y-height/2, 
-                                height*1.5, height*1.5,0, cursor_bitmap);
-        
+        friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
+        friday.cursor_target_y = y;
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);

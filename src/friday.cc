@@ -165,6 +165,10 @@ main(int argc, char** args){
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
         draw_view_buttons();
+        friday.cursor_x += lerp(friday.cursor_x, friday.cursor_target_x, 0.1f);
+        friday.cursor_y += lerp(friday.cursor_y, friday.cursor_target_y, 0.1f);
+        
+        push_rectangle_textured(friday.cursor_x, friday.cursor_y-30/2, 30,30,0, cursor_bitmap);
         
         render_graph(scope);
         draw_menu_bar();

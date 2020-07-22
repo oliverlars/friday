@@ -74,7 +74,20 @@ struct {
     int minimap_y_offset;
     
     int LOD;
+    
+    
+    f32 cursor_x;
+    f32 cursor_y;
+    
+    f32 cursor_target_x;
+    f32 cursor_target_y;
+    
 } friday;
+
+internal f32
+lerp(f32 source, f32 target, f32 value){
+    return (target - source)*value;
+}
 
 // NOTE(Oliver): probably should do this better
 internal inline int
@@ -1629,8 +1642,9 @@ draw_insertable(String8 label, Closure closure){
     
     auto id = gen_unique_id(label);
     if(ui_state.hover_id == id){
-        push_string(friday.x-get_text_width("insert!")-10.0f, 
-                    get_friday_y(), "--->", 0x00FF00FF);
+        friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 0.1f);
+        friday.cursor_y += lerp(friday.cursor_y, get_friday_y(), 0.1f);
+        push_string(friday.cursor_x, friday.cursor_y, "--->", 0x00FF00FF);
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
@@ -1648,8 +1662,9 @@ scope_insert(String8 label, Closure closure){
     
     auto id = gen_unique_id(label);
     if(ui_state.hover_id == id){
-        push_string(friday.x-get_text_width("insert!")-10.0f, 
-                    y, "--->", 0x00FF00FF);
+        friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 1.0f);
+        friday.cursor_y += lerp(friday.cursor_y, y, 1.0f);
+        push_string(friday.cursor_x, friday.cursor_y, "--->", 0x00FF00FF);
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
@@ -1828,14 +1843,14 @@ render_graph(Node* root){
                 switch(friday.selected){
                     case 0:{
                         Node* node = make_node(pool, NODE_FUNCTION);
-                        node->name = make_string(perm_arena, "new func");
+                        node->name = make_string(perm_arena, "untitled");
                         node->next = active->next;
                         active->next = node;
                     }break;
                     
                     case 1:{
                         Node* node = make_node(pool, NODE_STRUCT);
-                        node->name = make_string(perm_arena, "new struct");
+                        node->name = make_string(perm_arena, "untitled");
                         node->_struct.members = nullptr;
                         node->next = active->next;
                         active->next = node;
@@ -1843,7 +1858,7 @@ render_graph(Node* root){
                     
                     case 2:{
                         Node* node = make_node(pool, NODE_DECLARATION);
-                        node->name = make_string(perm_arena, "new declaration");
+                        node->name = make_string(perm_arena, "untitled");
                         node->declaration.is_initialised = false;
                         node->next = active->next;
                         active->next = node;

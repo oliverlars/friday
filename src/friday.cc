@@ -248,7 +248,7 @@ main(int argc, char** args){
                     }
                     
                 }
-                
+                platform.mouse_drag = 0;
             }
             if(event.type == SDL_KEYDOWN){
                 SDL_Keycode key = event.key.keysym.sym;

@@ -47,6 +47,7 @@ struct {
     int y;
     int x_offset;
     int y_offset;
+    int scroll_amount;
     
     int pan_offset_x;
     int pan_offset_y;
@@ -95,9 +96,10 @@ get_friday_x(){
     return friday.x + friday.x_offset + friday.pan_offset_x + friday.delta_x;
 }
 
+
 internal inline int
 get_friday_y(){
-    return friday.y + friday.y_offset + friday.pan_offset_y + friday.delta_y;
+    return friday.y + friday.scroll_amount+friday.pan_offset_y + friday.delta_y;
 }
 
 // NOTE(Oliver): probably should do this better
@@ -1412,6 +1414,7 @@ opengl_start_frame() {
     friday.minimap_y = 700;
     friday.minimap_x_offset = 0;
     
+    friday.scroll_amount += lerp(friday.scroll_amount, friday.y_offset, 0.1f);
     
 }
 
@@ -1440,6 +1443,7 @@ opengl_end_frame() {
     process_and_draw_commands();
     
     glUseProgram(0);
+    
 }
 
 internal void
@@ -1630,6 +1634,8 @@ draw_misc(String8 string, u32 colour = theme.text.packed ){
     draw_string(string, colour);
 }
 
+Bitmap cursor_bitmap;
+
 internal void
 draw_insertable(String8 label, Closure closure){
     
@@ -1644,7 +1650,8 @@ draw_insertable(String8 label, Closure closure){
     if(ui_state.hover_id == id){
         friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 0.1f);
         friday.cursor_y += lerp(friday.cursor_y, get_friday_y(), 0.1f);
-        push_string(friday.cursor_x, friday.cursor_y, "--->", 0x00FF00FF);
+        push_rectangle_textured(friday.cursor_x, friday.cursor_y-height/2, 
+                                height*1.5, height*1.5,0, cursor_bitmap);
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);
@@ -1664,7 +1671,9 @@ scope_insert(String8 label, Closure closure){
     if(ui_state.hover_id == id){
         friday.cursor_x += lerp(friday.cursor_x, friday.x-get_text_width("--->")-10.0f, 1.0f);
         friday.cursor_y += lerp(friday.cursor_y, y, 1.0f);
-        push_string(friday.cursor_x, friday.cursor_y, "--->", 0x00FF00FF);
+        push_rectangle_textured(friday.cursor_x, friday.cursor_y-height/2, 
+                                height*1.5, height*1.5,0, cursor_bitmap);
+        
     }
     
     auto widget = _push_widget(x, y, width, height, id, closure, true);

@@ -132,6 +132,8 @@ main(int argc, char** args){
     options_icon = make_bitmap("options_icon.png");
     bin_icon = make_bitmap("bin_icon.png");
     
+    cursor_bitmap = make_bitmap("arrow.png");
+    
     load_theme_ayu();
     SDL_StartTextInput();
     
@@ -192,8 +194,8 @@ main(int argc, char** args){
         
         free(platform.text_input);
         platform.text_input = (char*)calloc(1, 256);
-        
         char* text_input = platform.text_input;
+        
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = false;
@@ -267,7 +269,7 @@ main(int argc, char** args){
                 }
             }
             if(event.type == SDL_MOUSEWHEEL){
-                friday.y_offset += -event.wheel.y*50;
+                friday.y_offset += - event.wheel.y*50;
             }
         }
         

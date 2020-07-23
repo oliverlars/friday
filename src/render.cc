@@ -533,22 +533,28 @@ global f32 size_y_scale = 0.0f;
 
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
-    
+    auto menu_id = gen_unique_id(label);
+    auto anim_state = get_animation_state(menu_id);
+    if(!anim_state){
+        anim_state = init_animation_state(menu_id);
+    }
+    anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
+    anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
     f32 line_height = renderer.fonts[0].line_height;
-    menu_height += lerp(menu_height, 40, 0.2f);
-    f32 height = menu_height;
-    size_x_scale += lerp(size_x_scale, 1.5, 0.2f);
-    f32 size_x = 200*size_x_scale;
+    f32 height = 40*anim_state->y_scale;
+    f32 size_x = 200*anim_state->x_scale;
     f32 size_y = num_rows*height;
     y = y-size_y+line_height;
     friday.y -= size_y;
+    
+    anim_state->last_updated = platform.tick;
+    
     for(int i = 0; i < num_rows; i++){
         f32 text_width = get_text_width(strings[i]);
         text_width *= 1.2;
         size_x = text_width >= size_x ? text_width : size_x;
         
     }
-    auto menu_id = gen_unique_id(label);
     auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, closure);
     
     

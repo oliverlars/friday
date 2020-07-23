@@ -374,3 +374,47 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type type){
     }
     
 }
+
+struct Animation_State {
+    UI_ID id = -1;
+    f32 x_offset = 0;
+    f32 y_offset = 0;
+    f32 x_scale = 1.0f;
+    f32 y_scale = 1.0f;
+    u64 last_updated = 0;
+};
+
+#define ANIM_STATE_SIZE 1024
+global Animation_State animation_state[ANIM_STATE_SIZE];
+
+internal Animation_State*
+init_animation_state(UI_ID id){
+    u64 tick = platform.tick;
+    int index = 0;
+    for(int i = 0; i < ANIM_STATE_SIZE; i++){
+        if(animation_state[i].last_updated < platform.tick){
+            tick = animation_state[i].last_updated;
+            index = i;
+        }
+    }
+    Animation_State state;
+    animation_state[index] = state;
+    animation_state[index].id = id;
+    animation_state[index].last_updated = platform.tick;
+    return &animation_state[index];
+}
+
+internal Animation_State*
+get_animation_state(UI_ID id){
+    u64 tick = platform.tick;
+    u64 index = 0;
+    bool found = false;
+    for(int i = 0; i < ANIM_STATE_SIZE; i++){
+        
+        if(animation_state[i].id == id && 
+           (platform.tick - animation_state[i].last_updated) < 2){
+            return &animation_state[i];
+        }
+    }
+    return nullptr;
+}

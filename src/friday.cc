@@ -24,6 +24,7 @@ global SDL_Window* global_window;
 #define Megabytes(x) (Kilobytes(x)*1024)
 #define Gigabytes(x) (Megabytes(x)*1024)
 
+
 int 
 main(int argc, char** args){
 #define TITLE "Friday"
@@ -77,7 +78,6 @@ main(int argc, char** args){
     //glEnable(GL_FRAMEBUFFER_SRGB);
     init_opengl_renderer();
     init_shaders();
-    u64 tick = 0;
     int start = 0;
     int end = 0;
     SDL_Event event;
@@ -159,8 +159,8 @@ main(int argc, char** args){
         platform.mouse_y = platform.height - y;
         
         f32 offset = 5;
-        left->_int = tick;
-        right->_int = tick;
+        left->_int = platform.tick;
+        right->_int = platform.tick;
         
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
@@ -278,7 +278,7 @@ main(int argc, char** args){
         }
         
         SDL_GL_SwapWindow(global_window);
-        tick++;
+        platform.tick++;
     }
     
     return 0;

@@ -86,6 +86,7 @@ global struct {
     Widget* widgets;
     UI_ID hover_id;
     UI_ID clicked_id;
+    UI_ID menu_id;
     
     Arena frame_arena;
     Arena parameter_arena;

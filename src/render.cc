@@ -65,7 +65,6 @@ struct {
     Pool node_pool;
     
     f32 menu_x, menu_y;
-    bool is_menu_open;
     Node* menu_node;
     int selected;
     
@@ -528,14 +527,21 @@ get_text_width(String8 string){
     return result*renderer.fonts[0].scale;
 }
 
+global f32 menu_height = 0.0f;
+global f32 size_x_scale = 0.0f;
+global f32 size_y_scale = 0.0f;
+
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
     
     f32 line_height = renderer.fonts[0].line_height;
-    f32 height = 40;
-    f32 size_x = 200;
+    menu_height += lerp(menu_height, 40, 0.2f);
+    f32 height = menu_height;
+    size_x_scale += lerp(size_x_scale, 1.5, 0.2f);
+    f32 size_x = 200*size_x_scale;
     f32 size_y = num_rows*height;
     y = y-size_y+line_height;
+    friday.y -= size_y;
     for(int i = 0; i < num_rows; i++){
         f32 text_width = get_text_width(strings[i]);
         text_width *= 1.2;
@@ -561,7 +567,8 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
                 
                 friday.selected = i;
                 
-                friday.is_menu_open = false;
+                ui_state.menu_id = -1;
+                //friday.is_menu_open = false;
             }
             push_rectangle(x, y+ offset, 
                            size_x, height, 10.0,
@@ -1666,12 +1673,53 @@ scope_insert(String8 label, Closure closure){
     y = get_friday_y()+height;
     
     auto id = gen_unique_id(label);
+    auto widget = _push_widget(x, y, width, height, id, closure, true);
     if(ui_state.hover_id == id){
         friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
         friday.cursor_target_y = y;
     }
+    if(ui_state.clicked_id == id){
+        
+        String8 node_types[3];
+        Arena* arena = &renderer.frame_arena;
+        node_types[0] = make_string(arena, "function");
+        node_types[1] = make_string(arena, "struct");
+        node_types[2] = make_string(arena, "declaration");
+        
+        auto callback = [](u8* parameters){
+            Pool* pool = &friday.node_pool;
+            Arena* perm_arena = &platform.permanent_arena;
+            Node* active = friday.menu_node;
+            switch(friday.selected){
+                case 0:{
+                    Node* node = make_node(pool, NODE_FUNCTION);
+                    node->name = make_string(perm_arena, "untitled");
+                    node->next = active->next;
+                    active->next = node;
+                }break;
+                
+                case 1:{
+                    Node* node = make_node(pool, NODE_STRUCT);
+                    node->name = make_string(perm_arena, "untitled");
+                    node->_struct.members = nullptr;
+                    node->next = active->next;
+                    active->next = node;
+                }break;
+                
+                case 2:{
+                    Node* node = make_node(pool, NODE_DECLARATION);
+                    node->name = make_string(perm_arena, "untitled");
+                    node->declaration.is_initialised = false;
+                    node->next = active->next;
+                    active->next = node;
+                }break;
+            }
+        };
+        Closure menu_closure = make_closure(callback, 0);
+        boss_draw_menu("function node menu", node_types, 3, menu_closure);
+        
+    }
     
-    auto widget = _push_widget(x, y, width, height, id, closure, true);
     
 }
 
@@ -1696,7 +1744,7 @@ render_graph(Node* root){
             
             render_graph(binary->right);
         }break;
-        
+        // NOTE(Oliver): make this present.cc!!!
         case NODE_LITERAL:{
             Arena* arena = &renderer.frame_arena;
             
@@ -1812,8 +1860,7 @@ render_graph(Node* root){
                 auto stmt = get_arg(parameters, Node*);
                 auto x = get_arg(parameters, f32);
                 auto y = get_arg(parameters, f32);
-                
-                friday.is_menu_open = 1;
+                auto open_menu = get_arg(parameters, bool*);
                 should_insert = 1;
                 friday.menu_node = stmt;
                 friday.menu_x = x;
@@ -1833,7 +1880,6 @@ render_graph(Node* root){
                 snprintf(label.text, 256, "scope%d", append);
                 scope_insert(label, closure);
             }
-            
             String8 node_types[3];
             Arena* arena = &renderer.frame_arena;
             node_types[0] = make_string(arena, "function");
@@ -1870,9 +1916,9 @@ render_graph(Node* root){
                 }
             };
             Closure closure = make_closure(callback, 0);
-            if(friday.is_menu_open){
-                boss_draw_menu("node menu", node_types, 3, closure);
-            }
+            //if(friday.is_menu_open){
+            //boss_draw_menu("node menu", node_types, 3, closure);
+            //}
             
             
         }break;
@@ -1888,15 +1934,50 @@ render_graph(Node* root){
             indent();
             new_line();
             new_line();
-            if(0 && platform.mouse_left_clicked){
-                friday.is_menu_open = 1;
+            
+            auto statement_callback = [](u8* parameters) {
+                auto scope = get_arg(parameters, Node*);
+                auto stmt = get_arg(parameters, Node*);
+                auto x = get_arg(parameters, f32);
+                auto y = get_arg(parameters, f32);
+                
                 should_insert = 1;
-                friday.active_node = nullptr;
-                friday.menu_x = get_friday_x();
-                friday.menu_y = get_friday_y();
+                friday.menu_node = stmt;
+                friday.menu_x = x;
+                friday.menu_y = y;
+                
+            };
+            int append = 0;
+            if(root->function.scope){
+                
+                
+                for(Node* stmt = root->function.scope->scope.statements; 
+                    stmt; stmt = stmt->next, append++){
+                    render_graph(stmt);
+                    f32 _x = get_friday_x();
+                    f32 _y = get_friday_y();
+                    Closure closure = make_closure(statement_callback,
+                                                   3,
+                                                   arg(stmt), 
+                                                   arg(_x),
+                                                   arg(_y));
+                    String8 label = make_string(&renderer.frame_arena, "function scope");
+                    snprintf(label.text, 256, "function scope%d", append);
+                    scope_insert(label, closure);
+                }
+            }else {
+                f32 _x = get_friday_x();
+                f32 _y = get_friday_y();
+                Closure closure = make_closure(statement_callback,
+                                               4,
+                                               arg(root->function.scope), 
+                                               arg(root), 
+                                               arg(_x),
+                                               arg(_y));
+                String8 label = make_string(&renderer.frame_arena, "scope");
+                scope_insert(label, closure);
             }
             
-            render_graph(root->function.scope);
             if(friday.LOD != 2){
                 draw_misc("}", theme.text_misc.packed);
             }
@@ -2129,6 +2210,7 @@ draw_view_buttons(){
     Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
     char* icon_labels[4] = {"move_icon", "add_icon", "options_icon", "bin_icon"};
     for(int i = 0; i < 4; i++){
+        
 #if 0
         push_rectangle(x, y, size, size, 10, theme.view_button.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 5, icons[i]);
@@ -2137,6 +2219,7 @@ draw_view_buttons(){
         Closure closure = make_closure(callback, 0);
         icon_button(icon_labels[i], x, y, size, icons[i], closure);
         y -= size + spacing;
+        
     }
     
 }

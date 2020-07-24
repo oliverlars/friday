@@ -1722,7 +1722,7 @@ scope_insert(String8 label, Closure closure){
             }
         };
         Closure menu_closure = make_closure(callback, 0);
-        boss_draw_menu("function node menu", node_types, 3, menu_closure);
+        draw_menu(get_friday_x(), get_friday_y(), "function node menu", node_types, 3, menu_closure);
         
     }
     
@@ -2066,6 +2066,7 @@ button(f32 x, f32 y, char* text, Closure closure){
     f32 line_height = renderer.fonts[0].line_height;
     f32 border = 5.0f;
     if(id == ui_state.clicked_id){
+        
         push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
                        theme.button_highlight.packed);
         push_string(x, y+line_height/4, text, theme.text.packed);
@@ -2087,9 +2088,27 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     
     f32 line_height = renderer.fonts[0].line_height;
     if(id == ui_state.clicked_id){
+        auto anim_state = get_animation_state(id);
+        if(!anim_state){
+            anim_state = init_animation_state(id);
+        }
+        anim_state->x_scale += lerp(anim_state->x_scale, 1.0f, 0.2f);
+        anim_state->last_updated = platform.tick;
+        f32 diff = anim_state->x_scale - size;
+        f32 sx = anim_state->x_scale;
+        size *= sx;
         push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }else if(id == ui_state.hover_id){
+        auto anim_state = get_animation_state(id);
+        if(!anim_state){
+            anim_state = init_animation_state(id);
+        }
+        anim_state->x_scale += lerp(anim_state->x_scale, 1.2f, 0.2f);
+        anim_state->last_updated = platform.tick;
+        f32 diff = anim_state->x_scale - size;
+        f32 sx = anim_state->x_scale;
+        size *= sx;
         push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }else{

@@ -88,6 +88,7 @@ global struct {
     UI_ID clicked_id;
     UI_ID menu_id;
     
+    
     Arena frame_arena;
     Arena parameter_arena;
 } ui_state;
@@ -209,7 +210,7 @@ process_widgets_and_handle_events(){
             hovered = true;
             ui_state.hover_id = widget->id;
             
-            if(platform.mouse_left_clicked){
+            if(platform.mouse_left_down){
                 active = widget;
                 ui_state.clicked_id = widget->id;
                 click_type = CLICK_LEFT;

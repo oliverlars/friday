@@ -282,7 +282,17 @@ make_string(Arena* arena, char* string, u64 capacity = 256){
     return result;
 }
 
-
+internal String8
+copy_string(Arena* arena, String8 to_copy){
+    char* buffer = (char*)arena_allocate(arena, to_copy.length);
+    String8 result;
+    result.length = to_copy.length;
+    result.text = buffer;
+    for(int i = 0; i < to_copy.length; i++){
+        result.text[i] = to_copy.text[i];
+    }
+    return result;
+}
 
 internal char*
 to_cstring(Arena* arena, String8 string){

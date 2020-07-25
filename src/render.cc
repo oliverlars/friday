@@ -89,6 +89,11 @@ lerp(f32 source, f32 target, f32 value){
     return (target - source)*value;
 }
 
+internal f32
+oscillate(f32 source, f32 max, f32 value){
+    return sin(source*value)*max;
+}
+
 // NOTE(Oliver): probably should do this better
 internal inline int
 get_friday_x(){
@@ -1840,10 +1845,17 @@ render_graph(Node* root){
         }break;
         
         case NODE_DECLARATION: {
+            auto decl_id = gen_id(root->name);
+            auto anim_state = get_animation_state(decl_id);
+            update_animation_state(anim_state, 
+                                   lerp(anim_state->x_offset, 3.1415926535f, 0.3f),
+                                   0,0,0);
+            
             auto decl = root->declaration.declaration;
             auto type_usage = root->declaration.type_usage;
             Closure closure = make_closure(nullptr, 0);
-            
+            f32 offset = sinf(anim_state->x_offset)*20;
+            friday.x += offset;
             boss_draw_leaf(root, closure);
             if(!root->declaration.type_usage){
                 auto callback = [](u8* p){
@@ -1865,19 +1877,21 @@ render_graph(Node* root){
                 draw_misc(" :", theme.text_misc.packed);
                 boss_draw_leaf(type_usage->type_usage.type_reference, 
                                closure, theme.text_type.packed);
+                
                 space();
             }
             
             draw_misc("= ", theme.text_misc.packed);
             if(root->declaration.is_initialised){
-                render_graph(decl);
                 
+                render_graph(decl);
             }else {
                 draw_misc("void", theme.text_misc.packed);
             }
             
             new_line();
             new_line();
+            friday.x -= offset;
         }break;
         
         case NODE_SCOPE: {

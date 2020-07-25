@@ -433,7 +433,7 @@ get_animation_state(UI_ID id){
             return &animation_state[i];
         }
     }
-    return nullptr;
+    return init_animation_state(id);
 }
 
 internal void

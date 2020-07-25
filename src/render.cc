@@ -1896,6 +1896,10 @@ render_graph(Node* root){
                 friday.menu_y = y;
             };
             int append = 0;
+            int node_count = 0;
+            for(Node* stmt = scope->statements; stmt; stmt = stmt->next, node_count++){
+            }
+            
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next, append++){
                 render_graph(stmt);
                 f32 _x = get_friday_x();
@@ -1905,8 +1909,10 @@ render_graph(Node* root){
                                                arg(stmt), 
                                                arg(_x),
                                                arg(_y));
-                String8 label = make_string(&renderer.temp_string_arena, "scope_");
-                snprintf(label.text, 256, "scope%d", append);
+                String8 label = make_string(&renderer.temp_string_arena, "");
+                int length = snprintf(label.text, 256, "scope%d%d", append, node_count);
+                label.length = length;
+                
                 scope_insert(label, closure);
             }
             String8 node_types[3];
@@ -2127,10 +2133,10 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
         if(!anim_state){
             anim_state = init_animation_state(id);
         }
-        anim_state->x_scale += lerp(anim_state->x_scale, 1.2f, 0.2f);
+        anim_state->x_scale += lerp(anim_state->x_scale, 0.2f, 0.2f);
         anim_state->last_updated = platform.tick;
         f32 diff = anim_state->x_scale - size;
-        f32 sx = anim_state->x_scale;
+        f32 sx = (1.0 + anim_state->x_scale);
         size *= sx;
         push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
@@ -2167,7 +2173,7 @@ draw_menu_bar(){
     {
         char* file = "File"; 
         auto file_menu_callback = [](u8* parameters){
-            menu_open = !menu_open;
+            menu_open = 1;
         };
         Closure file_menu = make_closure(file_menu_callback, 0);
         file_id = button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
@@ -2177,7 +2183,7 @@ draw_menu_bar(){
     
     {
         auto edit_menu_callback = [](u8* parameters){
-            menu_open = !menu_open;
+            menu_open = 1;
         };
         char* edit = "Edit"; 
         Closure edit_menu = make_closure(edit_menu_callback, 0);
@@ -2187,7 +2193,7 @@ draw_menu_bar(){
     
     {
         auto help_menu_callback = [](u8* parameters){
-            menu_open |= !menu_open;
+            menu_open = 1;
         };
         char* help = "Help"; 
         Closure help_menu = make_closure(help_menu_callback, 0);

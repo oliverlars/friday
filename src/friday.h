@@ -261,6 +261,7 @@ struct String8 {
         return text[index];
     }
 };
+
 internal String8
 make_string(Arena* arena, char* string, u64 capacity = 256){
     
@@ -280,6 +281,7 @@ make_string(Arena* arena, char* string, u64 capacity = 256){
     result.capacity = capacity;
     return result;
 }
+
 
 
 internal char*

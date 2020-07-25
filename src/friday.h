@@ -261,6 +261,26 @@ struct String8 {
         return text[index];
     }
 };
+internal String8
+make_string(Arena* arena, char* string, u64 capacity = 256){
+    
+    char* pointer = string;
+    while(pointer && *pointer){
+        pointer++;
+    }
+    u64 length = pointer - string;
+    
+    char* text = (char*)arena_allocate(arena, capacity);
+    for(int i = 0; i < length; i++){
+        text[i] = string[i];
+    }
+    String8 result;
+    result.text = text;
+    result.length = length;
+    result.capacity = capacity;
+    return result;
+}
+
 
 internal char*
 to_cstring(Arena* arena, String8 string){
@@ -269,6 +289,19 @@ to_cstring(Arena* arena, String8 string){
         result[i] = string.text[i];
     }
     result[string.length] = 0;
+    return result;
+}
+
+internal String8
+append_to_string(Arena* arena, String8 string, char* appendee){
+    String8 result = make_string(arena, "result");
+    for(int i = 0; i < string.length; i++){
+        result.text[i] = string.text[i];
+    }
+    for(int i = 0; i < strlen(appendee); i++){
+        result.text[i+string.length] = appendee[i];
+    }
+    result.length = string.length + strlen(appendee);
     return result;
 }
 
@@ -308,26 +341,6 @@ pop_from_string(String8* string, u64 index){
         string->text[i-1] = string->text[i];
     }
     string->length--;
-}
-
-internal String8
-make_string(Arena* arena, char* string, u64 capacity = 256){
-    
-    char* pointer = string;
-    while(pointer && *pointer){
-        pointer++;
-    }
-    u64 length = pointer - string;
-    
-    char* text = (char*)arena_allocate(arena, capacity);
-    for(int i = 0; i < length; i++){
-        text[i] = string[i];
-    }
-    String8 result;
-    result.text = text;
-    result.length = length;
-    result.capacity = capacity;
-    return result;
 }
 
 internal Arena

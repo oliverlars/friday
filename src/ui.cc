@@ -373,8 +373,8 @@ struct Animation_State {
     UI_ID id = -1;
     f32 x_offset = 0;
     f32 y_offset = 0;
-    f32 x_scale = 1.0f;
-    f32 y_scale = 1.0f;
+    f32 x_scale = 0;
+    f32 y_scale = 0;
     u64 last_updated = 0;
 };
 
@@ -402,7 +402,8 @@ internal Animation_State*
 get_animation_state(UI_ID id){
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
         
-        if(animation_state[i].id == id){
+        if(animation_state[i].id == id &&
+           (platform.tick - animation_state[i].last_updated)  < 2){
             return &animation_state[i];
         }
     }

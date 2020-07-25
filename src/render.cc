@@ -1583,7 +1583,17 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
 
 internal void
 _highlight_word(Node* leaf){
+    String8 highlight_name = 
+        append_to_string(&renderer.temp_string_arena, leaf->name, "highlight");
     
+    auto id = gen_unique_id(highlight_name);
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+    }
+    update_animation_state(anim_state, 0, 0, 
+                           lerp(anim_state->x_scale, 1.0f, 0.4f),
+                           lerp(anim_state->y_scale, 1.0f, 0.4f));
     f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
     f32 width = text_width + offset;
@@ -1594,9 +1604,10 @@ _highlight_word(Node* leaf){
     
     u32 text_colour = theme.text.packed;
     
-    
-    
-    push_rectangle(x, y, width, height, 10, theme.cursor.packed);
+    push_rectangle(x + width/2 - width*anim_state->x_scale/2, 
+                   y + height/2 - height*anim_state->y_scale/2, 
+                   width*anim_state->x_scale, 
+                   height*anim_state->y_scale, 10, theme.cursor.packed);
     text_colour = theme.background.packed;
     draw_string(leaf->name, text_colour);
     
@@ -1604,7 +1615,6 @@ _highlight_word(Node* leaf){
 
 internal void
 boss_edit_name(Node* leaf, u32 colour = theme.text.packed){
-    
     f32 text_width = get_text_width(leaf->name);
     f32 offset = 5.0f;
     f32 width = text_width + offset;

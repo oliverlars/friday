@@ -135,8 +135,34 @@ make_closure(void(*callback)(unsigned char* parameters), int num, ...) {
     return closure;
 }
 
+#define HASH_INITIAL 2166136261
+
+internal void
+hash32(u64* hash, char* data, int size){
+    
+    while(size--){
+        *hash = (*hash ^ *data++) * 16777619;
+    }
+}
+
 internal UI_ID
 gen_unique_id(char* label){
+    int size = strlen(label);
+    UI_ID result = 0;
+    hash32(&result, label, size);
+    return result;
+}
+
+internal UI_ID
+gen_unique_id(String8 label){
+    int size = label.length;
+    UI_ID result = 0;
+    hash32(&result, label.text, size);
+    return result;
+}
+
+internal UI_ID
+gen_id(char* label){
     
     u64 id = (u64)(void*)label;
     return (UI_ID)id;
@@ -144,7 +170,7 @@ gen_unique_id(char* label){
 
 
 internal UI_ID
-gen_unique_id(String8 label){
+gen_id(String8 label){
     
     u64 id = (u64)(void*)label.text;
     return (UI_ID)id;

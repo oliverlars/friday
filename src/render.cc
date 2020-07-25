@@ -1639,7 +1639,7 @@ internal void
 boss_draw_leaf(Node* leaf,
                Closure closure, u32 colour = theme.text.packed){
     
-    auto id = gen_unique_id(leaf->name);
+    auto id = gen_id(leaf->name);
     auto widget = _push_widget(get_friday_x(), get_friday_y(), 
                                get_text_width(leaf->name), 
                                renderer.fonts[0].line_height, id, closure);

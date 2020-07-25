@@ -262,6 +262,16 @@ struct String8 {
     }
 };
 
+internal char*
+to_cstring(Arena* arena, String8 string){
+    char* result = (char*)arena_allocate(arena, string.length+1);
+    for(int i = 0; i < string.length; i++){
+        result[i] = string.text[i];
+    }
+    result[string.length] = 0;
+    return result;
+}
+
 internal bool
 string_eq(String8 a, char* b){
     if(!a.text || !a.length) return false;
@@ -518,4 +528,15 @@ clampf(f32 value, f32 min, f32 max){
     if(value < min) return min;
     if(value > max) return max;
     return value;
+}
+
+internal void
+debug_print(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    char output[256];
+    int size = vsnprintf(output, 256, fmt, args);
+    output[size] = '\n';
+    output[size+1] = 0;
+    OutputDebugStringA(output);
 }

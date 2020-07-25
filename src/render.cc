@@ -222,6 +222,7 @@ global struct {
     
     Arena shape_attribs;
     Arena frame_arena;
+    Arena temp_string_arena;
 } renderer;
 
 internal Command*
@@ -534,12 +535,18 @@ global f32 size_y_scale = 0.0f;
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
     auto menu_id = gen_unique_id(label);
+    //debug_print("%d", menu_id);
     auto anim_state = get_animation_state(menu_id);
     if(!anim_state){
         anim_state = init_animation_state(menu_id);
     }
-    anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
-    anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
+    update_animation_state(anim_state,
+                           0,
+                           0,
+                           lerp(anim_state->x_scale, 1.2, 0.2f),
+                           lerp(anim_state->y_scale, 1.2, 0.2f));
+    //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
+    //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
     f32 line_height = renderer.fonts[0].line_height;
     f32 height = 40*anim_state->y_scale;
     f32 size_x = 200*anim_state->x_scale;
@@ -579,9 +586,7 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
             push_rectangle(x, y+ offset, 
                            size_x, height, 10.0,
                            theme.menu.packed);
-            push_rectangle(x, y+ offset, 
-                           2, height, 0.0,
-                           theme.cursor.packed);
+            
             text_colour = theme.cursor.packed;
         }
         
@@ -604,6 +609,8 @@ init_opengl_renderer(){
         subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
     
     renderer.frame_arena = subdivide_arena(&platform.temporary_arena, 8192);
+    
+    renderer.temp_string_arena = subdivide_arena(&platform.temporary_arena, 4096);
     
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
@@ -1411,6 +1418,7 @@ opengl_start_frame() {
     
     arena_reset(&renderer.shape_attribs);
     arena_reset(&renderer.frame_arena);
+    arena_reset(&renderer.temp_string_arena);
     
     //arena_reset(&ui_state.frame_arena);
     arena_reset(&ui_state.parameter_arena);
@@ -1630,6 +1638,7 @@ boss_draw_leaf(Node* leaf,
         friday.cursor_index = leaf->name.length;
         boss_edit_name(leaf, colour);
     }else if(id == ui_state.hover_id){
+        
         _highlight_word(leaf);
     }else{
         draw_string(leaf->name, colour);
@@ -1680,14 +1689,17 @@ scope_insert(String8 label, Closure closure){
     
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, width, height, id, closure, true);
+    
     if(ui_state.hover_id == id){
         friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
         friday.cursor_target_y = y;
     }
+    
     if(ui_state.clicked_id == id){
+        //debug_print("we made it here");
         
         String8 node_types[3];
-        Arena* arena = &renderer.frame_arena;
+        Arena* arena = &renderer.temp_string_arena;
         node_types[0] = make_string(arena, "function");
         node_types[1] = make_string(arena, "struct");
         node_types[2] = make_string(arena, "declaration");
@@ -1722,7 +1734,9 @@ scope_insert(String8 label, Closure closure){
             }
         };
         Closure menu_closure = make_closure(callback, 0);
-        draw_menu(get_friday_x(), get_friday_y(), "function node menu", node_types, 3, menu_closure);
+        char* cstr_label = to_cstring(&renderer.temp_string_arena, label);
+        debug_print(cstr_label);
+        draw_menu(get_friday_x(), get_friday_y(), cstr_label, node_types, 3, menu_closure);
         
     }
     
@@ -1739,7 +1753,7 @@ render_graph(Node* root){
             render_graph(binary->left);
             
             String8 op = {};
-            Arena* arena = &renderer.frame_arena;
+            Arena* arena = &renderer.temp_string_arena;
             switch(binary->op_type){
                 case OP_PLUS: op = make_string(arena, " + ");break;
                 case OP_MINUS: op = make_string(arena, " - ");break;
@@ -1752,7 +1766,7 @@ render_graph(Node* root){
         }break;
         // NOTE(Oliver): make this present.cc!!!
         case NODE_LITERAL:{
-            Arena* arena = &renderer.frame_arena;
+            Arena* arena = &renderer.temp_string_arena;
             
             auto literal = &root->literal;
             char* string = (char*)arena_allocate(arena, 256);
@@ -1803,7 +1817,7 @@ render_graph(Node* root){
                     indent();
                 }
                 Closure closure = make_closure(callback, 2, arg(root), arg(_struct->members));
-                draw_insertable(make_string(&renderer.frame_arena,"insertable"), closure);
+                draw_insertable(make_string(&renderer.temp_string_arena,"insertable"), closure);
                 
                 if(!_struct->members){
                     new_line();
@@ -1866,7 +1880,6 @@ render_graph(Node* root){
                 auto stmt = get_arg(parameters, Node*);
                 auto x = get_arg(parameters, f32);
                 auto y = get_arg(parameters, f32);
-                auto open_menu = get_arg(parameters, bool*);
                 should_insert = 1;
                 friday.menu_node = stmt;
                 friday.menu_x = x;
@@ -1882,12 +1895,12 @@ render_graph(Node* root){
                                                arg(stmt), 
                                                arg(_x),
                                                arg(_y));
-                String8 label = make_string(&renderer.frame_arena, "scope");
+                String8 label = make_string(&renderer.temp_string_arena, "scope_");
                 snprintf(label.text, 256, "scope%d", append);
                 scope_insert(label, closure);
             }
             String8 node_types[3];
-            Arena* arena = &renderer.frame_arena;
+            Arena* arena = &renderer.temp_string_arena;
             node_types[0] = make_string(arena, "function");
             node_types[1] = make_string(arena, "struct");
             node_types[2] = make_string(arena, "declaration");
@@ -1922,10 +1935,6 @@ render_graph(Node* root){
                 }
             };
             Closure closure = make_closure(callback, 0);
-            //if(friday.is_menu_open){
-            //boss_draw_menu("node menu", node_types, 3, closure);
-            //}
-            
             
         }break;
         
@@ -1967,7 +1976,7 @@ render_graph(Node* root){
                                                    arg(stmt), 
                                                    arg(_x),
                                                    arg(_y));
-                    String8 label = make_string(&renderer.frame_arena, "function scope");
+                    String8 label = make_string(&renderer.temp_string_arena, "function scope");
                     snprintf(label.text, 256, "function scope%d", append);
                     scope_insert(label, closure);
                 }
@@ -1980,7 +1989,7 @@ render_graph(Node* root){
                                                arg(root), 
                                                arg(_x),
                                                arg(_y));
-                String8 label = make_string(&renderer.frame_arena, "scope");
+                String8 label = make_string(&renderer.temp_string_arena, "scope");
                 scope_insert(label, closure);
             }
             
@@ -2092,8 +2101,12 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
         if(!anim_state){
             anim_state = init_animation_state(id);
         }
-        anim_state->x_scale += lerp(anim_state->x_scale, 1.0f, 0.2f);
-        anim_state->last_updated = platform.tick;
+        update_animation_state(anim_state,
+                               0,
+                               0,
+                               lerp(anim_state->x_scale, 1.0f, 0.2f),
+                               0);
+        
         f32 diff = anim_state->x_scale - size;
         f32 sx = anim_state->x_scale;
         size *= sx;
@@ -2144,7 +2157,7 @@ draw_menu_bar(){
     {
         char* file = "File"; 
         auto file_menu_callback = [](u8* parameters){
-            menu_open = 1;
+            menu_open = !menu_open;
         };
         Closure file_menu = make_closure(file_menu_callback, 0);
         file_id = button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
@@ -2154,7 +2167,7 @@ draw_menu_bar(){
     
     {
         auto edit_menu_callback = [](u8* parameters){
-            menu_open = 1;
+            menu_open = !menu_open;
         };
         char* edit = "Edit"; 
         Closure edit_menu = make_closure(edit_menu_callback, 0);
@@ -2164,7 +2177,7 @@ draw_menu_bar(){
     
     {
         auto help_menu_callback = [](u8* parameters){
-            menu_open = 1;
+            menu_open |= !menu_open;
         };
         char* help = "Help"; 
         Closure help_menu = make_closure(help_menu_callback, 0);
@@ -2175,7 +2188,7 @@ draw_menu_bar(){
     
     if(menu_open && file_id == ui_state.clicked_id){
         String8 items[4] = {};
-        Arena* arena = &renderer.frame_arena;
+        Arena* arena = &renderer.temp_string_arena;
         items[3] = make_string(arena, "New");
         items[2] = make_string(arena, "Open");
         items[1] = make_string(arena, "Open Recent");
@@ -2188,21 +2201,21 @@ draw_menu_bar(){
     
     if(menu_open && edit_id == ui_state.clicked_id){
         String8 items[5] = {};
-        Arena* arena = &renderer.frame_arena;
+        Arena* arena = &renderer.temp_string_arena;
         items[4] = make_string(arena, "Undo");
         items[3] = make_string(arena, "Redo");
         items[2] = make_string(arena, "Undo History");
         items[1] = make_string(arena, "Repeat");
         items[0] = make_string(arena, "Preferences");
         Closure empty;
-        draw_menu(edit_x, platform.height-size-40, "file_menu",
+        draw_menu(edit_x, platform.height-size-40, "edit_menu",
                   items, 5, empty);
         
     }
     
     if(menu_open && help_id == ui_state.clicked_id){
         String8 items[2] = {};
-        Arena* arena = &renderer.frame_arena;
+        Arena* arena = &renderer.temp_string_arena;
         items[1] = make_string(arena, "About");
         items[0] = make_string(arena, "Splash Screen");
         Closure empty;

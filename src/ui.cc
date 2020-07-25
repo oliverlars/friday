@@ -139,12 +139,6 @@ internal UI_ID
 gen_unique_id(char* label){
     
     u64 id = (u64)(void*)label;
-    char* ptr = label;
-    while(ptr && *ptr){
-        id += (u64)(void*)ptr;
-        ptr++;
-    }
-    
     return (UI_ID)id;
 }
 
@@ -210,7 +204,7 @@ process_widgets_and_handle_events(){
             hovered = true;
             ui_state.hover_id = widget->id;
             
-            if(platform.mouse_left_down){
+            if(platform.mouse_left_clicked){
                 active = widget;
                 ui_state.clicked_id = widget->id;
                 click_type = CLICK_LEFT;
@@ -235,7 +229,6 @@ process_widgets_and_handle_events(){
             active->closure.callback(active->closure.parameters);
         }
     }
-    
 }
 
 enum Panel_Split_Type {
@@ -393,12 +386,12 @@ init_animation_state(UI_ID id){
     u64 tick = platform.tick;
     int index = 0;
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
-        if(animation_state[i].last_updated < platform.tick){
+        if(animation_state[i].last_updated < tick){
             tick = animation_state[i].last_updated;
             index = i;
         }
     }
-    Animation_State state;
+    Animation_State state = {};
     animation_state[index] = state;
     animation_state[index].id = id;
     animation_state[index].last_updated = platform.tick;
@@ -407,15 +400,23 @@ init_animation_state(UI_ID id){
 
 internal Animation_State*
 get_animation_state(UI_ID id){
-    u64 tick = platform.tick;
-    u64 index = 0;
-    bool found = false;
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
         
-        if(animation_state[i].id == id && 
-           (platform.tick - animation_state[i].last_updated) < 2){
+        if(animation_state[i].id == id){
             return &animation_state[i];
         }
     }
     return nullptr;
+}
+
+internal void
+update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, f32 x_scale, f32 y_scale){
+    if(!anim_state) return; 
+    
+    anim_state->x_offset += x_offset;
+    anim_state->y_offset += y_offset;
+    anim_state->x_scale += x_scale;
+    anim_state->y_scale += y_scale;
+    
+    anim_state->last_updated = platform.tick;
 }

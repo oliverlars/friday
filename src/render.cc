@@ -1591,11 +1591,8 @@ _highlight_word(Node* leaf){
     String8 highlight_name = 
         append_to_string(&renderer.temp_string_arena, leaf->name, "highlight");
     
-    auto id = gen_unique_id(highlight_name);
+    auto id = gen_unique_id(leaf->name);
     auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-    }
     update_animation_state(anim_state, 0, 0, 
                            lerp(anim_state->x_scale, 1.0f, 0.4f),
                            lerp(anim_state->y_scale, 1.0f, 0.4f));
@@ -1757,7 +1754,9 @@ scope_insert(String8 label, Closure closure){
     
     
 }
-
+// NOTE(Oliver): REWRITE INTO PROPER PRESENTATION
+// generate visual state for each node, should be better
+// than this 
 internal void
 render_graph(Node* root){
     if(!root) return;

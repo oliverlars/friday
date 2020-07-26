@@ -17,6 +17,7 @@
 #include "graph.cc"
 #include "ui.cc"
 #include "render.cc"
+#include "present.cc"
 
 global SDL_Window* global_window;
 

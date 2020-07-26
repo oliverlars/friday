@@ -565,3 +565,17 @@ debug_print(char* fmt, ...){
     output[size+1] = 0;
     OutputDebugStringA(output);
 }
+
+
+internal void
+debug_print(String8 string){
+    char output[256];
+    output[0] = '%';
+    output[1] = '.';
+    output[0] = '*';
+    output[0] = 's';
+    int size = snprintf(output, string.length, string.text);
+    output[size-1] = '\n';
+    output[size] = 0;
+    OutputDebugStringA(output);
+}

@@ -85,7 +85,7 @@ main(int argc, char** args){
     
     friday.node_pool = make_pool(sizeof(Node));
     Pool* pool = &friday.node_pool;
-    
+#if 0 
     Node* decl = make_node(pool, NODE_DECLARATION);
     
     Node* binary = make_node(pool, NODE_BINARY);
@@ -117,8 +117,17 @@ main(int argc, char** args){
     scope->scope.statements->next = _struct2;
     scope->scope.statements->next->next = decl;
     scope->name = make_string(&platform.permanent_arena, "global");
+#endif
     
-    friday.program_root = scope;
+    Node* global_scope = make_node(pool, NODE_SCOPE);
+    global_scope->name = make_string(&platform.permanent_arena, "global");
+    global_scope->scope.statements = make_node(pool, NODE_DUMMY);
+    global_scope->scope.statements->next = make_node(pool, NODE_FUNCTION);
+    global_scope->scope.statements->next->function.scope = make_node(pool, NODE_SCOPE);
+    global_scope->scope.statements->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
+    global_scope->scope.statements->next->name = make_string(&platform.permanent_arena, "entry");
+    
+    friday.program_root = global_scope;
     
     friday.x = 640;
     friday.y = 100;
@@ -160,8 +169,10 @@ main(int argc, char** args){
         platform.mouse_y = platform.height - y;
         
         f32 offset = 5;
+#if 0
         left->_int = platform.tick;
         right->_int = platform.tick;
+#endif
         
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
@@ -171,7 +182,7 @@ main(int argc, char** args){
         
         //push_rectangle_textured(friday.cursor_x, friday.cursor_y-30/2, 30,30,0, cursor_bitmap);
         
-        render_graph(scope);
+        render_graph(global_scope);
         draw_menu_bar();
         draw_status_bar();
         

@@ -15,6 +15,7 @@ enum Node_Type {
     NODE_CONDITIONAL,
     NODE_FOR,
     NODE_CALL,
+    NODE_DUMMY,
 };
 
 enum Operator_Type {
@@ -33,6 +34,8 @@ enum Literal_Type {
 struct Node {
     Node_Type type;
     
+    // TODO(Oliver): strings should go next to a node!!!!
+    // same lifetime!!!!!!!!!!!!!!!
     String8 name;
     
     Node* next = nullptr;
@@ -108,6 +111,7 @@ struct Node {
             Node* who_called_me;
             Node* arguments;
         } call;
+        
     };
 };
 // NOTE(Oliver): we assume all nodes have to be pool allocated

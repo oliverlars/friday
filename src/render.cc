@@ -48,6 +48,7 @@ struct {
     int x_offset;
     int y_offset;
     int scroll_amount;
+    int indent;
     
     int pan_offset_x;
     int pan_offset_y;
@@ -97,7 +98,7 @@ oscillate(f32 source, f32 max, f32 value){
 // NOTE(Oliver): probably should do this better
 internal inline int
 get_friday_x(){
-    return friday.x + friday.x_offset + friday.pan_offset_x + friday.delta_x;
+    return friday.x + friday.x_offset + friday.pan_offset_x + friday.delta_x + friday.indent;
 }
 
 
@@ -1485,12 +1486,12 @@ pop_line(){
 
 internal void
 indent(){
-    friday.x_offset += 40;
+    friday.indent += 40;
 }
 
 internal void
 pop_indent(){
-    friday.x_offset -= 40;
+    friday.indent -= 40;
 }
 
 internal void
@@ -1724,6 +1725,9 @@ scope_insert(String8 label, Closure closure){
                 case 0:{
                     Node* node = make_node(pool, NODE_FUNCTION);
                     node->name = make_string(perm_arena, "untitled");
+                    node->function.scope = make_node(pool, NODE_SCOPE);
+                    node->function.scope->name = make_string(perm_arena, "func_scope");
+                    node->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
                     node->next = active->next;
                     active->next = node;
                 }break;
@@ -1836,6 +1840,7 @@ render_graph(Node* root){
                 if(!_struct->members){
                     new_line();
                 }
+                pop_indent();
                 
                 draw_misc("}", theme.text_misc.packed);
             }
@@ -1912,7 +1917,7 @@ render_graph(Node* root){
             int node_count = 0;
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next, node_count++){
             }
-            
+            assert(node_count >= 1);
             for(Node* stmt = scope->statements; stmt; stmt = stmt->next, append++){
                 render_graph(stmt);
                 f32 _x = get_friday_x();
@@ -1923,7 +1928,7 @@ render_graph(Node* root){
                                                arg(_x),
                                                arg(_y));
                 String8 label = make_string(&renderer.temp_string_arena, "");
-                int length = snprintf(label.text, 256, "scope%d%d", append, node_count);
+                int length = snprintf(label.text, 256, "scope%d%d%.*s", append, node_count, root->name.length, root->name.text);
                 label.length = length;
                 
                 scope_insert(label, closure);
@@ -1942,6 +1947,9 @@ render_graph(Node* root){
                     case 0:{
                         Node* node = make_node(pool, NODE_FUNCTION);
                         node->name = make_string(perm_arena, "untitled");
+                        node->function.scope = make_node(pool, NODE_SCOPE);
+                        node->function.scope->name = make_string(perm_arena, "func_scope");
+                        node->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
                         node->next = active->next;
                         active->next = node;
                     }break;
@@ -1975,54 +1983,14 @@ render_graph(Node* root){
             }else {
                 draw_misc(" :: () {", theme.text_misc.packed);
             }
+            new_line();
+            new_line();
             indent();
-            new_line();
-            new_line();
-            
-            auto statement_callback = [](u8* parameters) {
-                auto scope = get_arg(parameters, Node*);
-                auto stmt = get_arg(parameters, Node*);
-                auto x = get_arg(parameters, f32);
-                auto y = get_arg(parameters, f32);
-                
-                should_insert = 1;
-                friday.menu_node = stmt;
-                friday.menu_x = x;
-                friday.menu_y = y;
-                
-            };
-            int append = 0;
-            if(root->function.scope){
-                
-                
-                for(Node* stmt = root->function.scope->scope.statements; 
-                    stmt; stmt = stmt->next, append++){
-                    render_graph(stmt);
-                    f32 _x = get_friday_x();
-                    f32 _y = get_friday_y();
-                    Closure closure = make_closure(statement_callback,
-                                                   3,
-                                                   arg(stmt), 
-                                                   arg(_x),
-                                                   arg(_y));
-                    String8 label = make_string(&renderer.temp_string_arena, "function scope");
-                    snprintf(label.text, 256, "function scope%d", append);
-                    scope_insert(label, closure);
-                }
-            }else {
-                f32 _x = get_friday_x();
-                f32 _y = get_friday_y();
-                Closure closure = make_closure(statement_callback,
-                                               4,
-                                               arg(root->function.scope), 
-                                               arg(root), 
-                                               arg(_x),
-                                               arg(_y));
-                String8 label = make_string(&renderer.temp_string_arena, "scope");
-                scope_insert(label, closure);
-            }
-            
+            assert(root->function.scope);
+            render_graph(root->function.scope);
+            pop_indent();
             if(friday.LOD != 2){
+                
                 draw_misc("}", theme.text_misc.packed);
             }
             new_line();
@@ -2127,9 +2095,6 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     f32 line_height = renderer.fonts[0].line_height;
     if(id == ui_state.clicked_id){
         auto anim_state = get_animation_state(id);
-        if(!anim_state){
-            anim_state = init_animation_state(id);
-        }
         update_animation_state(anim_state,
                                0,
                                0,
@@ -2143,9 +2108,7 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }else if(id == ui_state.hover_id){
         auto anim_state = get_animation_state(id);
-        if(!anim_state){
-            anim_state = init_animation_state(id);
-        }
+        
         anim_state->x_scale += lerp(anim_state->x_scale, 0.2f, 0.2f);
         anim_state->last_updated = platform.tick;
         f32 diff = anim_state->x_scale - size;

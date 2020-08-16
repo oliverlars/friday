@@ -401,6 +401,9 @@ struct Animation_State {
     f32 y_offset = 0;
     f32 x_scale = 0;
     f32 y_scale = 0;
+    
+    v4f rect;
+    
     u64 last_updated = 0;
 };
 

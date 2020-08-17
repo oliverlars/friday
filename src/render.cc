@@ -83,6 +83,9 @@ struct {
     f32 cursor_target_x;
     f32 cursor_target_y;
     
+    
+    Node* selected_node;
+    
 } friday;
 
 internal f32
@@ -1650,7 +1653,7 @@ boss_draw_leaf(Node* leaf,
         friday.active_node = leaf;
         friday.cursor_index = leaf->name.length;
         boss_edit_name(leaf, colour);
-    }else if(id == ui_state.hover_id){
+    }else if(id == ui_state.hover_id || leaf == friday.selected_node){
         
         _highlight_word(leaf);
     }else{
@@ -1728,8 +1731,10 @@ scope_insert(String8 label, Closure closure){
                     node->function.scope = make_node(pool, NODE_SCOPE);
                     node->function.scope->name = make_string(perm_arena, "func_scope");
                     node->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
+                    
                     node->next = active->next;
                     active->next = node;
+                    node->prev = active;
                 }break;
                 
                 case 1:{
@@ -1738,6 +1743,7 @@ scope_insert(String8 label, Closure closure){
                     node->_struct.members = nullptr;
                     node->next = active->next;
                     active->next = node;
+                    node->prev = active;
                 }break;
                 
                 case 2:{
@@ -1746,6 +1752,7 @@ scope_insert(String8 label, Closure closure){
                     node->declaration.is_initialised = false;
                     node->next = active->next;
                     active->next = node;
+                    node->prev = active;
                 }break;
             }
         };
@@ -1758,6 +1765,31 @@ scope_insert(String8 label, Closure closure){
     
     
 }
+
+internal void
+navigate_graph(){
+    
+    if(platform.keys_pressed[SDL_SCANCODE_J]){
+        if(!friday.selected_node){
+            friday.selected_node = friday.program_root->scope.statements;
+        }else {
+            //friday.active_node = friday.active_node->scope.statements->next;
+            friday.selected_node = friday.selected_node->next;
+        }
+        platform.keys_pressed[SDL_SCANCODE_J] = 0;
+    }
+    else if(platform.keys_pressed[SDL_SCANCODE_K]){
+        if(!friday.selected_node){
+            friday.selected_node = friday.program_root->scope.statements;
+        }else {
+            //friday.active_node = friday.active_node->scope.statements->next;
+            friday.selected_node = friday.selected_node->prev;
+        }
+        platform.keys_pressed[SDL_SCANCODE_K] = 0;
+    }
+    
+}
+
 // NOTE(Oliver): REWRITE INTO PROPER PRESENTATION
 // generate visual state for each node, should be better
 // than this 
@@ -1983,12 +2015,20 @@ render_graph(Node* root){
             }else {
                 draw_misc(" :: () {", theme.text_misc.packed);
             }
+            
+            int scope_y = get_friday_y();
             new_line();
             new_line();
+            int scope_x = get_friday_x(); 
+            
             indent();
+            
             assert(root->function.scope);
+            
             render_graph(root->function.scope);
             pop_indent();
+            push_rectangle(scope_x, get_friday_y() + renderer.fonts[0].line_height, 1,
+                           fabs(get_friday_y() - scope_y)-renderer.fonts[0].line_height, 1, 0xFFFFFFFF);
             if(friday.LOD != 2){
                 
                 draw_misc("}", theme.text_misc.packed);

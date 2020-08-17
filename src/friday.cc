@@ -128,6 +128,7 @@ main(int argc, char** args){
     global_scope->scope.statements->next->name = make_string(&platform.permanent_arena, "entry");
     
     friday.program_root = global_scope;
+    friday.selected_node = global_scope->scope.statements;
     
     friday.x = 640;
     friday.y = 100;
@@ -182,6 +183,8 @@ main(int argc, char** args){
         
         //push_rectangle_textured(friday.cursor_x, friday.cursor_y-30/2, 30,30,0, cursor_bitmap);
         
+        
+        navigate_graph();
         render_graph(global_scope);
         draw_menu_bar();
         draw_status_bar();

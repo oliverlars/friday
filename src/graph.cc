@@ -39,7 +39,7 @@ struct Node {
     String8 name;
     
     Node* next = nullptr;
-    Node* previous = nullptr;
+    Node* prev = nullptr;
     
     union {
         struct {

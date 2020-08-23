@@ -76,6 +76,8 @@ struct Widget {
     Widget* next;
     Widget* last;
     
+    
+    
     Closure closure;
     
     Closure right_click;
@@ -204,6 +206,13 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     return widget;
 }
 
+
+internal Widget* 
+ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
+               Closure closure, bool has_parameters = false){
+    
+    return _push_widget(x, y, width, height, id, closure, has_parameters);
+}
 
 internal bool
 is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
@@ -410,9 +419,12 @@ struct Animation_State {
     f32 x_scale = 0;
     f32 y_scale = 0;
     
-    v4f rect;
     
     u64 last_updated = 0;
+    
+    v4f source_rect;
+    v4f target_rect;
+    v4f rect;
 };
 
 #define ANIM_STATE_SIZE 1024
@@ -432,6 +444,9 @@ init_animation_state(UI_ID id){
     animation_state[index] = state;
     animation_state[index].id = id;
     animation_state[index].last_updated = platform.tick;
+    animation_state[index].rect = v4f(0,0,0,0);
+    animation_state[index].source_rect = v4f(0,0,0,0);
+    animation_state[index].target_rect = v4f(40,0,0,0);
     return &animation_state[index];
 }
 
@@ -439,11 +454,11 @@ internal Animation_State*
 get_animation_state(UI_ID id){
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
         
-        if(animation_state[i].id == id &&
-           (platform.tick - animation_state[i].last_updated)  < 2){
+        if(animation_state[i].id == id && 
+           (platform.tick - animation_state[i].last_updated  < 2)){
             return &animation_state[i];
         }
-    }
+    } 
     return init_animation_state(id);
 }
 
@@ -456,5 +471,26 @@ update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, 
     anim_state->x_scale += x_scale;
     anim_state->y_scale += y_scale;
     
+    anim_state->last_updated = platform.tick;
+}
+
+internal void
+animate(Animation_State* anim_state){
+    if(!anim_state) return; 
+    anim_state->rect.x += lerp(anim_state->rect.x, anim_state->target_rect.x, 0.1f);
+    anim_state->rect.y += lerp(anim_state->rect.y, anim_state->target_rect.y, 0.1f);
+    anim_state->rect.z += lerp(anim_state->rect.z, anim_state->target_rect.z, 0.1f);
+    anim_state->rect.w += lerp(anim_state->rect.w, anim_state->target_rect.w, 0.1f);
+    anim_state->last_updated = platform.tick;
+    
+}
+
+internal void
+unanimate(Animation_State* anim_state){
+    if(!anim_state) return; 
+    anim_state->rect.x += lerp(anim_state->rect.x, anim_state->source_rect.x, 0.1f);
+    anim_state->rect.y += lerp(anim_state->rect.y, anim_state->source_rect.y, 0.1f);
+    anim_state->rect.z += lerp(anim_state->rect.z, anim_state->source_rect.z, 0.1f);
+    anim_state->rect.w += lerp(anim_state->rect.w, anim_state->source_rect.w, 0.1f);
     anim_state->last_updated = platform.tick;
 }

@@ -140,10 +140,6 @@ main(int argc, char** args){
         platform.mouse_y = platform.height - y;
         
         f32 offset = 5;
-#if 0
-        left->_int = platform.tick;
-        right->_int = platform.tick;
-#endif
         
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
@@ -172,13 +168,6 @@ main(int argc, char** args){
         process_widgets_and_handle_events();
         opengl_end_frame();
         
-        // NOTE(Oliver): supposedley this goes here
-        // to avoid weird frame spikes
-        // it helps a little but ultimately
-        // disabling threaded optimisation
-        // in the nvidia control panel is what
-        // fixed it
-        // fuck you opengl
         platform.mouse_drag = 0;
         platform.has_text_input = 0;
         platform.mouse_left_clicked = 0;

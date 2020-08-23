@@ -89,11 +89,6 @@ struct {
 } friday;
 
 internal f32
-lerp(f32 source, f32 target, f32 value){
-    return (target - source)*value;
-}
-
-internal f32
 oscillate(f32 source, f32 max, f32 value){
     return sin(source*value)*max;
 }
@@ -1567,7 +1562,7 @@ find_node_types_helper(Node* root, Node*** node_list, u64 node_list_length, Node
         }break;
         
         case NODE_DECLARATION:{
-            auto decl = root->declaration.declaration;
+            auto decl = root->declaration.expression;
             find_node_types_helper(root->declaration.type_usage, node_list, 
                                    node_list_length, type);
             find_node_types_helper(decl, node_list, node_list_length, type);
@@ -1891,7 +1886,7 @@ render_graph(Node* root){
                                    lerp(anim_state->x_offset, 3.1415926535f, 0.3f),
                                    0,0,0);
             
-            auto decl = root->declaration.declaration;
+            auto decl = root->declaration.expression;
             auto type_usage = root->declaration.type_usage;
             Closure closure = make_closure(nullptr, 0);
             f32 offset = sinf(anim_state->x_offset)*20;

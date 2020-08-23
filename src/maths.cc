@@ -234,3 +234,19 @@ make_v4f(f32 x, f32 y, f32 z, f32 w){
 }
 
 #define v4f(x, y, z, w) make_v4f(x, y, z, w)
+
+
+internal f32
+lerp(f32 source, f32 target, f32 value){
+    return (target - source)*value;
+}
+
+internal v4f
+lerp_rects(v4f a, v4f b, f32 amount){
+    v4f result = {};
+    result.x = (a.x - b.x)*amount;
+    result.y = (a.y - b.y)*amount;
+    result.z = (a.z - b.z)*amount;
+    result.w = (a.w - b.w)*amount;
+    return result;
+}

@@ -79,7 +79,7 @@ struct Node {
         } function;
         
         struct {
-            Node* declaration;
+            Node* expression;
             Node* type_usage;
             bool is_initialised = false;
         } declaration;

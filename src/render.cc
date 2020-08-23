@@ -1768,13 +1768,15 @@ scope_insert(String8 label, Closure closure){
 
 internal void
 navigate_graph(){
-    
+    // TODO(Oliver): fuck this, time to switch to presentation nodes!
     if(platform.keys_pressed[SDL_SCANCODE_J]){
         if(!friday.selected_node){
             friday.selected_node = friday.program_root->scope.statements;
         }else {
             //friday.active_node = friday.active_node->scope.statements->next;
-            friday.selected_node = friday.selected_node->next;
+            if(friday.selected_node->next){
+                friday.selected_node = friday.selected_node->next;
+            }
         }
         platform.keys_pressed[SDL_SCANCODE_J] = 0;
     }
@@ -1783,7 +1785,9 @@ navigate_graph(){
             friday.selected_node = friday.program_root->scope.statements;
         }else {
             //friday.active_node = friday.active_node->scope.statements->next;
-            friday.selected_node = friday.selected_node->prev;
+            if(friday.selected_node->prev){
+                friday.selected_node = friday.selected_node->prev;
+            }
         }
         platform.keys_pressed[SDL_SCANCODE_K] = 0;
     }
@@ -2027,8 +2031,10 @@ render_graph(Node* root){
             
             render_graph(root->function.scope);
             pop_indent();
+#if 0
             push_rectangle(scope_x, get_friday_y() + renderer.fonts[0].line_height, 1,
                            fabs(get_friday_y() - scope_y)-renderer.fonts[0].line_height, 1, 0xFFFFFFFF);
+#endif
             if(friday.LOD != 2){
                 
                 draw_misc("}", theme.text_misc.packed);

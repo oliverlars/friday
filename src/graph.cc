@@ -13,7 +13,7 @@ enum Node_Type {
     NODE_IDENTIFIER,
     NODE_FUNCTION,
     NODE_CONDITIONAL,
-    NODE_FOR,
+    NODE_LOOP,
     NODE_CALL,
     NODE_DUMMY,
 };

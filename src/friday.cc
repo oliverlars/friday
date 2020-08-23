@@ -185,7 +185,8 @@ main(int argc, char** args){
         
         
         navigate_graph();
-        render_graph(global_scope);
+        present_graph(global_scope->scope.statements->next);
+        
         draw_menu_bar();
         draw_status_bar();
         
@@ -193,6 +194,7 @@ main(int argc, char** args){
         
         
         if(platform.mouse_middle_down && platform.mouse_drag){
+            
             friday.delta_x = platform.mouse_x - platform.mouse_drag_x;
             friday.delta_y = platform.mouse_y - platform.mouse_drag_y;
         }
@@ -262,6 +264,7 @@ main(int argc, char** args){
                     platform.mouse_middle_up = 1;
                     platform.mouse_middle_down = 0;
                     if(platform.mouse_drag){
+                        
                         friday.pan_offset_x += friday.delta_x;
                         friday.pan_offset_y += friday.delta_y;
                         friday.delta_x = 0;

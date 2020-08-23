@@ -267,10 +267,15 @@ enum Panel_Type {
     PANEL_PROPERTIES,
 };
 
+struct Presenter;
+internal void present(Presenter* presenter);
+internal void reset_presenter(Presenter* presenter);
+
 struct Panel {
     Panel_Split_Type type;
     f32 split_ratio;
     Panel* children[2];
+    Presenter* presenter;
 };
 
 internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
@@ -366,13 +371,16 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
     auto callback = [](u8* parameters){
         return;
     };
+    
+    
     Closure closure = make_closure(callback, 0);
     auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
                                new_width-PANEL_BORDER*2, new_width-PANEL_BORDER*2, id,
                                closure);
     push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
                    new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
-    
+    present(root->presenter);
+    reset_presenter(root->presenter);
 }
 
 internal void 

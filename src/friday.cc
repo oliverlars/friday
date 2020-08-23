@@ -76,56 +76,22 @@ main(int argc, char** args){
     SDL_ShowWindow(global_window);
     renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
-    //glEnable(GL_FRAMEBUFFER_SRGB);
     init_opengl_renderer();
     init_shaders();
     int start = 0;
     int end = 0;
     SDL_Event event;
     
-    friday.node_pool = make_pool(sizeof(Node));
+    friday.node_pool = make_pool(sizeof(Node) + 256);
     Pool* pool = &friday.node_pool;
-#if 0 
-    Node* decl = make_node(pool, NODE_DECLARATION);
     
-    Node* binary = make_node(pool, NODE_BINARY);
-    binary->binary.op_type = OP_PLUS;
-    binary->binary.left = make_node(pool, NODE_LITERAL);
-    binary->binary.right = make_node(pool, NODE_LITERAL);
-    binary->binary.left->literal._int = 10;
-    binary->binary.right->literal._int = 10;
-    auto left = &binary->binary.left->literal;
-    auto right = &binary->binary.right->literal;
-    decl->declaration.declaration = binary;
-    decl->name = make_string(&platform.permanent_arena, "potato");
-    decl->declaration.is_initialised = true;
-    
-    Node* _struct = make_node(pool, NODE_STRUCT);
-    _struct->name = make_string(&platform.permanent_arena, "mat4x4");
-    _struct->_struct.members = nullptr;
-    
-    Node* _struct2 = make_node(pool, NODE_STRUCT);
-    _struct2->name = make_string(&platform.permanent_arena, "vec3");
-    _struct2->_struct.members = nullptr;
-    
-    if(_struct->name.text - decl->name.text == 256){
-        OutputDebugStringA("test");
-    }
-    
-    Node* scope = make_node(pool, NODE_SCOPE);
-    scope->scope.statements = _struct;
-    scope->scope.statements->next = _struct2;
-    scope->scope.statements->next->next = decl;
-    scope->name = make_string(&platform.permanent_arena, "global");
-#endif
-    
-    Node* global_scope = make_node(pool, NODE_SCOPE);
-    global_scope->name = make_string(&platform.permanent_arena, "global");
+    Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next = make_node(pool, NODE_FUNCTION);
+    global_scope->scope.statements->next = make_node(pool, NODE_FUNCTION, "entry");
     global_scope->scope.statements->next->function.scope = make_node(pool, NODE_SCOPE);
     global_scope->scope.statements->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next->name = make_string(&platform.permanent_arena, "entry");
+    global_scope->scope.statements->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
+    
     
     friday.program_root = global_scope;
     friday.selected_node = global_scope->scope.statements;
@@ -150,7 +116,11 @@ main(int argc, char** args){
     
     ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
+    Presenter presenter = {};
+    presenter.root = global_scope;
+    
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+    root->presenter = &presenter;
     root->split_ratio = 1.0f;
     
     split_panel(root, 0.75, PANEL_SPLIT_VERTICAL);
@@ -185,7 +155,7 @@ main(int argc, char** args){
         
         
         navigate_graph();
-        present_graph(global_scope->scope.statements->next);
+        //present_graph(global_scope->scope.statements->next);
         
         draw_menu_bar();
         draw_status_bar();

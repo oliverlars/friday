@@ -283,6 +283,26 @@ make_string(Arena* arena, char* string, u64 capacity = 256){
 }
 
 internal String8
+make_string(u8* backing, char* string, u64 capacity){
+    
+    char* pointer = string;
+    while(pointer && *pointer){
+        pointer++;
+    }
+    u64 length = pointer - string;
+    
+    char* text = (char*)backing;
+    for(int i = 0; i < length; i++){
+        text[i] = string[i];
+    }
+    String8 result;
+    result.text = text;
+    result.length = length;
+    result.capacity = capacity;
+    return result;
+}
+
+internal String8
 copy_string(Arena* arena, String8 to_copy){
     char* buffer = (char*)arena_allocate(arena, to_copy.length);
     String8 result;
@@ -579,3 +599,5 @@ debug_print(String8 string){
     output[size] = 0;
     OutputDebugStringA(output);
 }
+
+#define defer_loop(begin, end) for(int _i_ = (begin, 0); !_i_; ++_i_, end)

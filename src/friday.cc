@@ -89,8 +89,13 @@ main(int argc, char** args){
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
     global_scope->scope.statements->next = make_node(pool, NODE_FUNCTION, "entry");
     global_scope->scope.statements->next->function.scope = make_node(pool, NODE_SCOPE);
+    
     global_scope->scope.statements->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
     global_scope->scope.statements->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->function.scope->scope.statements->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->function.scope->scope.statements->next->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->function.scope->scope.statements->next->next->next->next = make_node(pool, NODE_DECLARATION, "test");
     
     
     friday.program_root = global_scope;
@@ -127,7 +132,12 @@ main(int argc, char** args){
     
     
     bool previous_mouse_left_clicked = 0;
+    
+    u32 start_time = 0;
+    u32 end_time = 0;
     while(running){
+        start_time = SDL_GetTicks();
+        
         OPTICK_FRAME("MainThread");
         
         opengl_start_frame();
@@ -175,6 +185,8 @@ main(int argc, char** args){
         free(platform.text_input);
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
+        
+        
         
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -256,6 +268,9 @@ main(int argc, char** args){
         
         SDL_GL_SwapWindow(global_window);
         platform.tick++;
+        end_time = SDL_GetTicks();
+        platform.delta_time = ((f32)end_time - (f32)start_time)/1000.0f;
+        debug_print("%f", platform.delta_time);
     }
     
     return 0;

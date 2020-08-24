@@ -566,6 +566,8 @@ struct {
     
     u64 tick;
     
+    f32 delta_time;
+    
 } platform;
 
 internal f32

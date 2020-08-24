@@ -241,6 +241,16 @@ lerp(f32 source, f32 target, f32 value){
     return (target - source)*value;
 }
 
+
+internal f32
+smooth_step(f32 source, f32 target, f32 value){
+    
+    value = clampf((value - source)/(target - source), 0.0, 1.0f);
+    
+    return value*value*(3 -2 * value);
+    
+}
+
 internal v4f
 lerp_rects(v4f a, v4f b, f32 amount){
     v4f result = {};

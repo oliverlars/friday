@@ -114,13 +114,13 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
 }
 
 
-#define INSERTABLE_WIDTH 40
+#define INSERTABLE_WIDTH 20
 internal void
 present_insertable(Presenter* presenter, char* label, Closure closure){
     
     auto callback = [](u8* parameters){};
     closure = make_closure(callback, 0);
-    auto id = gen_id(label);
+    auto id = gen_unique_id(label);
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
@@ -133,6 +133,33 @@ present_insertable(Presenter* presenter, char* label, Closure closure){
     }else{
         unanimate(anim_state);
     }
+    
+    presenter->x_offset += anim_state->rect.x;
+}
+internal void
+present_insertable(Presenter* presenter, String8 label, Closure closure){
+    
+    auto callback = [](u8* parameters){};
+    closure = make_closure(callback, 0);
+    auto id = gen_id(label);
+    auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
+                                 get_presenter_y(presenter),
+                                 INSERTABLE_WIDTH,
+                                 renderer.fonts[0].line_height, 
+                                 id, closure);
+    
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 40.0f;
+    }
+    if(ui_state.hover_id == id){
+        animate(anim_state);
+    }else{
+        unanimate(anim_state);
+    }
+    
+    draw_view_buttons();
     
     presenter->x_offset += anim_state->rect.x;
 }
@@ -191,7 +218,9 @@ present_function_node(Presenter* presenter, Node* node){
     auto function = &node->function;
     present_editable_string(presenter, &node->name, theme.text_function.packed);
     
-    present_misc(presenter, " :: () {");
+    present_misc(presenter, " :: (");
+    present_insertable(presenter, node->name, {});
+    present_misc(presenter, ") {");
     
     present_new_line(presenter);
     
@@ -215,21 +244,15 @@ present_declaration_node(Presenter* presenter, Node* node){
     auto decl = &node->declaration;
     present_editable_string(presenter, &node->name);
     present_misc(presenter, " :");
-    if(is_mouse_in_rect(get_presenter_x(presenter),
-                        get_presenter_y(presenter),
-                        INSERTABLE_WIDTH,
-                        renderer.fonts[0].line_height)){
-        
-        //present_insertable(presenter, "type_inserter", {});
-    }
-    present_insertable(presenter, "type_inserter", {});
     
+    present_insertable(presenter, node->name, {});
     present_misc(presenter, "= ");
     if(decl->expression){
     }else {
         present_misc(presenter, "void");
     }
     present_graph(presenter, decl->type_usage);
+    present_new_line(presenter);
 }
 
 internal void

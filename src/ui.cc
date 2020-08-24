@@ -446,7 +446,7 @@ init_animation_state(UI_ID id){
     animation_state[index].last_updated = platform.tick;
     animation_state[index].rect = v4f(0,0,0,0);
     animation_state[index].source_rect = v4f(0,0,0,0);
-    animation_state[index].target_rect = v4f(40,0,0,0);
+    animation_state[index].target_rect = v4f(0,0,0,0);
     return &animation_state[index];
 }
 
@@ -459,7 +459,7 @@ get_animation_state(UI_ID id){
             return &animation_state[i];
         }
     } 
-    return init_animation_state(id);
+    return nullptr;
 }
 
 internal void
@@ -475,22 +475,23 @@ update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, 
 }
 
 internal void
-animate(Animation_State* anim_state){
+unanimate(Animation_State* anim_state){
     if(!anim_state) return; 
-    anim_state->rect.x += lerp(anim_state->rect.x, anim_state->target_rect.x, 0.1f);
-    anim_state->rect.y += lerp(anim_state->rect.y, anim_state->target_rect.y, 0.1f);
-    anim_state->rect.z += lerp(anim_state->rect.z, anim_state->target_rect.z, 0.1f);
-    anim_state->rect.w += lerp(anim_state->rect.w, anim_state->target_rect.w, 0.1f);
+    anim_state->rect.x += (anim_state->source_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
+    anim_state->rect.y += (anim_state->source_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
+    anim_state->rect.z += (anim_state->source_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
+    anim_state->rect.w += (anim_state->source_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
     anim_state->last_updated = platform.tick;
     
 }
 
 internal void
-unanimate(Animation_State* anim_state){
+animate(Animation_State* anim_state){
     if(!anim_state) return; 
-    anim_state->rect.x += lerp(anim_state->rect.x, anim_state->source_rect.x, 0.1f);
-    anim_state->rect.y += lerp(anim_state->rect.y, anim_state->source_rect.y, 0.1f);
-    anim_state->rect.z += lerp(anim_state->rect.z, anim_state->source_rect.z, 0.1f);
-    anim_state->rect.w += lerp(anim_state->rect.w, anim_state->source_rect.w, 0.1f);
+    anim_state->rect.x += (anim_state->target_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
+    anim_state->rect.y += (anim_state->target_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
+    anim_state->rect.z += (anim_state->target_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
+    anim_state->rect.w += (anim_state->target_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
+    
     anim_state->last_updated = platform.tick;
 }

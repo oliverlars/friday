@@ -2134,30 +2134,30 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     auto widget = _push_widget(x, y, size, size, id, closure);
     
     f32 line_height = renderer.fonts[0].line_height;
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 0.5f;
+    }
     if(id == ui_state.clicked_id){
-        auto anim_state = get_animation_state(id);
-        update_animation_state(anim_state,
-                               0,
-                               0,
-                               lerp(anim_state->x_scale, 1.0f, 0.2f),
-                               0);
+        unanimate(anim_state);
         
-        f32 diff = anim_state->x_scale - size;
-        f32 sx = anim_state->x_scale;
+        f32 sx = (1.0 + anim_state->rect.x);
         size *= sx;
         push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }else if(id == ui_state.hover_id){
-        auto anim_state = get_animation_state(id);
+        animate(anim_state);
         
-        anim_state->x_scale += lerp(anim_state->x_scale, 0.2f, 0.2f);
-        anim_state->last_updated = platform.tick;
-        f32 diff = anim_state->x_scale - size;
-        f32 sx = (1.0 + anim_state->x_scale);
+        f32 sx = (1.0 + anim_state->rect.x);
         size *= sx;
         push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }else{
+        unanimate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
         push_rectangle(x, y, size, size, 10, theme.view_button.packed);
         push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
     }

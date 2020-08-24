@@ -43,6 +43,10 @@ present_new_line(Presenter* presenter){
     presenter->y_offset -= renderer.fonts[0].line_height;
     presenter->x_offset = 0;
 }
+internal void
+present_space(Presenter* presenter){
+    presenter->x_offset += 10;
+}
 
 internal void
 present_string(Presenter* presenter, char* string, u32 colour = 0xFFFFFFFF){
@@ -116,11 +120,19 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
 
 #define INSERTABLE_WIDTH 20
 internal void
-present_insertable(Presenter* presenter, char* label, Closure closure){
+present_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     
-    auto callback = [](u8* parameters){};
-    closure = make_closure(callback, 0);
-    auto id = gen_unique_id(label);
+    UI_ID id;
+    {
+        va_list args;
+        va_start(args, label);
+        char fmt_label[256];
+        int size = vsnprintf(fmt_label, 256, label, args);
+        fmt_label[size] = '\n';
+        fmt_label[size+1] = 0;
+        id = gen_unique_id(fmt_label);
+    }
+    
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
@@ -128,6 +140,10 @@ present_insertable(Presenter* presenter, char* label, Closure closure){
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 40.0f;
+    }
     if(ui_state.hover_id == id){
         animate(anim_state);
     }else{
@@ -136,11 +152,10 @@ present_insertable(Presenter* presenter, char* label, Closure closure){
     
     presenter->x_offset += anim_state->rect.x;
 }
+
 internal void
-present_insertable(Presenter* presenter, String8 label, Closure closure){
+present_insertable(Presenter* presenter, Closure closure, String8 label){
     
-    auto callback = [](u8* parameters){};
-    closure = make_closure(callback, 0);
     auto id = gen_id(label);
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
@@ -219,7 +234,7 @@ present_function_node(Presenter* presenter, Node* node){
     present_editable_string(presenter, &node->name, theme.text_function.packed);
     
     present_misc(presenter, " :: (");
-    present_insertable(presenter, node->name, {});
+    present_insertable(presenter, {}, node->name);
     present_misc(presenter, ") {");
     
     present_new_line(presenter);
@@ -235,8 +250,21 @@ present_function_node(Presenter* presenter, Node* node){
 
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
-    auto type_usage = &node->type_usage;
-    present_string(presenter, node->name);
+    present_space(presenter);
+    present_editable_string(presenter, &node->type_usage.type_reference->name,
+                            theme.text_type.packed);
+    present_space(presenter);
+}
+
+internal void
+insert_type_for_declaration(u8* parameters){
+    auto root = get_arg(parameters, Node*);
+    auto decl = &root->declaration;
+    decl->type_usage = make_node(&friday.node_pool, NODE_TYPE_USAGE);
+    Node* node_list[10];
+    find_node_types(node_list, 10, NODE_STRUCT);
+    
+    decl->type_usage->type_usage.type_reference = node_list[0];
 }
 
 internal void
@@ -245,13 +273,14 @@ present_declaration_node(Presenter* presenter, Node* node){
     present_editable_string(presenter, &node->name);
     present_misc(presenter, " :");
     
-    present_insertable(presenter, node->name, {});
+    Closure closure = make_closure(insert_type_for_declaration, 1, arg(node));
+    present_insertable(presenter, closure, "test%d", (int)node);
+    present_graph(presenter, decl->type_usage);
     present_misc(presenter, "= ");
-    if(decl->expression){
+    if(decl->is_initialised){
     }else {
         present_misc(presenter, "void");
     }
-    present_graph(presenter, decl->type_usage);
     present_new_line(presenter);
 }
 
@@ -273,8 +302,8 @@ present_struct_node(Presenter* presenter, Node* node){
 internal void
 present_scope_node(Presenter* presenter, Node* node){
     auto scope = &node->scope;
-    
-    for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
+    Node* stmt = scope->statements;
+    for(; stmt; stmt = stmt->next){
         present_graph(presenter, stmt);
     }
 }
@@ -299,6 +328,8 @@ present_graph(Presenter* presenter, Node* root){
         }break;
         case NODE_STRUCT: {
             present_struct_node(presenter, root);
+            present_new_line(presenter);
+            present_new_line(presenter);
         }break;
         case NODE_ENUM: {
         }break;

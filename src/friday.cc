@@ -18,6 +18,7 @@
 #include "ui.cc"
 #include "render.cc"
 #include "present.cc"
+#include "navigation.cc"
 
 global SDL_Window* global_window;
 
@@ -87,15 +88,17 @@ main(int argc, char** args){
     
     Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next = make_node(pool, NODE_FUNCTION, "entry");
-    global_scope->scope.statements->next->function.scope = make_node(pool, NODE_SCOPE);
+    global_scope->scope.statements->next = make_node(pool, NODE_STRUCT, "mat4x4");
+    global_scope->scope.statements->next->next = make_node(pool, NODE_FUNCTION, "entry");
     
-    global_scope->scope.statements->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->function.scope->scope.statements->next->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->function.scope->scope.statements->next->next->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->function.scope->scope.statements->next->next->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope = make_node(pool, NODE_SCOPE);
+    
+    global_scope->scope.statements->next->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next->next = make_node(pool, NODE_DECLARATION, "test");
     
     
     friday.program_root = global_scope;

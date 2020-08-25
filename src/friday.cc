@@ -15,6 +15,12 @@
 
 #include <string.h>
 #include "graph.cc"
+
+global Node* _u8;
+global Node* _u16;
+global Node* _u32;
+global Node* _u64;
+
 #include "ui.cc"
 #include "render.cc"
 #include "present.cc"
@@ -86,10 +92,17 @@ main(int argc, char** args){
     friday.node_pool = make_pool(sizeof(Node) + 256);
     Pool* pool = &friday.node_pool;
     
+    
+    _u8 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u8");
+    _u16 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u16");
+    _u32 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u32");
+    _u64 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u64");
+    
     Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
     global_scope->scope.statements->next = make_node(pool, NODE_STRUCT, "mat4x4");
     global_scope->scope.statements->next->next = make_node(pool, NODE_FUNCTION, "entry");
+    global_scope->scope.statements->next->next->function.parameters = make_node(pool, NODE_DUMMY, "parameters");
     
     global_scope->scope.statements->next->next->function.scope = make_node(pool, NODE_SCOPE);
     

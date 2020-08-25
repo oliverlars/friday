@@ -229,12 +229,38 @@ present_binary_node(Presenter* presenter, Node* node){
 }
 
 internal void
+insert_parameters_for_function(u8* parameters){
+    auto params = get_arg(parameters, Node*);
+    while(params->next){
+        params = params->next;
+    }
+    params->next = make_node(&friday.node_pool, NODE_DECLARATION, "arg");
+    params->next->declaration.type_usage = _u16;
+}
+
+
+internal void present_type_usage_node(Presenter* presenter, Node* node);
+
+internal void
 present_function_node(Presenter* presenter, Node* node){
     auto function = &node->function;
     present_editable_string(presenter, &node->name, theme.text_function.packed);
     
     present_misc(presenter, " :: (");
-    present_insertable(presenter, {}, node->name);
+    Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
+    for(Node* param = function->parameters; param; param = param->next){
+        if(param->type != NODE_DUMMY){
+            present_editable_string(presenter, &param->name);
+            present_misc(presenter, ":");
+            present_space(presenter);
+            present_string(presenter, param->declaration.type_usage->name, theme.text_type.packed);
+            
+            present_misc(presenter, ",");
+            present_space(presenter);
+        }
+    }
+    present_insertable(presenter, closure, node->name);
+    
     present_misc(presenter, ") {");
     
     present_new_line(presenter);

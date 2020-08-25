@@ -133,6 +133,7 @@ main(int argc, char** args){
     
     Presenter presenter = {};
     presenter.root = global_scope;
+    presenter.active_node = global_scope->scope.statements->next->next;
     
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;

@@ -25,8 +25,16 @@ struct Presenter {
     int cursor_index;
     
     Node* hover_node;
+    
+    Node* active_node;
+    Node* current_node;
 };
 
+
+internal inline void
+set_current_node(Presenter* presenter, Node* node){
+    presenter->current_node = node;
+}
 
 internal inline int
 get_presenter_x(Presenter* presenter) {
@@ -61,6 +69,18 @@ present_string(Presenter* presenter, String8 string, u32 colour = 0xFFFFFFFF){
 }
 
 internal void
+present_string(Presenter* presenter, f32 x, f32 y, String8 string, u32 colour = 0xFFFFFFFF){
+    push_string8(x, y, string, colour);
+    presenter->x_offset += get_text_width(string);
+}
+
+internal void
+present_string(Presenter* presenter, f32 x, f32 y, char* string, u32 colour = 0xFFFFFFFF){
+    push_string(x, y, string, colour);
+    presenter->x_offset += get_text_width(string);
+}
+
+internal void
 edit_string(Presenter* presenter, String8* string){
     if(platform.has_text_input){
         insert_in_string(string, platform.text_input, presenter->cursor_index);
@@ -87,6 +107,23 @@ edit_string(Presenter* presenter, String8* string){
 }
 
 internal void
+present_highlighted_string(Presenter* presenter, String8 string){
+    f32 line_height = renderer.fonts[0].line_height;
+    push_rectangle(get_presenter_x(presenter), get_presenter_y(presenter) - line_height/4, 
+                   get_text_width(string), line_height, 10, theme.cursor.packed);
+    present_string(presenter, string, theme.panel.packed);
+}
+
+internal void
+present_highlighted_string(Presenter* presenter, char* string){
+    
+    f32 line_height = renderer.fonts[0].line_height;
+    push_rectangle(get_presenter_x(presenter), get_presenter_y(presenter)-line_height/4, 
+                   get_text_width(string), line_height, 10, theme.cursor.packed);
+    present_string(presenter, string, theme.panel.packed);
+}
+
+internal void
 present_editable_string(Presenter* presenter, String8* string, u32 colour = theme.text.packed){
     
     auto id = gen_id(*string);
@@ -95,6 +132,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
                                  get_text_width(*string),
                                  renderer.fonts[0].line_height, 
                                  id, {});
+    
     
     if(id == ui_state.clicked_id){
         presenter->active_string = string;
@@ -113,9 +151,13 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
             edit_string(presenter, string);
         }
     }else if(id == ui_state.hover_id){
-        
+    }else{
     }
-    present_string(presenter, *string, colour);
+    if(presenter->current_node == presenter->active_node){
+        present_highlighted_string(presenter, *string);
+    }else{
+        present_string(presenter, *string, colour);
+    }
 }
 
 
@@ -266,8 +308,8 @@ internal void present_graph(Presenter* presenter, Node* root);
 
 internal void
 present_binary_literal(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
     auto literal = &node->literal;
-    
     Arena* arena = &renderer.temp_string_arena;
     char* string = (char*)arena_allocate(arena, 256);
     snprintf(string, 256, "%d", literal->_int);
@@ -276,6 +318,7 @@ present_binary_literal(Presenter* presenter, Node* node){
 
 internal void
 present_binary_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
     auto binary = &node->binary;
     present_binary_literal(presenter, binary->left);
     
@@ -304,12 +347,15 @@ internal void present_type_usage_node(Presenter* presenter, Node* node);
 
 internal void
 present_function_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
+    
     auto function = &node->function;
     present_editable_string(presenter, &node->name, theme.text_function.packed);
     
     present_misc(presenter, " :: (");
     Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
     for(Node* param = function->parameters; param; param = param->next){
+        set_current_node(presenter, param);
         if(param->type != NODE_DUMMY){
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
@@ -340,6 +386,8 @@ present_function_node(Presenter* presenter, Node* node){
 
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
+    
     present_space(presenter);
     present_editable_string(presenter, &node->name,
                             theme.text_type.packed);
@@ -359,6 +407,8 @@ insert_type_for_declaration(u8* parameters){
 
 internal void
 present_declaration_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
+    
     auto decl = &node->declaration;
     present_editable_string(presenter, &node->name);
     present_misc(presenter, " :");
@@ -387,6 +437,7 @@ insert_members_for_struct(u8* parameters){
 
 internal void
 present_struct_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
     auto _struct = &node->_struct;
     present_editable_string(presenter, &node->name, theme.text_type.packed);
     present_misc(presenter, " :: struct {");
@@ -407,6 +458,7 @@ present_struct_node(Presenter* presenter, Node* node){
 
 internal void
 present_scope_node(Presenter* presenter, Node* node){
+    set_current_node(presenter, node);
     auto scope = &node->scope;
     Node* stmt = scope->statements;
     for(; stmt; stmt = stmt->next){

@@ -10,3 +10,4 @@ struct {
     
     Navigation_Mode mode;
 } navigator;
+

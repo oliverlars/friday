@@ -114,6 +114,12 @@ struct Node {
         
     };
 };
+
+global Node* _u8;
+global Node* _u16;
+global Node* _u32;
+global Node* _u64;
+
 // NOTE(Oliver): we assume all nodes have to be pool allocated
 // but maybe that's not always true
 
@@ -124,11 +130,48 @@ make_node(Pool* pool, Node_Type type){
     return result;
 }
 
+
 internal Node*
 make_node(Pool* pool, Node_Type type, char* name){
     Node* result = (Node*)pool_allocate(pool);
     u8* backing = (u8*)result + sizeof(Node);
     result->name = make_string(backing, name, 256); 
     result->type = type;
+    return result;
+}
+
+internal Node*
+make_dummy_node(Pool* pool){
+    Node* result = make_node(pool, NODE_DUMMY);
+    return result;
+}
+
+internal Node*
+make_scope_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_SCOPE, name);
+    result->scope.statements = make_node(pool, NODE_DUMMY); 
+    return result;
+}
+
+internal Node*
+make_function_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_FUNCTION, name);
+    result->function.parameters = make_dummy_node(pool);
+    result->function.scope = make_dummy_node(pool);
+    return result;
+}
+
+internal Node*
+make_struct_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_STRUCT, name);
+    result->_struct.members = make_dummy_node(pool);
+    return result;
+}
+
+internal Node*
+make_declaration_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_DECLARATION, name);
+    result->declaration.type_usage = _u8;
+    
     return result;
 }

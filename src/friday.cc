@@ -14,12 +14,8 @@
 #include "../ext/stb_image.h"
 
 #include <string.h>
-#include "graph.cc"
 
-global Node* _u8;
-global Node* _u16;
-global Node* _u32;
-global Node* _u64;
+#include "graph.cc"
 
 #include "ui.cc"
 #include "render.cc"
@@ -100,18 +96,16 @@ main(int argc, char** args){
     
     Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next = make_node(pool, NODE_STRUCT, "mat4x4");
+    global_scope->scope.statements->next = make_struct_node(pool, "mat4x4");
     global_scope->scope.statements->next->next = make_node(pool, NODE_FUNCTION, "entry");
     global_scope->scope.statements->next->next->function.parameters = make_node(pool, NODE_DUMMY, "parameters");
     
     global_scope->scope.statements->next->next->function.scope = make_node(pool, NODE_SCOPE);
     
     global_scope->scope.statements->next->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next = make_node(pool, NODE_DECLARATION, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next->next = make_node(pool, NODE_DECLARATION, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_declaration_node(pool, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next = make_declaration_node(pool, "test");
+    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next = make_declaration_node(pool, "test");
     
     
     friday.program_root = global_scope;

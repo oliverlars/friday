@@ -79,7 +79,7 @@ struct Widget {
     
     
     Closure closure;
-    
+    Closure hover;
     Closure right_click;
     Closure middle_click;
 };
@@ -224,6 +224,8 @@ internal void
 process_widgets_and_handle_events(){
     
     Widget* active = nullptr;
+    Widget* active_hover = nullptr;
+    
     bool hovered = false;
     
     enum Click_Type {
@@ -238,6 +240,7 @@ process_widgets_and_handle_events(){
             hovered = true;
             ui_state.hover_id = widget->id;
             
+            active_hover = widget;
             if(platform.mouse_left_clicked){
                 active = widget;
                 ui_state.clicked_id = widget->id;
@@ -256,8 +259,14 @@ process_widgets_and_handle_events(){
     }
     if(!hovered){
         ui_state.hover_id = -1;
+    }else {
+        
     }
-    
+    if(active_hover){
+        if(active_hover->hover.callback){
+            active_hover->hover.callback(active_hover->hover.parameters);
+        }
+    }
     if(active){
         if(active->closure.callback){
             active->closure.callback(active->closure.parameters);

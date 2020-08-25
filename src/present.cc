@@ -14,7 +14,7 @@ struct Presenter {
     Arena present_arena;
     Node* root;
     
-    int x_start = 480;
+    int x_start = 300;
     int x_offset = 0;
     int y_start = 480;
     int y_offset;
@@ -24,7 +24,7 @@ struct Presenter {
     String8* active_string;
     int cursor_index;
     
-    Node* active_node;
+    Node* hover_node;
 };
 
 
@@ -89,13 +89,12 @@ edit_string(Presenter* presenter, String8* string){
 internal void
 present_editable_string(Presenter* presenter, String8* string, u32 colour = theme.text.packed){
     
-    Closure closure = make_closure(nullptr, 0);
     auto id = gen_id(*string);
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
                                  get_text_width(*string),
                                  renderer.fonts[0].line_height, 
-                                 id, closure);
+                                 id, {});
     
     if(id == ui_state.clicked_id){
         presenter->active_string = string;
@@ -113,6 +112,8 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
             push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
             edit_string(presenter, string);
         }
+    }else if(id == ui_state.hover_id){
+        
     }
     present_string(presenter, *string, colour);
 }
@@ -120,7 +121,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
 
 #define INSERTABLE_WIDTH 20
 internal void
-present_insertable(Presenter* presenter,  Closure closure, char* label, ...){
+present_x_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     
     UI_ID id;
     {
@@ -154,7 +155,7 @@ present_insertable(Presenter* presenter,  Closure closure, char* label, ...){
 }
 
 internal void
-present_insertable(Presenter* presenter, Closure closure, String8 label){
+present_x_insertable(Presenter* presenter, Closure closure, String8 label){
     
     auto id = gen_id(label);
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
@@ -177,6 +178,66 @@ present_insertable(Presenter* presenter, Closure closure, String8 label){
     draw_view_buttons();
     
     presenter->x_offset += anim_state->rect.x;
+}
+
+#define INSERTABLE_Y_WIDTH 200
+
+internal void
+present_y_insertable(Presenter* presenter,  Closure closure, char* label, ...){
+    
+    UI_ID id;
+    {
+        va_list args;
+        va_start(args, label);
+        char fmt_label[256];
+        int size = vsnprintf(fmt_label, 256, label, args);
+        fmt_label[size] = '\n';
+        fmt_label[size+1] = 0;
+        id = gen_unique_id(fmt_label);
+    }
+    
+    auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_Y_WIDTH/2,
+                                 get_presenter_y(presenter),
+                                 INSERTABLE_Y_WIDTH,
+                                 renderer.fonts[0].line_height, 
+                                 id, closure);
+    
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.y = renderer.fonts[0].line_height;
+    }
+    if(ui_state.hover_id == id){
+        animate(anim_state);
+    }else{
+        unanimate(anim_state);
+    }
+    
+    presenter->y_offset -= anim_state->rect.y;
+}
+
+internal void
+present_y_insertable(Presenter* presenter, Closure closure, String8 label){
+    
+    auto id = gen_id(label);
+    auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_Y_WIDTH/2,
+                                 get_presenter_y(presenter),
+                                 INSERTABLE_Y_WIDTH,
+                                 renderer.fonts[0].line_height, 
+                                 id, closure);
+    
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.y = renderer.fonts[0].line_height;
+    }
+    if(ui_state.hover_id == id){
+        animate(anim_state);
+    }else{
+        unanimate(anim_state);
+    }
+    
+    presenter->y_offset -= anim_state->rect.y;
 }
 
 internal void
@@ -255,11 +316,14 @@ present_function_node(Presenter* presenter, Node* node){
             present_space(presenter);
             present_string(presenter, param->declaration.type_usage->name, theme.text_type.packed);
             
-            present_misc(presenter, ",");
-            present_space(presenter);
+            if(param->next){
+                present_misc(presenter, ",");
+                present_space(presenter);
+            }
         }
     }
-    present_insertable(presenter, closure, node->name);
+    //present_x_insertable(presenter, closure, node->name);
+    present_x_insertable(presenter, closure, "arg%d", (int)node);
     
     present_misc(presenter, ") {");
     
@@ -277,7 +341,7 @@ present_function_node(Presenter* presenter, Node* node){
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
     present_space(presenter);
-    present_editable_string(presenter, &node->type_usage.type_reference->name,
+    present_editable_string(presenter, &node->name,
                             theme.text_type.packed);
     present_space(presenter);
 }
@@ -300,7 +364,7 @@ present_declaration_node(Presenter* presenter, Node* node){
     present_misc(presenter, " :");
     
     Closure closure = make_closure(insert_type_for_declaration, 1, arg(node));
-    present_insertable(presenter, closure, "test%d", (int)node);
+    present_x_insertable(presenter, closure, "test%d", (int)node);
     present_graph(presenter, decl->type_usage);
     present_misc(presenter, "= ");
     if(decl->is_initialised){
@@ -310,17 +374,33 @@ present_declaration_node(Presenter* presenter, Node* node){
     present_new_line(presenter);
 }
 
+
+internal void
+insert_members_for_struct(u8* parameters){
+    auto members = get_arg(parameters, Node*);
+    while(members->next){
+        members = members->next;
+    }
+    members->next = make_declaration_node(&friday.node_pool,"untitled");
+}
+
+
 internal void
 present_struct_node(Presenter* presenter, Node* node){
     auto _struct = &node->_struct;
-    present_string(presenter, node->name, theme.text_type.packed);
+    present_editable_string(presenter, &node->name, theme.text_type.packed);
     present_misc(presenter, " :: struct {");
     present_new_line(presenter);
-    for(Node* stmt = _struct->members; stmt; stmt = stmt->next){
-        present_declaration_node(presenter, stmt);
-        present_new_line(presenter);
-        
+    
+    present_indent(presenter){
+        for(Node* stmt = _struct->members; stmt; stmt = stmt->next){
+            if(stmt->type != NODE_DUMMY){
+                present_declaration_node(presenter, stmt);
+            }
+        }
     }
+    Closure closure = make_closure(insert_members_for_struct, 1, arg(_struct->members));
+    present_y_insertable(presenter, closure, "member%d", get_presenter_y(presenter));
     present_misc(presenter, "}");
 }
 
@@ -390,4 +470,5 @@ internal void
 present(Presenter* presenter){
     if(!presenter) return;
     present_graph(presenter, presenter->root);
+    
 }

@@ -88,34 +88,6 @@ struct {
     
 } friday;
 
-internal f32
-oscillate(f32 source, f32 max, f32 value){
-    return sin(source*value)*max;
-}
-
-// NOTE(Oliver): probably should do this better
-internal inline int
-get_friday_x(){
-    return friday.x + friday.x_offset + friday.pan_offset_x + friday.delta_x + friday.indent;
-}
-
-
-internal inline int
-get_friday_y(){
-    return friday.y + friday.scroll_amount+friday.pan_offset_y + friday.delta_y;
-}
-
-// NOTE(Oliver): probably should do this better
-internal inline int
-get_friday_minimap_x(){
-    return friday.minimap_x + friday.minimap_x_offset;
-}
-
-internal inline int
-get_friday_minimap_y(){
-    return friday.minimap_y + friday.minimap_y_offset;
-}
-
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_CIRCLE,
@@ -530,79 +502,6 @@ get_text_width(String8 string){
         //result += x1 - x0;
     }
     return result*renderer.fonts[0].scale;
-}
-
-global f32 menu_height = 0.0f;
-global f32 size_x_scale = 0.0f;
-global f32 size_y_scale = 0.0f;
-
-internal void
-draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
-    auto menu_id = gen_unique_id(label);
-    //debug_print("%d", menu_id);
-    auto anim_state = get_animation_state(menu_id);
-    if(!anim_state){
-        anim_state = init_animation_state(menu_id);
-    }
-    update_animation_state(anim_state,
-                           0,
-                           0,
-                           lerp(anim_state->x_scale, 1.2, 0.2f),
-                           lerp(anim_state->y_scale, 1.2, 0.2f));
-    //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
-    //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
-    f32 line_height = renderer.fonts[0].line_height;
-    f32 height = 40*anim_state->y_scale;
-    f32 size_x = 200*anim_state->x_scale;
-    f32 size_y = num_rows*height;
-    y = y-size_y+line_height;
-    friday.y -= size_y;
-    
-    anim_state->last_updated = platform.tick;
-    
-    for(int i = 0; i < num_rows; i++){
-        f32 text_width = get_text_width(strings[i]);
-        text_width *= 1.2;
-        size_x = text_width >= size_x ? text_width : size_x;
-        
-    }
-    auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, closure);
-    
-    
-    push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
-    
-    for(int i = 0; i < num_rows; i++){
-        
-        String8 string = strings[i];
-        f32 offset = i*height;
-        push_rectangle(x,y + offset, size_x, height, 10, theme.menu.packed);
-        u32 text_colour = theme.text.packed;
-        
-        
-        if(is_mouse_in_rect(x, y + offset, size_x, height)){
-            if(platform.mouse_left_clicked){
-                
-                friday.selected = i;
-                
-                ui_state.menu_id = -1;
-                //friday.is_menu_open = false;
-            }
-            push_rectangle(x, y+ offset, 
-                           size_x, height, 10.0,
-                           theme.menu.packed);
-            
-            text_colour = theme.cursor.packed;
-        }
-        
-        push_string8(x+10, y + i*height+line_height/2, string,
-                     text_colour);
-    }
-    
-}
-
-internal void
-boss_draw_menu(char* label, String8* strings, u64 num_rows, Closure closure){
-    draw_menu(friday.menu_x, friday.menu_y, label, strings, num_rows, closure);
 }
 
 
@@ -1431,22 +1330,11 @@ opengl_start_frame() {
     renderer.head = nullptr;
     renderer.tail = nullptr;
     
-    friday.x = 320;
-    friday.y = 600;
-    friday.x_offset = 0;
-    
-    friday.minimap_x = 600;
-    friday.minimap_y = 700;
-    friday.minimap_x_offset = 0;
-    
-    friday.scroll_amount += lerp(friday.scroll_amount, friday.y_offset, 0.1f);
-    
 }
 
 internal void
 opengl_end_frame() {
     OPTICK_EVENT();
-    panel_hover = 0;
     
     
     glViewport(0, 0, platform.width, platform.height);
@@ -1456,632 +1344,13 @@ opengl_end_frame() {
                  1);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    if(platform.keys_pressed[SDL_SCANCODE_1]){
-        friday.LOD = 1;
-        platform.keys_pressed[SDL_SCANCODE_1] = 0;
-    }
-    if(platform.keys_pressed[SDL_SCANCODE_2]){
-        friday.LOD = 2;
-        platform.keys_pressed[SDL_SCANCODE_2] = 0;
-    }
-    
     process_and_draw_commands();
     
     glUseProgram(0);
     
 }
 
-internal void
-new_line(){
-    friday.y -= renderer.fonts[0].line_height;
-    friday.x_offset = 0;
-}
-
-internal void
-pop_line(){
-    friday.y += renderer.fonts[0].line_height;
-}
-
-internal void
-indent(){
-    friday.indent += 40;
-}
-
-internal void
-pop_indent(){
-    friday.indent -= 40;
-}
-
-internal void
-space() {
-    friday.x_offset += 10;
-}
-
-internal void
-draw_string(char* string, u32 colour = 0xFFFFFFFF){
-    push_string(get_friday_x(),get_friday_y(), string, colour);
-    friday.x_offset += get_text_width(string);
-}
-
-internal void
-draw_string(String8 string, u32 colour = 0xFFFFFFFF){
-    push_string8(get_friday_x(), get_friday_y(), string, colour);
-    friday.x_offset += get_text_width(string);
-}
-
-internal void
-edit_node(Node* node){
-    if(platform.has_text_input){
-        insert_in_string(&node->name, platform.text_input, friday.cursor_index);
-        friday.cursor_index += strlen(platform.text_input);
-        platform.has_text_input = 0;
-        OutputDebugStringA(platform.text_input);
-        OutputDebugStringA("\n");
-    }
-    
-    if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
-        friday.cursor_index--;
-        platform.keys_pressed[SDL_SCANCODE_LEFT] = 0;
-    }
-    
-    if(platform.keys_pressed[SDL_SCANCODE_RIGHT]){
-        friday.cursor_index++;
-        platform.keys_pressed[SDL_SCANCODE_RIGHT] = 0;
-    }
-    if(platform.keys_pressed[SDL_SCANCODE_BACKSPACE]){
-        platform.keys_pressed[SDL_SCANCODE_BACKSPACE] = 0;
-        pop_from_string(&node->name, friday.cursor_index);
-        friday.cursor_index--;
-    }
-}
-
-internal void
-find_node_types_helper(Node* root, Node*** node_list, u64 node_list_length, Node_Type type){
-    if(!root) return;
-    if(type == root->type){
-        **node_list = root;
-        (*node_list)++;
-    }
-    switch(root->type){
-        
-        case NODE_BINARY:{
-            auto binary = &root->binary;
-            find_node_types_helper(binary->left, node_list, node_list_length, type);
-            find_node_types_helper(binary->right, node_list, node_list_length, type);
-        }break;
-        
-        case NODE_LITERAL:{
-            
-        }break;
-        
-        case NODE_STRUCT:{
-            auto _struct = &root->_struct;
-            for(Node* member = _struct->members; member; member = member->next){
-                find_node_types_helper(member, node_list, node_list_length, type);
-            }
-        }break;
-        
-        case NODE_DECLARATION:{
-            auto decl = root->declaration.expression;
-            find_node_types_helper(root->declaration.type_usage, node_list, 
-                                   node_list_length, type);
-            find_node_types_helper(decl, node_list, node_list_length, type);
-        }break;
-        
-        case NODE_SCOPE:{
-            auto scope = &root->scope;
-            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
-                find_node_types_helper(stmt, node_list, node_list_length, type);
-            }
-        }break;
-        
-        case NODE_TYPE_USAGE:{
-        }break;
-    }
-}
-
-internal void
-find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
-    find_node_types_helper(friday.program_root, &node_list, node_list_length, type);
-}
-
-internal void
-_highlight_word(Node* leaf){
-    String8 highlight_name = 
-        append_to_string(&renderer.temp_string_arena, leaf->name, "highlight");
-    
-    auto id = gen_unique_id(leaf->name);
-    auto anim_state = get_animation_state(id);
-    update_animation_state(anim_state, 0, 0, 
-                           lerp(anim_state->x_scale, 1.0f, 0.4f),
-                           lerp(anim_state->y_scale, 1.0f, 0.4f));
-    f32 text_width = get_text_width(leaf->name);
-    f32 offset = 5.0f;
-    f32 width = text_width + offset;
-    f32 line_height = renderer.fonts[0].line_height;
-    f32 height = line_height;
-    f32 x = get_friday_x() - offset/2;
-    f32 y = get_friday_y() - line_height*0.25;
-    
-    u32 text_colour = theme.text.packed;
-    
-    push_rectangle(x + width/2 - width*anim_state->x_scale/2, 
-                   y + height/2 - height*anim_state->y_scale/2, 
-                   width*anim_state->x_scale, 
-                   height*anim_state->y_scale, 10, theme.cursor.packed);
-    text_colour = theme.background.packed;
-    draw_string(leaf->name, text_colour);
-    
-}
-
-internal void
-boss_edit_name(Node* leaf, u32 colour = theme.text.packed){
-    f32 text_width = get_text_width(leaf->name);
-    f32 offset = 5.0f;
-    f32 width = text_width + offset;
-    f32 line_height = renderer.fonts[0].line_height;
-    f32 height = line_height;
-    f32 x = get_friday_x() - offset/2;
-    f32 y = get_friday_y() - line_height*0.25;
-    
-    if(friday.active_node == leaf){
-        String8 cursor_string = leaf->name;
-        cursor_string.length = friday.cursor_index;
-        f32 cursor_pos = get_text_width(cursor_string);
-        push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
-        edit_node(leaf);
-    }
-    draw_string(leaf->name,colour);
-    
-    
-}
-
-internal void
-boss_draw_leaf(Node* leaf,
-               Closure closure, u32 colour = theme.text.packed){
-    
-    auto id = gen_id(leaf->name);
-    auto widget = _push_widget(get_friday_x(), get_friday_y(), 
-                               get_text_width(leaf->name), 
-                               renderer.fonts[0].line_height, id, closure);
-    if(id == ui_state.clicked_id){
-        friday.active_node = leaf;
-        friday.cursor_index = leaf->name.length;
-        boss_edit_name(leaf, colour);
-    }else if(id == ui_state.hover_id || leaf == friday.selected_node){
-        
-        _highlight_word(leaf);
-    }else{
-        draw_string(leaf->name, colour);
-    }
-    
-}
-
-internal void
-draw_misc(char* string, u32 colour = theme.text.packed){
-    draw_string(string, colour);
-}
-
-internal void
-draw_misc(String8 string, u32 colour = theme.text.packed ){
-    draw_string(string, colour);
-}
-
 Bitmap cursor_bitmap;
-
-internal void
-draw_insertable(String8 label, Closure closure){
-    
-    f32 x = get_friday_x();
-    f32 y = get_friday_y();
-    f32 width = 100.0f; // TODO(Oliver): make this not magic
-    f32 height = renderer.fonts[0].line_height;
-    
-    //push_rectangle(x, y, width, height, 0.2, 0xFF0000FF);
-    
-    auto id = gen_unique_id(label);
-    if(ui_state.hover_id == id){
-        friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
-        friday.cursor_target_y = get_friday_y();
-    }
-    
-    auto widget = _push_widget(x, y, width, height, id, closure, true);
-}
-
-global bool should_insert;
-internal void
-scope_insert(String8 label, Closure closure){
-    
-    f32 x = get_friday_x();
-    f32 y = get_friday_y();
-    f32 width = 100.0f; // TODO(Oliver): make this not magic
-    f32 height = renderer.fonts[0].line_height;
-    y = get_friday_y()+height;
-    
-    auto id = gen_unique_id(label);
-    auto widget = _push_widget(x, y, width, height, id, closure, true);
-    
-    if(ui_state.hover_id == id){
-        friday.cursor_target_x = friday.x-get_text_width("--->")-10.0f;
-        friday.cursor_target_y = y;
-    }
-    
-    if(ui_state.clicked_id == id){
-        //debug_print("we made it here");
-        
-        String8 node_types[3];
-        Arena* arena = &renderer.temp_string_arena;
-        node_types[0] = make_string(arena, "function");
-        node_types[1] = make_string(arena, "struct");
-        node_types[2] = make_string(arena, "declaration");
-        
-        auto callback = [](u8* parameters){
-            Pool* pool = &friday.node_pool;
-            Arena* perm_arena = &platform.permanent_arena;
-            Node* active = friday.menu_node;
-            switch(friday.selected){
-                case 0:{
-                    Node* node = make_node(pool, NODE_FUNCTION);
-                    node->name = make_string(perm_arena, "untitled");
-                    node->function.scope = make_node(pool, NODE_SCOPE);
-                    node->function.scope->name = make_string(perm_arena, "func_scope");
-                    node->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-                    
-                    node->next = active->next;
-                    active->next = node;
-                    node->prev = active;
-                }break;
-                
-                case 1:{
-                    Node* node = make_node(pool, NODE_STRUCT);
-                    node->name = make_string(perm_arena, "untitled");
-                    node->_struct.members = nullptr;
-                    node->next = active->next;
-                    active->next = node;
-                    node->prev = active;
-                }break;
-                
-                case 2:{
-                    Node* node = make_node(pool, NODE_DECLARATION);
-                    node->name = make_string(perm_arena, "untitled");
-                    node->declaration.is_initialised = false;
-                    node->next = active->next;
-                    active->next = node;
-                    node->prev = active;
-                }break;
-            }
-        };
-        Closure menu_closure = make_closure(callback, 0);
-        char* cstr_label = to_cstring(&renderer.temp_string_arena, label);
-        debug_print(cstr_label);
-        draw_menu(get_friday_x(), get_friday_y(), cstr_label, node_types, 3, menu_closure);
-        
-    }
-    
-    
-}
-
-internal void
-navigate_graph(){
-    // TODO(Oliver): fuck this, time to switch to presentation nodes!
-    if(platform.keys_pressed[SDL_SCANCODE_J]){
-        if(!friday.selected_node){
-            friday.selected_node = friday.program_root->scope.statements;
-        }else {
-            //friday.active_node = friday.active_node->scope.statements->next;
-            if(friday.selected_node->next){
-                friday.selected_node = friday.selected_node->next;
-            }
-        }
-        platform.keys_pressed[SDL_SCANCODE_J] = 0;
-    }
-    else if(platform.keys_pressed[SDL_SCANCODE_K]){
-        if(!friday.selected_node){
-            friday.selected_node = friday.program_root->scope.statements;
-        }else {
-            //friday.active_node = friday.active_node->scope.statements->next;
-            if(friday.selected_node->prev){
-                friday.selected_node = friday.selected_node->prev;
-            }
-        }
-        platform.keys_pressed[SDL_SCANCODE_K] = 0;
-    }
-    
-}
-
-// NOTE(Oliver): REWRITE INTO PROPER PRESENTATION
-// generate visual state for each node, should be better
-// than this 
-internal void
-render_graph(Node* root){
-    if(!root) return;
-    switch(root->type){
-        
-        case NODE_BINARY:{
-            auto binary = &root->binary;
-            render_graph(binary->left);
-            
-            String8 op = {};
-            Arena* arena = &renderer.temp_string_arena;
-            switch(binary->op_type){
-                case OP_PLUS: op = make_string(arena, " + ");break;
-                case OP_MINUS: op = make_string(arena, " - ");break;
-                case OP_DIVIDE: op = make_string(arena, " / ");break;
-                case OP_MULTIPLY: op = make_string(arena, " * ");break;
-            }
-            draw_misc(op);
-            
-            render_graph(binary->right);
-        }break;
-        // NOTE(Oliver): make this present.cc!!!
-        case NODE_LITERAL:{
-            Arena* arena = &renderer.temp_string_arena;
-            
-            auto literal = &root->literal;
-            char* string = (char*)arena_allocate(arena, 256);
-            snprintf(string, 256, "%d", literal->_int);
-            draw_string(string, theme.text_literal.packed);
-        }break;
-        
-        case NODE_STRUCT: {
-            friday.test_node = root;
-            auto _struct = &root->_struct;
-            Closure _closure = {};
-            boss_draw_leaf(root, _closure, theme.text_type.packed);
-            draw_misc(" ::", theme.text_misc.packed);
-            draw_misc(" struct ");
-            draw_misc("{", theme.text_misc.packed);
-            if(friday.LOD == 2){
-                draw_misc(" ... ", theme.text_misc.packed);
-                draw_misc("}", theme.text_misc.packed);
-            }else{
-                new_line();
-                auto callback = [](u8* parameters) {
-                    auto _struct = get_arg(parameters, Node*);
-                    auto member = get_arg(parameters, Node*);
-                    
-                    //Node* member = _struct->members;
-                    Pool* pool = &friday.node_pool;
-                    if(member){
-                        for(member; member->next; member = member->next){}
-                        member->next = make_node(pool, NODE_DECLARATION);
-                        member->next->name = make_string(&platform.permanent_arena,
-                                                         "new");
-                        
-                    }else{
-                        _struct->_struct.members = make_node(pool, NODE_DECLARATION);
-                        _struct->_struct.members->name = make_string(&platform.permanent_arena,
-                                                                     "new");
-                    }
-                    
-                };
-                for(Node* member = _struct->members; member; member = member->next){
-                    indent();
-                    
-                    render_graph(member);
-                    
-                    pop_line();
-                }
-                if(!_struct->members){
-                    indent();
-                }
-                Closure closure = make_closure(callback, 2, arg(root), arg(_struct->members));
-                draw_insertable(make_string(&renderer.temp_string_arena,"insertable"), closure);
-                
-                if(!_struct->members){
-                    new_line();
-                }
-                pop_indent();
-                
-                draw_misc("}", theme.text_misc.packed);
-            }
-            new_line();
-            new_line();
-        }break;
-        
-        case NODE_DECLARATION: {
-            auto decl_id = gen_id(root->name);
-            auto anim_state = get_animation_state(decl_id);
-            update_animation_state(anim_state, 
-                                   lerp(anim_state->x_offset, 3.1415926535f, 0.3f),
-                                   0,0,0);
-            
-            auto decl = root->declaration.expression;
-            auto type_usage = root->declaration.type_usage;
-            Closure closure = make_closure(nullptr, 0);
-            f32 offset = sinf(anim_state->x_offset)*20;
-            friday.x += offset;
-            boss_draw_leaf(root, closure);
-            if(!root->declaration.type_usage){
-                auto callback = [](u8* p){
-                    auto root = get_arg(p, Node*);
-                    auto decl = &root->declaration;
-                    decl->type_usage = make_node(&friday.node_pool, NODE_TYPE_USAGE);
-                    Node* node_list[10];
-                    find_node_types(node_list, 10, NODE_STRUCT);
-                    
-                    decl->type_usage->type_usage.type_reference = node_list[0];
-                };
-                
-                closure = make_closure(callback, 1, arg(root));
-                draw_insertable(root->name, closure);
-                draw_misc(" :", theme.text_misc.packed);
-            }else {
-                
-                space();
-                draw_misc(" :", theme.text_misc.packed);
-                boss_draw_leaf(type_usage->type_usage.type_reference, 
-                               closure, theme.text_type.packed);
-                
-                space();
-            }
-            
-            draw_misc("= ", theme.text_misc.packed);
-            if(root->declaration.is_initialised){
-                
-                render_graph(decl);
-            }else {
-                draw_misc("void", theme.text_misc.packed);
-            }
-            
-            new_line();
-            new_line();
-            friday.x -= offset;
-        }break;
-        
-        case NODE_SCOPE: {
-            if(friday.LOD == 2 && root != friday.program_root){
-                draw_misc("...");
-                break;
-            }
-            auto scope = &root->scope;
-            auto statement_callback = [](u8* parameters) {
-                auto stmt = get_arg(parameters, Node*);
-                auto x = get_arg(parameters, f32);
-                auto y = get_arg(parameters, f32);
-                should_insert = 1;
-                friday.menu_node = stmt;
-                friday.menu_x = x;
-                friday.menu_y = y;
-            };
-            int append = 0;
-            int node_count = 0;
-            for(Node* stmt = scope->statements; stmt; stmt = stmt->next, node_count++){
-            }
-            assert(node_count >= 1);
-            for(Node* stmt = scope->statements; stmt; stmt = stmt->next, append++){
-                render_graph(stmt);
-                f32 _x = get_friday_x();
-                f32 _y = get_friday_y();
-                Closure closure = make_closure(statement_callback,
-                                               3,
-                                               arg(stmt), 
-                                               arg(_x),
-                                               arg(_y));
-                String8 label = make_string(&renderer.temp_string_arena, "");
-                int length = snprintf(label.text, 256, "scope%d%d%.*s", append, node_count, root->name.length, root->name.text);
-                label.length = length;
-                
-                scope_insert(label, closure);
-            }
-            String8 node_types[3];
-            Arena* arena = &renderer.temp_string_arena;
-            node_types[0] = make_string(arena, "function");
-            node_types[1] = make_string(arena, "struct");
-            node_types[2] = make_string(arena, "declaration");
-            
-            auto callback = [](u8* parameters){
-                Pool* pool = &friday.node_pool;
-                Arena* perm_arena = &platform.permanent_arena;
-                Node* active = friday.menu_node;
-                switch(friday.selected){
-                    case 0:{
-                        Node* node = make_node(pool, NODE_FUNCTION);
-                        node->name = make_string(perm_arena, "untitled");
-                        node->function.scope = make_node(pool, NODE_SCOPE);
-                        node->function.scope->name = make_string(perm_arena, "func_scope");
-                        node->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-                        node->next = active->next;
-                        active->next = node;
-                    }break;
-                    
-                    case 1:{
-                        Node* node = make_node(pool, NODE_STRUCT);
-                        node->name = make_string(perm_arena, "untitled");
-                        node->_struct.members = nullptr;
-                        node->next = active->next;
-                        active->next = node;
-                    }break;
-                    
-                    case 2:{
-                        Node* node = make_node(pool, NODE_DECLARATION);
-                        node->name = make_string(perm_arena, "untitled");
-                        node->declaration.is_initialised = false;
-                        node->next = active->next;
-                        active->next = node;
-                    }break;
-                }
-            };
-            Closure closure = make_closure(callback, 0);
-            
-        }break;
-        
-        case NODE_FUNCTION: {
-            Closure closure = {};
-            boss_draw_leaf(root, closure, theme.text_function.packed);
-            if(friday.LOD == 2){
-                draw_misc(" :: () { ... }", theme.text_misc.packed);
-            }else {
-                draw_misc(" :: () {", theme.text_misc.packed);
-            }
-            
-            int scope_y = get_friday_y();
-            new_line();
-            new_line();
-            int scope_x = get_friday_x(); 
-            
-            indent();
-            
-            assert(root->function.scope);
-            
-            render_graph(root->function.scope);
-            pop_indent();
-#if 0
-            push_rectangle(scope_x, get_friday_y() + renderer.fonts[0].line_height, 1,
-                           fabs(get_friday_y() - scope_y)-renderer.fonts[0].line_height, 1, 0xFFFFFFFF);
-#endif
-            if(friday.LOD != 2){
-                
-                draw_misc("}", theme.text_misc.packed);
-            }
-            new_line();
-            new_line();
-        }break;
-        
-        case NODE_CALL: {
-            
-        }break;
-        
-    }
-    
-}
-
-internal void
-render_minimap(Node* root){
-    if(!root) return;
-    switch(root->type){
-        
-        case NODE_BINARY:{
-            
-        }break;
-        
-        case NODE_LITERAL:{
-            
-        }break;
-        
-        case NODE_STRUCT: {
-            
-        }break;
-        
-        case NODE_DECLARATION: {
-            
-        }break;
-        
-        case NODE_SCOPE: {
-            
-        }break;
-        
-        case NODE_FUNCTION: {
-            
-        }break;
-        
-        case NODE_CALL: {
-            
-        }break;
-        
-    }
-    
-}
 
 internal void
 display_modes(){
@@ -2103,7 +1372,6 @@ display_modes(){
                        0.3, theme.background.packed);
     }
 }
-
 
 internal UI_ID
 button(f32 x, f32 y, char* text, Closure closure){
@@ -2170,8 +1438,121 @@ Bitmap move_icon;
 Bitmap add_icon;
 Bitmap options_icon;
 Bitmap bin_icon;
+internal void
+find_node_types_helper(Node* root, Node*** node_list, u64 node_list_length, Node_Type type){
+    if(!root) return;
+    if(type == root->type){
+        **node_list = root;
+        (*node_list)++;
+    }
+    switch(root->type){
+        
+        case NODE_BINARY:{
+            auto binary = &root->binary;
+            find_node_types_helper(binary->left, node_list, node_list_length, type);
+            find_node_types_helper(binary->right, node_list, node_list_length, type);
+        }break;
+        
+        case NODE_LITERAL:{
+            
+        }break;
+        
+        case NODE_STRUCT:{
+            auto _struct = &root->_struct;
+            for(Node* member = _struct->members; member; member = member->next){
+                find_node_types_helper(member, node_list, node_list_length, type);
+            }
+        }break;
+        
+        case NODE_DECLARATION:{
+            auto decl = root->declaration.expression;
+            find_node_types_helper(root->declaration.type_usage, node_list, 
+                                   node_list_length, type);
+            find_node_types_helper(decl, node_list, node_list_length, type);
+        }break;
+        
+        case NODE_SCOPE:{
+            auto scope = &root->scope;
+            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
+                find_node_types_helper(stmt, node_list, node_list_length, type);
+            }
+        }break;
+        
+        case NODE_TYPE_USAGE:{
+        }break;
+    }
+}
+
+internal void
+find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
+    find_node_types_helper(friday.program_root, &node_list, node_list_length, type);
+}
 
 global bool menu_open = 0;
+
+internal void
+draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
+    auto menu_id = gen_unique_id(label);
+    //debug_print("%d", menu_id);
+    auto anim_state = get_animation_state(menu_id);
+    if(!anim_state){
+        anim_state = init_animation_state(menu_id);
+    }
+    update_animation_state(anim_state,
+                           0,
+                           0,
+                           lerp(anim_state->x_scale, 1.2, 0.2f),
+                           lerp(anim_state->y_scale, 1.2, 0.2f));
+    //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
+    //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 height = 40*anim_state->y_scale;
+    f32 size_x = 200*anim_state->x_scale;
+    f32 size_y = num_rows*height;
+    y = y-size_y+line_height;
+    friday.y -= size_y;
+    
+    anim_state->last_updated = platform.tick;
+    
+    for(int i = 0; i < num_rows; i++){
+        f32 text_width = get_text_width(strings[i]);
+        text_width *= 1.2;
+        size_x = text_width >= size_x ? text_width : size_x;
+        
+    }
+    auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, closure);
+    
+    
+    push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
+    
+    for(int i = 0; i < num_rows; i++){
+        
+        String8 string = strings[i];
+        f32 offset = i*height;
+        push_rectangle(x,y + offset, size_x, height, 10, theme.menu.packed);
+        u32 text_colour = theme.text.packed;
+        
+        
+        if(is_mouse_in_rect(x, y + offset, size_x, height)){
+            if(platform.mouse_left_clicked){
+                
+                friday.selected = i;
+                
+                ui_state.menu_id = -1;
+                //friday.is_menu_open = false;
+            }
+            push_rectangle(x, y+ offset, 
+                           size_x, height, 10.0,
+                           theme.menu.packed);
+            
+            text_colour = theme.cursor.packed;
+        }
+        
+        push_string8(x+10, y + i*height+line_height/2, string,
+                     text_colour);
+    }
+    
+}
 
 internal void
 draw_menu_bar(){

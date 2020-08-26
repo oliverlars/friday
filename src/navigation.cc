@@ -11,3 +11,7 @@ struct {
     Navigation_Mode mode;
 } navigator;
 
+internal void
+navigate_graph(){
+    
+}

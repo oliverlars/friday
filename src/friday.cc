@@ -161,7 +161,6 @@ main(int argc, char** args){
         platform.mouse_y = platform.height - y;
         
         f32 offset = 5;
-        
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
         draw_view_buttons();
@@ -171,13 +170,13 @@ main(int argc, char** args){
         //push_rectangle_textured(friday.cursor_x, friday.cursor_y-30/2, 30,30,0, cursor_bitmap);
         
         
-        navigate_graph();
         //present_graph(global_scope->scope.statements->next);
         
         draw_menu_bar();
         draw_status_bar();
         
         display_modes();
+        navigate_graph(&presenter);
         
         
         if(platform.mouse_middle_down && platform.mouse_drag){

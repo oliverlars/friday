@@ -511,7 +511,7 @@ init_opengl_renderer(){
     renderer.shape_attribs = 
         subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
     
-    renderer.frame_arena = subdivide_arena(&platform.temporary_arena, 8192);
+    renderer.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
     renderer.temp_string_arena = subdivide_arena(&platform.temporary_arena, 4096);
     

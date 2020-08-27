@@ -1,13 +1,10 @@
 
 struct Present_Node {
-    
     Node* node;
-    v4f rect;
-    Animation_State* anim;
-    char name[256];
-    Present_Node* next;
-    Present_Node* prev;
+    Present_Node* next = nullptr;
+    Present_Node* prev = nullptr;
 };
+
 
 struct Presenter {
     
@@ -28,11 +25,31 @@ struct Presenter {
     
     Node* active_node;
     Node* current_node;
+    
+    Present_Node* node_list = nullptr;
 };
 
 
 internal inline void
 set_current_node(Presenter* presenter, Node* node){
+    if(!presenter->node_list){
+        presenter->node_list = 
+            (Present_Node*)
+            arena_allocate(&renderer.frame_arena, sizeof(Present_Node));
+        presenter->node_list->node = node;
+        presenter->node_list->next = nullptr;
+        presenter->node_list->prev = nullptr;
+    }else{
+        Present_Node* node_list = presenter->node_list;
+        while(node_list->next){
+            node_list = node_list->next;
+        }
+        node_list->next = (Present_Node*)
+            arena_allocate(&renderer.frame_arena, sizeof(Present_Node));
+        node_list->next->node = node;
+        node_list->next->next = nullptr;
+        node_list->next->prev = node_list;
+    }
     presenter->current_node = node;
 }
 
@@ -355,8 +372,8 @@ present_function_node(Presenter* presenter, Node* node){
     present_misc(presenter, " :: (");
     Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
     for(Node* param = function->parameters; param; param = param->next){
-        set_current_node(presenter, param);
         if(param->type != NODE_DUMMY){
+            set_current_node(presenter, param);
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
             present_space(presenter);
@@ -458,7 +475,7 @@ present_struct_node(Presenter* presenter, Node* node){
 
 internal void
 present_scope_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    //set_current_node(presenter, node);
     auto scope = &node->scope;
     Node* stmt = scope->statements;
     for(; stmt; stmt = stmt->next){

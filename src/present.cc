@@ -27,6 +27,7 @@ struct Presenter {
     Node* current_node;
     
     Present_Node* node_list = nullptr;
+    b32 should_edit;
 };
 
 
@@ -151,7 +152,8 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
                                  id, {});
     
     
-    if(id == ui_state.clicked_id){
+    if(id == ui_state.clicked_id || 
+       ((presenter->current_node == presenter->active_node)&&presenter->should_edit)){
         presenter->active_string = string;
         presenter->cursor_index = string->length;
         f32 text_width = get_text_width(*string);

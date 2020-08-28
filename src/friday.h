@@ -559,6 +559,7 @@ struct {
     f32 mouse_drag_y;
     
     bool keys_pressed[4096];
+    bool keys_down[4096];
     
     bool has_text_input;
     char* text_input;

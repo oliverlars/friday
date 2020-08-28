@@ -5,6 +5,13 @@ struct Present_Node {
     Present_Node* prev = nullptr;
 };
 
+internal UI_ID 
+gen_id_from_present_node(Present_Node* node){
+    UI_ID result = (UI_ID)node->node;
+    result += (UI_ID)node->next;
+    result += (UI_ID)node->prev;
+    return result;
+}
 
 struct Presenter {
     
@@ -27,6 +34,8 @@ struct Presenter {
     Node* current_node;
     
     Present_Node* node_list = nullptr;
+    Present_Node** node_list_tail = nullptr;
+    Present_Node* active_present_node;
     b32 should_edit;
 };
 
@@ -36,20 +45,25 @@ set_current_node(Presenter* presenter, Node* node){
     if(!presenter->node_list){
         presenter->node_list = 
             (Present_Node*)
-            arena_allocate(&renderer.frame_arena, sizeof(Present_Node));
+            arena_allocate(&presenter->present_arena, sizeof(Present_Node));
         presenter->node_list->node = node;
         presenter->node_list->next = nullptr;
         presenter->node_list->prev = nullptr;
+        presenter->node_list_tail = &presenter->node_list;
+        if(!presenter->active_present_node){
+            presenter->active_present_node = presenter->node_list;
+        }
     }else{
         Present_Node* node_list = presenter->node_list;
         while(node_list->next){
             node_list = node_list->next;
         }
         node_list->next = (Present_Node*)
-            arena_allocate(&renderer.frame_arena, sizeof(Present_Node));
+            arena_allocate(&presenter->present_arena, sizeof(Present_Node));
         node_list->next->node = node;
         node_list->next->next = nullptr;
         node_list->next->prev = node_list;
+        presenter->node_list_tail = &node_list->next;
     }
     presenter->current_node = node;
 }
@@ -153,7 +167,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     
     
     if(id == ui_state.clicked_id || 
-       ((presenter->current_node == presenter->active_node)&&presenter->should_edit)){
+       ((*presenter->node_list_tail == presenter->active_present_node)&&presenter->should_edit)){
         presenter->active_string = string;
         presenter->cursor_index = string->length;
         f32 text_width = get_text_width(*string);
@@ -170,12 +184,50 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
             edit_string(presenter, string);
         }
     }else if(id == ui_state.hover_id){
-    }else{
     }
-    if(presenter->current_node == presenter->active_node){
+    
+    if(*presenter->node_list_tail == presenter->active_present_node && !presenter->should_edit){
         present_highlighted_string(presenter, *string);
     }else{
         present_string(presenter, *string, colour);
+    }
+}
+
+internal void
+present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.text.packed){
+    
+    auto id = gen_id(node->name);
+    auto widget = ui_push_widget(get_presenter_x(presenter),
+                                 get_presenter_y(presenter),
+                                 get_text_width(node->name),
+                                 renderer.fonts[0].line_height, 
+                                 id, {});
+    
+    
+    if(id == ui_state.clicked_id || 
+       ((*presenter->node_list_tail == presenter->active_present_node)&&presenter->should_edit)){
+        presenter->active_string = &node->name;
+        presenter->cursor_index = node->name.length;
+        f32 text_width = get_text_width(node->name);
+        f32 offset = 5.0f;
+        f32 width = text_width + offset;
+        f32 line_height = renderer.fonts[0].line_height;
+        f32 height = line_height;
+        f32 x = get_presenter_x(presenter) - offset/2;
+        f32 y = get_presenter_y(presenter) - line_height*0.25;
+        
+        if(presenter->active_string == &node->name){
+            f32 cursor_pos = get_text_width(node->name);
+            push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
+            edit_string(presenter, &node->name);
+        }
+    }else if(id == ui_state.hover_id){
+    }
+    
+    if(*presenter->node_list_tail == presenter->active_present_node && !presenter->should_edit){
+        present_highlighted_string(presenter, node->name);
+    }else{
+        present_string(presenter, node->name, colour);
     }
 }
 
@@ -369,7 +421,7 @@ present_function_node(Presenter* presenter, Node* node){
     set_current_node(presenter, node);
     
     auto function = &node->function;
-    present_editable_string(presenter, &node->name, theme.text_function.packed);
+    present_editable_string(presenter, node, theme.text_function.packed);
     
     present_misc(presenter, " :: (");
     Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
@@ -406,7 +458,6 @@ present_function_node(Presenter* presenter, Node* node){
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
     set_current_node(presenter, node);
-    
     present_space(presenter);
     present_editable_string(presenter, &node->name,
                             theme.text_type.packed);
@@ -452,7 +503,6 @@ insert_members_for_struct(u8* parameters){
     }
     members->next = make_declaration_node(&friday.node_pool,"untitled");
 }
-
 
 internal void
 present_struct_node(Presenter* presenter, Node* node){
@@ -540,6 +590,7 @@ present_graph(Presenter* presenter, Node* root){
 internal void
 present(Presenter* presenter){
     if(!presenter) return;
+    arena_reset(&presenter->present_arena);
     present_graph(presenter, presenter->root);
     
 }

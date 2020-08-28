@@ -134,6 +134,8 @@ main(int argc, char** args){
     Presenter presenter = {};
     presenter.root = global_scope;
     presenter.active_node = global_scope->scope.statements->next->next;
+    presenter.present_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
+    
     
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;
@@ -255,14 +257,27 @@ main(int argc, char** args){
                 }
                 platform.mouse_drag = 0;
             }
-            if(event.type == SDL_KEYDOWN){
-                SDL_Keycode key = event.key.keysym.sym;
-                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
-            }
+            
             if(event.type == SDL_TEXTINPUT){
                 platform.has_text_input = 1;
                 *text_input++ = *event.text.text;
             }
+            if(event.type == SDL_KEYDOWN){
+                SDL_Keycode key = event.key.keysym.sym;
+                if(!platform.keys_pressed[SDL_GetScancodeFromKey(key)]) {
+                    platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
+                }else {
+                    platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
+                    platform.keys_down[SDL_GetScancodeFromKey(key)] = 1;
+                }
+                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
+                
+            }else if(event.type == SDL_KEYUP){
+                SDL_Keycode key = event.key.keysym.sym;
+                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
+                
+            }
+            
             if(event.type == SDL_MOUSEMOTION){
                 if(platform.mouse_left_down){
                     platform.mouse_drag = 1;
@@ -275,12 +290,10 @@ main(int argc, char** args){
                 friday.y_offset += - event.wheel.y*50;
             }
         }
-        
         SDL_GL_SwapWindow(global_window);
         platform.tick++;
         end_time = SDL_GetTicks();
         platform.delta_time = ((f32)end_time - (f32)start_time)/1000.0f;
-        debug_print("%f", platform.delta_time);
     }
     
     return 0;

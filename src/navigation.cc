@@ -8,7 +8,6 @@ enum Navigation_Mode {
     NV_DELETE,
 };
 struct {
-    
     Navigation_Mode mode = NV_COMMAND;
 } navigator;
 
@@ -16,40 +15,98 @@ internal void
 navigate_graph(Presenter* presenter){
     Present_Node* node_list = presenter->node_list;
     
-    for(;node_list; node_list = node_list->next){
-        debug_print("%d %d\n", (int)node_list, (int)presenter->active_present_node);
-        
-        if(node_list == presenter->active_present_node){
-            if(navigator.mode == NV_COMMAND){
-                if(platform.keys_pressed[SDL_SCANCODE_J]){
-                    if(node_list->next) {
-                        presenter->active_present_node = node_list->next;
-                        debug_print("%d\n", (int)presenter->active_present_node);
-                    }
-                    platform.keys_pressed[SDL_SCANCODE_J] = 0;
+    if(navigator.mode == NV_COMMAND){
+        if(platform.keys_pressed[SDL_SCANCODE_J]){
+            auto node = presenter->active_present_node;
+            if(node->down){
+                presenter->active_present_node = presenter->active_present_node->down;
+            }else if(node->left){
+                auto left = node->left;
+                while(left->left){
+                    left = left->left;
                 }
-                if(platform.keys_pressed[SDL_SCANCODE_K]){
-                    debug_print("%d\n", (int)presenter->active_present_node);
-                    presenter->active_present_node = node_list->prev;
-                    platform.keys_pressed[SDL_SCANCODE_K] = 0;
+                if(left->down){
+                    presenter->active_present_node = left->down;
                 }
-                if(platform.keys_pressed[SDL_SCANCODE_I]){
-                    navigator.mode = NV_TEXT_EDIT;
-                    presenter->should_edit = true;
-                    platform.keys_pressed[SDL_SCANCODE_I] = 0;
+            }else if(node->right){
+                auto right = node->right;
+                while(right->right){
+                    right = right->right;
                 }
-            }
-            if(navigator.mode == NV_TEXT_EDIT){
-                if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
-                   platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
-                    navigator.mode = NV_COMMAND;
-                    
-                    presenter->should_edit = false;
-                    platform.keys_pressed[SDL_SCANCODE_LCTRL] = 0;
-                    platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET] = 0;
-                    
+                if(right->down){
+                    presenter->active_present_node = right->down;
                 }
             }
+            platform.keys_pressed[SDL_SCANCODE_J] = 0;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_K]){
+            auto node = presenter->active_present_node;
+            if(node->up){
+                presenter->active_present_node = presenter->active_present_node->up;
+            }else if(node->left){
+                auto left = node->left;
+                while(left->left){
+                    left = left->left;
+                }
+                if(left->up){
+                    presenter->active_present_node = left->up;
+                }
+            }else if(node->right){
+                auto right = node->right;
+                while(right->right){
+                    right = right->right;
+                }
+                if(right->up){
+                    presenter->active_present_node = right->up;
+                }
+            }
+            platform.keys_pressed[SDL_SCANCODE_K] = 0;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_L]){
+            auto node = presenter->active_present_node;
+            if(node->right){
+                presenter->active_present_node = presenter->active_present_node->right;
+            }
+            debug_print("%d\n", (int)presenter->active_present_node);
+            platform.keys_pressed[SDL_SCANCODE_L] = 0;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_H]){
+            auto node = presenter->active_present_node;
+            if(node->left){
+                presenter->active_present_node = presenter->active_present_node->left;
+            }
+            platform.keys_pressed[SDL_SCANCODE_H] = 0;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_I]){
+            navigator.mode = NV_TEXT_EDIT;
+            presenter->should_edit = true;
+            platform.keys_pressed[SDL_SCANCODE_I] = 0;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_M]){
+            navigator.mode = NV_MAKE;
+        }
+    }
+    if(navigator.mode == NV_TEXT_EDIT){
+        if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
+           platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
+            navigator.mode = NV_COMMAND;
+            
+            presenter->should_edit = false;
+            platform.keys_pressed[SDL_SCANCODE_LCTRL] = 0;
+            platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET] = 0;
+            
+        }
+    }
+    if(navigator.mode == NV_MAKE){
+        if(platform.keys_pressed[SDL_SCANCODE_D]){
+            auto node = presenter->active_present_node;
+            node->node->next = make_declaration_node(&friday.node_pool, "untitled");
+            navigator.mode = NV_COMMAND;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_F]){
+            auto node = presenter->active_present_node;
+            node->node->next = make_function_node(&friday.node_pool, "untitled");
+            navigator.mode = NV_COMMAND;
         }
     }
     

@@ -3,15 +3,11 @@ struct Present_Node {
     Node* node;
     Present_Node* next = nullptr;
     Present_Node* prev = nullptr;
+    Present_Node* left = nullptr;
+    Present_Node* right = nullptr;
+    Present_Node* up = nullptr;
+    Present_Node* down = nullptr;
 };
-
-internal UI_ID 
-gen_id_from_present_node(Present_Node* node){
-    UI_ID result = (UI_ID)node->node;
-    result += (UI_ID)node->next;
-    result += (UI_ID)node->prev;
-    return result;
-}
 
 struct Presenter {
     
@@ -34,18 +30,30 @@ struct Presenter {
     Node* current_node;
     
     Present_Node* node_list = nullptr;
+    Present_Node** node_list_down_tail = nullptr;
+    Present_Node** node_list_right_tail = nullptr;
     Present_Node** node_list_tail = nullptr;
     Present_Node* active_present_node;
     b32 should_edit;
 };
 
 
+internal inline Present_Node*
+allocate_present_node(Presenter* presenter){
+    auto node = (Present_Node*)arena_allocate(&presenter->present_arena, sizeof(Present_Node));
+    node->next = nullptr;
+    node->prev = nullptr;
+    node->left = nullptr;
+    node->right = nullptr;
+    node->up = nullptr;
+    node->down = nullptr;
+    return node;
+}
+
 internal inline void
 set_current_node(Presenter* presenter, Node* node){
     if(!presenter->node_list){
-        presenter->node_list = 
-            (Present_Node*)
-            arena_allocate(&presenter->present_arena, sizeof(Present_Node));
+        presenter->node_list = allocate_present_node(presenter);
         presenter->node_list->node = node;
         presenter->node_list->next = nullptr;
         presenter->node_list->prev = nullptr;
@@ -58,14 +66,57 @@ set_current_node(Presenter* presenter, Node* node){
         while(node_list->next){
             node_list = node_list->next;
         }
-        node_list->next = (Present_Node*)
-            arena_allocate(&presenter->present_arena, sizeof(Present_Node));
+        node_list->next = allocate_present_node(presenter);
         node_list->next->node = node;
         node_list->next->next = nullptr;
         node_list->next->prev = node_list;
         presenter->node_list_tail = &node_list->next;
     }
     presenter->current_node = node;
+}
+
+internal inline void
+set_current_right_node(Presenter* presenter, Node* node){
+    if(!presenter->node_list){
+        presenter->node_list = allocate_present_node(presenter);
+        presenter->node_list->node = node;
+        presenter->node_list_tail = &presenter->node_list;
+        if(!presenter->active_present_node){
+            presenter->active_present_node = presenter->node_list;
+        }
+    }else{
+        Present_Node* node_tail = *presenter->node_list_tail;
+        
+        node_tail->right = allocate_present_node(presenter);
+        node_tail->right->node = node;
+        node_tail->right->left = node_tail;
+        presenter->node_list_tail = &node_tail->right;
+    }
+}
+
+internal inline void
+set_current_down_node(Presenter* presenter, Node* node){
+    if(!presenter->node_list){
+        presenter->node_list = allocate_present_node(presenter);
+        presenter->node_list->node = node;
+        presenter->node_list_tail = &presenter->node_list;
+        if(!presenter->active_present_node){
+            presenter->active_present_node = presenter->node_list;
+        }
+    }else{
+        Present_Node* node_tail = *presenter->node_list_tail;
+        
+        node_tail->down = allocate_present_node(presenter);
+        node_tail->down->node = node;
+        node_tail->down->up = node_tail;
+        presenter->node_list_tail = &node_tail->down;
+    }
+    
+}
+
+internal b32
+is_active_present_node(Presenter* presenter){
+    return *presenter->node_list_tail == presenter->active_present_node;
 }
 
 internal inline int
@@ -167,7 +218,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     
     
     if(id == ui_state.clicked_id || 
-       ((*presenter->node_list_tail == presenter->active_present_node)&&presenter->should_edit)){
+       (is_active_present_node(presenter) && presenter->should_edit)){
         presenter->active_string = string;
         presenter->cursor_index = string->length;
         f32 text_width = get_text_width(*string);
@@ -186,7 +237,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     }else if(id == ui_state.hover_id){
     }
     
-    if(*presenter->node_list_tail == presenter->active_present_node && !presenter->should_edit){
+    if(is_active_present_node(presenter) && !presenter->should_edit){
         present_highlighted_string(presenter, *string);
     }else{
         present_string(presenter, *string, colour);
@@ -205,7 +256,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     
     
     if(id == ui_state.clicked_id || 
-       ((*presenter->node_list_tail == presenter->active_present_node)&&presenter->should_edit)){
+       (is_active_present_node(presenter) && presenter->should_edit)){
         presenter->active_string = &node->name;
         presenter->cursor_index = node->name.length;
         f32 text_width = get_text_width(node->name);
@@ -224,7 +275,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     }else if(id == ui_state.hover_id){
     }
     
-    if(*presenter->node_list_tail == presenter->active_present_node && !presenter->should_edit){
+    if(is_active_present_node(presenter) && !presenter->should_edit){
         present_highlighted_string(presenter, node->name);
     }else{
         present_string(presenter, node->name, colour);
@@ -379,7 +430,7 @@ internal void present_graph(Presenter* presenter, Node* root);
 
 internal void
 present_binary_literal(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    //set_current_node(presenter, node);
     auto literal = &node->literal;
     Arena* arena = &renderer.temp_string_arena;
     char* string = (char*)arena_allocate(arena, 256);
@@ -389,7 +440,7 @@ present_binary_literal(Presenter* presenter, Node* node){
 
 internal void
 present_binary_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    //set_current_node(presenter, node);
     auto binary = &node->binary;
     present_binary_literal(presenter, binary->left);
     
@@ -411,6 +462,7 @@ insert_parameters_for_function(u8* parameters){
     }
     params->next = make_node(&friday.node_pool, NODE_DECLARATION, "arg");
     params->next->declaration.type_usage = _u16;
+    
 }
 
 
@@ -418,7 +470,7 @@ internal void present_type_usage_node(Presenter* presenter, Node* node);
 
 internal void
 present_function_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    //set_current_node(presenter, node);
     
     auto function = &node->function;
     present_editable_string(presenter, node, theme.text_function.packed);
@@ -427,7 +479,7 @@ present_function_node(Presenter* presenter, Node* node){
     Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
     for(Node* param = function->parameters; param; param = param->next){
         if(param->type != NODE_DUMMY){
-            set_current_node(presenter, param);
+            set_current_right_node(presenter, param);
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
             present_space(presenter);
@@ -457,7 +509,7 @@ present_function_node(Presenter* presenter, Node* node){
 
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    set_current_right_node(presenter, node);
     present_space(presenter);
     present_editable_string(presenter, &node->name,
                             theme.text_type.packed);
@@ -477,7 +529,6 @@ insert_type_for_declaration(u8* parameters){
 
 internal void
 present_declaration_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
     
     auto decl = &node->declaration;
     present_editable_string(presenter, &node->name);
@@ -485,6 +536,7 @@ present_declaration_node(Presenter* presenter, Node* node){
     
     Closure closure = make_closure(insert_type_for_declaration, 1, arg(node));
     present_x_insertable(presenter, closure, "test%d", (int)node);
+    
     present_graph(presenter, decl->type_usage);
     present_misc(presenter, "= ");
     if(decl->is_initialised){
@@ -506,7 +558,7 @@ insert_members_for_struct(u8* parameters){
 
 internal void
 present_struct_node(Presenter* presenter, Node* node){
-    set_current_node(presenter, node);
+    //set_current_node(presenter, node);
     auto _struct = &node->_struct;
     present_editable_string(presenter, &node->name, theme.text_type.packed);
     present_misc(presenter, " :: struct {");
@@ -531,6 +583,9 @@ present_scope_node(Presenter* presenter, Node* node){
     auto scope = &node->scope;
     Node* stmt = scope->statements;
     for(; stmt; stmt = stmt->next){
+        if(stmt->type != NODE_DUMMY){
+            set_current_down_node(presenter, stmt);
+        }
         present_graph(presenter, stmt);
     }
 }
@@ -541,6 +596,8 @@ reset_presenter(Presenter* presenter){
     presenter->x_offset = 0;
     presenter->y_offset = 0;
     presenter->indent = 0;
+    arena_reset(&presenter->present_arena);
+    
 }
 
 internal void
@@ -590,7 +647,6 @@ present_graph(Presenter* presenter, Node* root){
 internal void
 present(Presenter* presenter){
     if(!presenter) return;
-    arena_reset(&presenter->present_arena);
     present_graph(presenter, presenter->root);
     
 }

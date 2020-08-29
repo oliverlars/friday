@@ -16,6 +16,11 @@ navigate_graph(Presenter* presenter){
     Present_Node* node_list = presenter->node_list;
     
     if(navigator.mode == NV_COMMAND){
+        if(platform.keys_pressed[SDL_SCANCODE_D]){
+            auto node = presenter->active_present_node;
+            friday.node_pool.clear(node->node);
+            platform.keys_pressed[SDL_SCANCODE_D] = 0;
+        }
         if(platform.keys_pressed[SDL_SCANCODE_J]){
             auto node = presenter->active_present_node;
             if(node->down){
@@ -116,6 +121,7 @@ navigate_graph(Presenter* presenter){
             }
             
             navigator.mode = NV_COMMAND;
+            platform.keys_pressed[SDL_SCANCODE_D] = 0;
         }
         if(platform.keys_pressed[SDL_SCANCODE_F]){
             auto node = presenter->active_present_node;
@@ -129,7 +135,7 @@ navigate_graph(Presenter* presenter){
             }
             navigator.mode = NV_COMMAND;
         }
-        if(platform.keys_pressed[SDL_SCANCODE_P]){
+        if(platform.keys_pressed[SDL_SCANCODE_A]){
             auto node = presenter->active_present_node;
             auto param = make_declaration_node(&friday.node_pool, "arg");
             auto params = node->node->function.parameters;
@@ -139,7 +145,7 @@ navigate_graph(Presenter* presenter){
             params->next = param;
             params->next->declaration.type_usage = _u16;
             navigator.mode = NV_COMMAND;
-            platform.keys_pressed[SDL_SCANCODE_P] = 0;
+            platform.keys_pressed[SDL_SCANCODE_A] = 0;
             
         }
     }

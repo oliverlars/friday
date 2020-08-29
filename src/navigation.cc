@@ -98,15 +98,49 @@ navigate_graph(Presenter* presenter){
         }
     }
     if(navigator.mode == NV_MAKE){
+        if(platform.keys_pressed[SDL_SCANCODE_B]){
+            auto node = presenter->active_present_node;
+            auto decl = make_declaration_node(&friday.node_pool, "untitled");
+            node->node->function.scope->scope.statements->next = decl;
+            navigator.mode = NV_COMMAND;
+        }
         if(platform.keys_pressed[SDL_SCANCODE_D]){
             auto node = presenter->active_present_node;
-            node->node->next = make_declaration_node(&friday.node_pool, "untitled");
+            auto decl = make_declaration_node(&friday.node_pool, "untitled");
+            if(node->node->next){
+                auto temp = node->node->next;
+                node->node->next = decl;
+                node->node->next->next = temp;
+            }else {
+                node->node->next = decl;
+            }
+            
             navigator.mode = NV_COMMAND;
         }
         if(platform.keys_pressed[SDL_SCANCODE_F]){
             auto node = presenter->active_present_node;
-            node->node->next = make_function_node(&friday.node_pool, "untitled");
+            auto func = make_function_node(&friday.node_pool, "untitled");
+            if(node->node->next){
+                auto temp = node->node->next;
+                node->node->next = func;
+                node->node->next->next = temp;
+            }else {
+                node->node->next = func;
+            }
             navigator.mode = NV_COMMAND;
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_P]){
+            auto node = presenter->active_present_node;
+            auto param = make_declaration_node(&friday.node_pool, "arg");
+            auto params = node->node->function.parameters;
+            while(params->next){
+                params = params->next;
+            }
+            params->next = param;
+            params->next->declaration.type_usage = _u16;
+            navigator.mode = NV_COMMAND;
+            platform.keys_pressed[SDL_SCANCODE_P] = 0;
+            
         }
     }
     

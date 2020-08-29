@@ -268,13 +268,13 @@ main(int argc, char** args){
                     platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
                 }else {
                     platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
-                    platform.keys_down[SDL_GetScancodeFromKey(key)] = 1;
                 }
-                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
                 
-            }else if(event.type == SDL_KEYUP){
+            }
+            if(event.type == SDL_KEYUP){
                 SDL_Keycode key = event.key.keysym.sym;
                 platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
+                platform.keys_down[SDL_GetScancodeFromKey(key)] = 0;
                 
             }
             
@@ -287,7 +287,7 @@ main(int argc, char** args){
                 }
             }
             if(event.type == SDL_MOUSEWHEEL){
-                friday.y_offset += - event.wheel.y*50;
+                platform.mouse_scroll_amount -= event.wheel.y*50;
             }
         }
         SDL_GL_SwapWindow(global_window);

@@ -126,7 +126,7 @@ get_presenter_x(Presenter* presenter) {
 
 internal inline int
 get_presenter_y(Presenter* presenter) {
-    return presenter->y_start + presenter->y_offset;
+    return presenter->y_start + presenter->y_offset + platform.mouse_scroll_amount;
 }
 
 internal inline void
@@ -456,7 +456,9 @@ present_binary_node(Presenter* presenter, Node* node){
 
 internal void
 insert_parameters_for_function(u8* parameters){
+    return;
     auto params = get_arg(parameters, Node*);
+    
     while(params->next){
         params = params->next;
     }
@@ -505,6 +507,8 @@ present_function_node(Presenter* presenter, Node* node){
     present_new_line(presenter);
     
     present_misc(presenter, "}");
+    present_new_line(presenter);
+    
 }
 
 internal void

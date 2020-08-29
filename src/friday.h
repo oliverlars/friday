@@ -547,6 +547,7 @@ struct {
     bool mouse_left_up;
     bool mouse_left_down;
     
+    f32 mouse_scroll_amount;
     bool mouse_middle_up;
     bool mouse_middle_down;
     
@@ -570,6 +571,7 @@ struct {
     f32 delta_time;
     
 } platform;
+
 
 internal f32
 clampf(f32 value, f32 min, f32 max){

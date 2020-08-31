@@ -114,7 +114,17 @@ navigate_graph(Presenter* presenter){
         if(platform.keys_pressed[SDL_SCANCODE_B]){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
-            node->node->function.scope->scope.statements->next = decl;
+            switch(node->node->type){
+                case NODE_FUNCTION:{
+                    node->node->function.scope->scope.statements->next = decl;
+                }break;
+                case NODE_LOOP:{
+                    node->node->loop.scope->scope.statements->next = decl;
+                }break;
+                case NODE_CONDITIONAL:{
+                    node->node->conditional.scope->scope.statements->next = decl;
+                }break;
+            }
             navigator.mode = NV_COMMAND;
         }
         if(platform.keys_pressed[SDL_SCANCODE_D]){

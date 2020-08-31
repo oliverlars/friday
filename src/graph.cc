@@ -222,6 +222,7 @@ make_conditional_node(Pool* pool, char* name){
     result->conditional.scope = make_scope_node(pool, name);
     result->conditional._else_if = nullptr;
     result->conditional._else = nullptr;
+    
     return result;
 }
 

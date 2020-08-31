@@ -254,9 +254,63 @@ smooth_step(f32 source, f32 target, f32 value){
 internal v4f
 lerp_rects(v4f a, v4f b, f32 amount){
     v4f result = {};
-    result.x = (a.x - b.x)*amount;
-    result.y = (a.y - b.y)*amount;
-    result.z = (a.z - b.z)*amount;
-    result.w = (a.w - b.w)*amount;
+    result.x = (b.x - a.x)*amount;
+    result.y = (b.y - a.y)*amount;
+    result.z = (b.z - a.z)*amount;
+    result.w = (b.w - a.w)*amount;
+    return result;
+}
+
+internal v4f
+add_rects(v4f a, v4f b){
+    v4f result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    result.w = a.w + b.w;
+    return result;
+}
+
+
+internal b32
+rects_eq(v4f a, v4f b){
+    return (a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w);
+}
+
+internal b32
+rects_similar(v4f a, v4f b, f32 tolerance){
+    
+    return (fabs(a.x - b.x) < tolerance) && (fabs(a.y - b.y) < tolerance) && 
+        (fabs(a.z - b.z) < tolerance) && (fabs(a.w - b.w) < tolerance);
+}
+
+// NOTE(Oliver): 0xAABBGGRR 
+union Colour {
+    u32 packed;
+    struct {
+        u8 a;
+        u8 b;
+        u8 g;
+        u8 r;
+    };
+};
+
+internal Colour
+lerp_colours(Colour a, Colour b, f32 amount){
+    Colour result ={};
+    result.a = (a.a - b.a)*amount;
+    result.b = (a.b - b.b)*amount;
+    result.g = (a.g - b.g)*amount;
+    result.r = (a.r - b.r)*amount;
+    return result;
+}
+
+internal Colour
+add_colours(Colour a, Colour b){
+    Colour result = {};
+    result.a = a.a + b.a;
+    result.b = a.b + b.b;
+    result.g = a.g + b.g;
+    result.r = a.r + b.r;
     return result;
 }

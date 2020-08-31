@@ -36,6 +36,12 @@ struct Presenter {
     Present_Node** node_list_tail = nullptr;
     Present_Node* active_present_node;
     b32 should_edit;
+    
+    
+    v4f cursor_rect;
+    v4f cursor_target_rect;
+    Colour cursor_colour;
+    Colour cursor_target_colour;
 };
 
 
@@ -191,21 +197,48 @@ edit_string(Presenter* presenter, String8* string){
 }
 
 internal void
-present_highlighted_string(Presenter* presenter, String8 string){
+present_highlighted_string(Presenter* presenter, String8 string, u32 colour = theme.panel.packed){
+    
     f32 line_height = renderer.fonts[0].line_height;
-    push_rectangle(get_presenter_x(presenter), get_presenter_y(presenter) - line_height/4, 
-                   get_text_width(string), line_height, 10, theme.cursor.packed);
-    present_string(presenter, string, theme.panel.packed);
+    presenter->cursor_target_rect.x = get_presenter_x(presenter);
+    presenter->cursor_target_rect.y = get_presenter_y(presenter)-line_height/4;
+    presenter->cursor_target_rect.z = get_text_width(string);
+    presenter->cursor_target_rect.w = line_height;
+    
+    presenter->cursor_rect = add_rects(presenter->cursor_rect, 
+                                       lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
+    v4f r = presenter->cursor_rect;
+    v4f rt = presenter->cursor_target_rect;
+    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.cursor.packed);
+    if(rects_similar(presenter->cursor_rect, presenter->cursor_target_rect, 10.0f)){
+        present_string(presenter, string, theme.panel.packed);
+    }else {
+        present_string(presenter, string, colour);
+    }
+    
 }
 
 internal void
-present_highlighted_string(Presenter* presenter, char* string){
+present_highlighted_string(Presenter* presenter, char* string, u32 colour = theme.panel.packed){
     
     f32 line_height = renderer.fonts[0].line_height;
-    push_rectangle(get_presenter_x(presenter), get_presenter_y(presenter)-line_height/4, 
-                   get_text_width(string), line_height, 10, theme.cursor.packed);
-    present_string(presenter, string, theme.panel.packed);
+    presenter->cursor_target_rect.x = get_presenter_x(presenter);
+    presenter->cursor_target_rect.y = get_presenter_y(presenter)-line_height/4;
+    presenter->cursor_target_rect.z = get_text_width(string);
+    presenter->cursor_target_rect.w = line_height;
+    
+    presenter->cursor_rect = add_rects(presenter->cursor_rect, 
+                                       lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
+    v4f r = presenter->cursor_rect;
+    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.cursor.packed);
+    if(rects_similar(presenter->cursor_rect, presenter->cursor_target_rect, 10.0f)){
+        present_string(presenter, string, theme.panel.packed);
+    }else {
+        present_string(presenter, string, colour);
+    }
+    
 }
+
 
 internal void
 present_editable_string(Presenter* presenter, String8* string, u32 colour = theme.text.packed){
@@ -277,7 +310,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     }
     
     if(is_active_present_node(presenter) && !presenter->should_edit){
-        present_highlighted_string(presenter, node->name);
+        present_highlighted_string(presenter, node->name, colour);
     }else{
         present_string(presenter, node->name, colour);
     }
@@ -462,11 +495,23 @@ present_binary_literal(Presenter* presenter, Node* node){
     present_string(presenter, string, theme.text_literal.packed);
 }
 
+
+internal void
+present_literal_node(Presenter* presenter, Node* node){
+    auto literal = &node->literal;
+    set_current_right_node(presenter, node);
+    char buffer[256];
+    int length = snprintf(buffer, 256, "%d", literal->_int);
+    buffer[length+1] = 0;
+    present_selectable_string(presenter, buffer, theme.text_literal.packed);
+    
+}
+
 internal void
 present_binary_node(Presenter* presenter, Node* node){
     //set_current_node(presenter, node);
     auto binary = &node->binary;
-    present_binary_literal(presenter, binary->left);
+    present_literal_node(presenter, binary->left);
     
     switch(binary->op_type){
         case OP_PLUS: present_misc(presenter, " + ");break;
@@ -481,7 +526,7 @@ present_binary_node(Presenter* presenter, Node* node){
         case OP_GTE: present_misc(presenter, " >= ");break;
     }
     
-    present_binary_literal(presenter, binary->right);
+    present_literal_node(presenter, binary->right);
 }
 
 internal void
@@ -660,16 +705,6 @@ present_conditional_node(Presenter* presenter, Node* node){
     }
     present_misc(presenter, "}");
     present_new_line(presenter);
-}
-
-internal void
-present_literal_node(Presenter* presenter, Node* node){
-    auto literal = &node->literal;
-    
-    char buffer[256];
-    int length = snprintf(buffer, 256, "%d", literal->_int);
-    buffer[length+1] = 0;
-    present_misc(presenter, buffer, theme.text_literal.packed);
 }
 
 internal void

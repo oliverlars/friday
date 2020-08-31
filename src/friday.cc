@@ -84,10 +84,10 @@ main(int argc, char** args){
     Pool* pool = &friday.node_pool;
     
     
-    _u8 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u8");
-    _u16 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u16");
-    _u32 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u32");
-    _u64 = make_node(&friday.node_pool, NODE_TYPE_USAGE, "u64");
+    _u8 = make_node(&friday.node_pool, NODE_DECLARATION, "u8");
+    _u16 = make_node(&friday.node_pool, NODE_DECLARATION, "u16");
+    _u32 = make_node(&friday.node_pool, NODE_DECLARATION, "u32");
+    _u64 = make_node(&friday.node_pool, NODE_DECLARATION, "u64");
     
     Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);

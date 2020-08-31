@@ -1,19 +1,9 @@
 // NOTE(Oliver): stuff!
 
-enum Navigation_Mode {
-    NV_COMMAND,
-    NV_MAKE,
-    NV_EDIT,
-    NV_TEXT_EDIT,
-    NV_DELETE,
-};
-struct {
-    Navigation_Mode mode = NV_COMMAND;
-} navigator;
-
 internal void
 navigate_graph(Presenter* presenter){
     Present_Node* node_list = presenter->node_list;
+    const u8* state = SDL_GetKeyboardState(nullptr);
     
     if(navigator.mode == NV_COMMAND){
         if(platform.keys_pressed[SDL_SCANCODE_D]){
@@ -23,6 +13,12 @@ navigate_graph(Presenter* presenter){
             friday.node_pool.clear(node_to_delete);
         }
         
+        if(platform.keys_pressed[SDL_SCANCODE_P]){
+            auto node = presenter->active_present_node;
+            if(node->node->type == NODE_TYPE_USAGE){
+                node->node->type_usage.number_of_pointers++;
+            }
+        }
         if(platform.keys_pressed[SDL_SCANCODE_J]){
             auto node = presenter->active_present_node;
             if(node->down){
@@ -134,6 +130,16 @@ navigate_graph(Presenter* presenter){
             navigator.mode = NV_COMMAND;
         }
         
+        if(platform.keys_pressed[SDL_SCANCODE_E]){
+            auto node = presenter->active_present_node;
+            auto expr = make_binary_node(&friday.node_pool, "binary");
+            expr->binary.left = make_literal_node(&friday.node_pool, 1);
+            expr->binary.right = make_literal_node(&friday.node_pool, 2);
+            expr->binary.op_type = OP_PLUS;
+            node->node->declaration.expression = expr;
+            node->node->declaration.is_initialised = true;
+            navigator.mode = NV_COMMAND;
+        }
         if(platform.keys_pressed[SDL_SCANCODE_C]){
             auto node = presenter->active_present_node;
             auto decl = make_conditional_node(&friday.node_pool, "untitled");
@@ -167,7 +173,6 @@ navigate_graph(Presenter* presenter){
             
         }
     }
-    const u8* state = SDL_GetKeyboardState(nullptr);
     if(state[SDL_SCANCODE_LCTRL] &&
        state[SDL_SCANCODE_LEFTBRACKET]){
         navigator.mode = NV_COMMAND;

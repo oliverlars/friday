@@ -164,12 +164,20 @@ make_scope_node(Pool* pool, char* name){
 
 
 internal Node*
+make_type_usage_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_TYPE_USAGE, name);
+    result->type_usage.type_reference = _u16;
+    result->type_usage.number_of_pointers = 0;
+    return result;
+}
+
+internal Node*
 make_function_node(Pool* pool, char* name){
     Node* result = make_node(pool, NODE_FUNCTION, name);
     result->function.parameters = make_dummy_node(pool);
     result->function.scope = make_scope_node(pool, "scope");
     result->function.scope->next = make_dummy_node(pool);
-    result->function.return_type = _u16;
+    result->function.return_type = make_type_usage_node(pool, name);
     return result;
 }
 
@@ -183,8 +191,7 @@ make_struct_node(Pool* pool, char* name){
 internal Node*
 make_declaration_node(Pool* pool, char* name){
     Node* result = make_node(pool, NODE_DECLARATION, name);
-    result->declaration.type_usage = _u8;
-    
+    result->declaration.type_usage = make_type_usage_node(pool, name);
     return result;
 }
 

@@ -553,9 +553,7 @@ present_function_node(Presenter* presenter, Node* node){
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
             present_space(presenter);
-            set_current_right_node(presenter, param->declaration.type_usage);
-            present_editable_string(presenter, &param->declaration.type_usage->name, theme.text_type.packed);
-            
+            present_type_usage_node(presenter, param->declaration.type_usage);
             if(param->next){
                 present_misc(presenter, ",");
                 present_space(presenter);
@@ -591,7 +589,10 @@ internal void
 present_type_usage_node(Presenter* presenter, Node* node){
     set_current_right_node(presenter, node);
     present_space(presenter);
-    present_editable_string(presenter, &node->name,
+    for(int i = 0; i < node->type_usage.number_of_pointers; i++){
+        present_misc(presenter, "*", theme.text.packed);
+    }
+    present_editable_string(presenter, &node->type_usage.type_reference->name,
                             theme.text_type.packed);
     present_space(presenter);
 }
@@ -620,6 +621,7 @@ present_declaration_node(Presenter* presenter, Node* node){
     present_graph(presenter, decl->type_usage);
     present_misc(presenter, "= ");
     if(decl->is_initialised){
+        present_graph(presenter, decl->expression);
     }else {
         present_misc(presenter, "void");
     }
@@ -782,11 +784,23 @@ present(Presenter* presenter){
 }
 
 
+enum Navigation_Mode {
+    NV_COMMAND,
+    NV_MAKE,
+    NV_EDIT,
+    NV_TEXT_EDIT,
+    NV_DELETE,
+};
+struct {
+    Navigation_Mode mode = NV_COMMAND;
+} navigator;
+
 internal void
 draw_status_bar(Presenter* active_presenter){
     int size = 40;
     int x = 0;
-    push_rectangle(x, -size, platform.width-10, size*2, 10, theme.panel.packed);
+    int width = platform.width-10;
+    push_rectangle(x, -size, width, size*2, 10, theme.panel.packed);
     
     char* file = " active node: "; 
     push_string(x, size/2-renderer.fonts[0].line_height/4, 
@@ -830,6 +844,41 @@ draw_status_bar(Presenter* active_presenter){
         }break;
         case NODE_STRUCT:{
             char* str = "struct";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+    }
+    
+    x = width/3;
+    char* mode = "active mode: ";
+    
+    push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                mode, theme.text_misc.packed);
+    x += get_text_width(file);
+    
+    switch(navigator.mode){
+        case NV_COMMAND:{
+            char* str = "command";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NV_MAKE:{
+            char* str = "make";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NV_EDIT:{
+            char* str = "edit";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        NV_TEXT_EDIT:{
+            char* str = "text edit";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        NV_DELETE:{
+            char* str = "delete";
             push_string(x, size/2-renderer.fonts[0].line_height/4, 
                         str, theme.text.packed);
         }break;

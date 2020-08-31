@@ -201,7 +201,7 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
     
     f32 line_height = renderer.fonts[0].line_height;
     presenter->cursor_target_rect.x = get_presenter_x(presenter);
-    presenter->cursor_target_rect.y = get_presenter_y(presenter)-line_height/4;
+    presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
     presenter->cursor_target_rect.z = get_text_width(string);
     presenter->cursor_target_rect.w = line_height;
     
@@ -209,12 +209,8 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
     v4f r = presenter->cursor_rect;
     v4f rt = presenter->cursor_target_rect;
-    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.cursor.packed);
-    if(rects_similar(presenter->cursor_rect, presenter->cursor_target_rect, 10.0f)){
-        present_string(presenter, string, theme.panel.packed);
-    }else {
-        present_string(presenter, string, colour);
-    }
+    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.button_highlight.packed);
+    present_string(presenter, string, colour);
     
 }
 
@@ -223,19 +219,16 @@ present_highlighted_string(Presenter* presenter, char* string, u32 colour = them
     
     f32 line_height = renderer.fonts[0].line_height;
     presenter->cursor_target_rect.x = get_presenter_x(presenter);
-    presenter->cursor_target_rect.y = get_presenter_y(presenter)-line_height/4;
+    presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
     presenter->cursor_target_rect.z = get_text_width(string);
     presenter->cursor_target_rect.w = line_height;
     
     presenter->cursor_rect = add_rects(presenter->cursor_rect, 
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
     v4f r = presenter->cursor_rect;
-    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.cursor.packed);
-    if(rects_similar(presenter->cursor_rect, presenter->cursor_target_rect, 10.0f)){
-        present_string(presenter, string, theme.panel.packed);
-    }else {
-        present_string(presenter, string, colour);
-    }
+    v4f rt = presenter->cursor_target_rect;
+    push_rectangle(r.x, r.y, r.z, r.w, 10, theme.button_highlight.packed);
+    present_string(presenter, string, colour);
     
 }
 
@@ -272,7 +265,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     }
     
     if(is_active_present_node(presenter) && !presenter->should_edit){
-        present_highlighted_string(presenter, *string);
+        present_highlighted_string(presenter, *string, colour);
     }else{
         present_string(presenter, *string, colour);
     }
@@ -333,7 +326,7 @@ present_selectable_string(Presenter* presenter, char* string, u32 colour = theme
     }
     
     if(is_active_present_node(presenter)){
-        present_highlighted_string(presenter, string);
+        present_highlighted_string(presenter, string, colour);
     }else{
         present_string(presenter, string, colour);
     }

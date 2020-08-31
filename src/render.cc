@@ -1636,18 +1636,6 @@ draw_menu_bar(){
 }
 
 internal void
-draw_status_bar(){
-    int size = 40;
-    int x = 0;
-    push_rectangle(x += 5, -size, platform.width-10, size*2, 10, theme.panel.packed);
-    
-    char* file = "active node: "; 
-    push_string(x+=5, size/2-renderer.fonts[0].line_height/2, 
-                file, theme.text.packed);
-    
-}
-
-internal void
 draw_view_buttons(){
     f32 size = 60;
     f32 x = 30;

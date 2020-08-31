@@ -172,7 +172,7 @@ main(int argc, char** args){
         //present_graph(global_scope->scope.statements->next);
         
         draw_menu_bar();
-        draw_status_bar();
+        draw_status_bar(&presenter);
         
         display_modes();
         navigate_graph(&presenter);

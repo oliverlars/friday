@@ -553,7 +553,8 @@ present_function_node(Presenter* presenter, Node* node){
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
             present_space(presenter);
-            present_string(presenter, param->declaration.type_usage->name, theme.text_type.packed);
+            set_current_right_node(presenter, param->declaration.type_usage);
+            present_editable_string(presenter, &param->declaration.type_usage->name, theme.text_type.packed);
             
             if(param->next){
                 present_misc(presenter, ",");
@@ -772,4 +773,59 @@ present(Presenter* presenter){
     if(!presenter) return;
     present_graph(presenter, presenter->root);
     
+}
+
+
+internal void
+draw_status_bar(Presenter* active_presenter){
+    int size = 40;
+    int x = 0;
+    push_rectangle(x, -size, platform.width-10, size*2, 10, theme.panel.packed);
+    
+    char* file = " active node: "; 
+    push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                file, theme.text_misc.packed);
+    x += get_text_width(file);
+    switch(active_presenter->active_present_node->node->type){
+        case NODE_DECLARATION:{
+            char* str = "declaration";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_TYPE_USAGE:{
+            char* str = "type usage";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_FUNCTION:{
+            char* str = "function";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_LOOP:{
+            char* str = "loop";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_CONDITIONAL:{
+            char* str = "conditional";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_LITERAL:{
+            char* str = "literal";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_BINARY:{
+            char* str = "binary";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+        case NODE_STRUCT:{
+            char* str = "struct";
+            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+                        str, theme.text.packed);
+        }break;
+    }
 }

@@ -662,11 +662,17 @@ present_scope_node(Presenter* presenter, Node* node){
     //set_current_node(presenter, node);
     auto scope = &node->scope;
     Node* stmt = scope->statements;
+    Node* prev = stmt;
     for(; stmt; stmt = stmt->next){
         if(stmt->type != NODE_DUMMY){
             set_current_down_node(presenter, stmt);
         }
+        if(prev->type != stmt->type){
+            present_new_line(presenter);
+        }
         present_graph(presenter, stmt);
+        prev = stmt;
+        
     }
 }
 

@@ -3,6 +3,7 @@ struct Present_Node {
     Node* node;
     Present_Node* next = nullptr;
     Present_Node* prev = nullptr;
+    
     Present_Node* left = nullptr;
     Present_Node* right = nullptr;
     Present_Node* up = nullptr;
@@ -282,6 +283,29 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     }
 }
 
+internal void
+present_selectable_string(Presenter* presenter, char* string, u32 colour = theme.text.packed){
+    
+    auto id = gen_id(string);
+    auto widget = ui_push_widget(get_presenter_x(presenter),
+                                 get_presenter_y(presenter),
+                                 get_text_width(string),
+                                 renderer.fonts[0].line_height, 
+                                 id, {});
+    
+    
+    if(id == ui_state.clicked_id || is_active_present_node(presenter)){
+        
+    }else if(id == ui_state.hover_id){
+    }
+    
+    if(is_active_present_node(presenter)){
+        present_highlighted_string(presenter, string);
+    }else{
+        present_string(presenter, string, colour);
+    }
+}
+
 
 #define INSERTABLE_WIDTH 20
 internal void
@@ -449,6 +473,12 @@ present_binary_node(Presenter* presenter, Node* node){
         case OP_MINUS: present_misc(presenter, " - ");break;
         case OP_DIVIDE: present_misc(presenter, " / ");break;
         case OP_MULTIPLY: present_misc(presenter, " * ");break;
+        case OP_LT: present_misc(presenter, " < ");break;
+        case OP_EQ: present_misc(presenter, " == ");break;
+        case OP_GT: present_misc(presenter, " > ");break;
+        case OP_LTE: present_misc(presenter, " <= ");break;
+        case OP_NEQ: present_misc(presenter, " != ");break;
+        case OP_GTE: present_misc(presenter, " >= ");break;
     }
     
     present_binary_literal(presenter, binary->right);
@@ -494,7 +524,7 @@ present_function_node(Presenter* presenter, Node* node){
         }
     }
     //present_x_insertable(presenter, closure, node->name);
-    present_x_insertable(presenter, closure, "arg%d", (int)node);
+    present_x_insertable(presenter, closure, "arg%d", (u64)node);
     
     present_misc(presenter, ") {");
     
@@ -504,7 +534,6 @@ present_function_node(Presenter* presenter, Node* node){
         present_graph(presenter, function->scope);
     }
     
-    present_new_line(presenter);
     
     present_misc(presenter, "}");
     present_new_line(presenter);
@@ -539,7 +568,7 @@ present_declaration_node(Presenter* presenter, Node* node){
     present_misc(presenter, " :");
     
     Closure closure = make_closure(insert_type_for_declaration, 1, arg(node));
-    present_x_insertable(presenter, closure, "test%d", (int)node);
+    present_x_insertable(presenter, closure, "test%d", (u64)node);
     
     present_graph(presenter, decl->type_usage);
     present_misc(presenter, "= ");
@@ -595,6 +624,55 @@ present_scope_node(Presenter* presenter, Node* node){
 }
 
 internal void
+present_loop_node(Presenter* presenter, Node* node){
+    auto loop = &node->loop;
+    present_selectable_string(presenter, "loop", theme.text.packed);
+    present_space(presenter);
+    
+    present_graph(presenter, loop->min);
+    present_space(presenter);
+    present_misc(presenter, "to", theme.text.packed);
+    present_space(presenter);
+    present_graph(presenter, loop->max);
+    present_space(presenter);
+    present_misc(presenter, "{");
+    present_new_line(presenter);
+    present_indent(presenter){
+        present_graph(presenter, loop->scope);
+    }
+    present_misc(presenter, "}");
+    present_new_line(presenter);
+}
+
+internal void
+present_conditional_node(Presenter* presenter, Node* node){
+    auto cond = &node->conditional;
+    present_selectable_string(presenter, "if", theme.text.packed);
+    present_space(presenter);
+    
+    present_graph(presenter, cond->condition);
+    
+    present_space(presenter);
+    present_misc(presenter, "{");
+    present_new_line(presenter);
+    present_indent(presenter){
+        present_graph(presenter, cond->scope);
+    }
+    present_misc(presenter, "}");
+    present_new_line(presenter);
+}
+
+internal void
+present_literal_node(Presenter* presenter, Node* node){
+    auto literal = &node->literal;
+    
+    char buffer[256];
+    int length = snprintf(buffer, 256, "%d", literal->_int);
+    buffer[length+1] = 0;
+    present_misc(presenter, buffer, theme.text_literal.packed);
+}
+
+internal void
 reset_presenter(Presenter* presenter){
     if(!presenter) return;
     presenter->x_offset = 0;
@@ -610,6 +688,9 @@ present_graph(Presenter* presenter, Node* root){
     switch(root->type){
         case NODE_BINARY:{
             present_binary_node(presenter, root);
+        }break;
+        case NODE_LITERAL: {
+            present_literal_node(presenter, root);
         }break;
         case NODE_UNARY:{
             
@@ -638,8 +719,10 @@ present_graph(Presenter* presenter, Node* root){
             present_function_node(presenter, root);
         }break;
         case NODE_CONDITIONAL: {
+            present_conditional_node(presenter, root);
         }break;
         case NODE_LOOP: {
+            present_loop_node(presenter, root);
         }break;
         case NODE_CALL: {
         }break;

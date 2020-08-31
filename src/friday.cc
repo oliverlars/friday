@@ -1,7 +1,6 @@
 #include "../ext/sdl/SDL.h"
 #include "../ext/sdl/SDL_opengl.h"
 #include "../ext/optick/optick.h"
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,10 +22,6 @@
 #include "navigation.cc"
 
 global SDL_Window* global_window;
-
-#define Kilobytes(x) (1024*x)
-#define Megabytes(x) (Kilobytes(x)*1024)
-#define Gigabytes(x) (Megabytes(x)*1024)
 
 
 int 
@@ -101,11 +96,13 @@ main(int argc, char** args){
     global_scope->scope.statements->next->next->function.parameters = make_node(pool, NODE_DUMMY, "parameters");
     
     global_scope->scope.statements->next->next->function.scope = make_node(pool, NODE_SCOPE);
+    auto function_scope = global_scope->scope.statements->next->next->function.scope;
     
-    global_scope->scope.statements->next->next->function.scope->scope.statements = make_node(pool, NODE_DUMMY);
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next = make_declaration_node(pool, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next = make_declaration_node(pool, "test");
-    global_scope->scope.statements->next->next->function.scope->scope.statements->next->next->next = make_declaration_node(pool, "test");
+    function_scope->scope.statements = make_node(pool, NODE_DUMMY);
+    function_scope->scope.statements->prev = nullptr;
+    function_scope->scope.statements->next = make_declaration_node(pool, "test");
+    function_scope->scope.statements->next->prev = function_scope->scope.statements->next;
+    function_scope->scope.statements->next->next = nullptr;
     
     
     friday.program_root = global_scope;
@@ -198,6 +195,7 @@ main(int argc, char** args){
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
         
+        memset(platform.keys_pressed, 0, 4096);
         
         
         while(SDL_PollEvent(&event)){
@@ -262,19 +260,16 @@ main(int argc, char** args){
                 platform.has_text_input = 1;
                 *text_input++ = *event.text.text;
             }
+            
             if(event.type == SDL_KEYDOWN){
                 SDL_Keycode key = event.key.keysym.sym;
-                if(!platform.keys_pressed[SDL_GetScancodeFromKey(key)]) {
-                    platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
-                }else {
-                    platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
-                }
+                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
                 
             }
+            
             if(event.type == SDL_KEYUP){
                 SDL_Keycode key = event.key.keysym.sym;
                 platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
-                platform.keys_down[SDL_GetScancodeFromKey(key)] = 0;
                 
             }
             

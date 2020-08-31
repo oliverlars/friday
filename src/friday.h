@@ -213,6 +213,7 @@ arena_allocate(Arena* arena, u64 size){
     if(!arena->active  || 
        arena->active->used + size > arena->active->size){
         if(arena->active && arena->active->next){
+            assert(true);
             // NOTE(Oliver): we must have already allocated some
             // blocks, lets reuse those!!!
             arena->active = arena->active->next;
@@ -446,6 +447,8 @@ struct Pool {
         if(!is_valid_pointer) return;
         
         Pool_Node* node;
+        
+        
         
         node = (Pool_Node*)pointer;
         node->next = free_head;

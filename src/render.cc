@@ -259,19 +259,15 @@ init_font(char* font_name, int font_size){
 
 internal void
 insert_command(Command* next_command){
-    if(renderer.head){
-        
-        Command* command = renderer.head;
-        while(command->next){
-            command = command->next;
-        }
-        command->next = next_command;
-        
-    }else{
-        // first node 
+    if(!renderer.tail){
         renderer.head = next_command;
-        //renderer.tail = renderer.head;
+        renderer.tail = renderer.head;
+    }else {
+        renderer.tail->next = next_command;
+        renderer.tail = renderer.tail->next;
     }
+    return;
+    
 }
 
 internal inline GLuint
@@ -1123,7 +1119,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
                     
-                    float resolution[2] = {platform.width, platform.height};
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
                     
                     glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
@@ -1163,7 +1159,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(renderer.programs[COMMAND_RECTANGLE_OUTLINE]);
                     
-                    float resolution[2] = {platform.width, platform.height};
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 
                                  1, resolution);
                     
@@ -1205,7 +1201,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_circle());
                     
-                    float resolution[2] = {platform.width, platform.height};
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
                     
                     glBindVertexArray(get_vao_circle());
@@ -1249,7 +1245,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_glyph());
                     
-                    float resolution[2] = {platform.width, platform.height};
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
                     
                     glActiveTexture(GL_TEXTURE0);
@@ -1291,7 +1287,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_rectangle_textured());
                     
-                    float resolution[2] = {platform.width, platform.height};
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_TEXTURED], 1, resolution);
                     
                     glActiveTexture(GL_TEXTURE0);
@@ -1607,7 +1603,7 @@ draw_menu_bar(){
         items[2] = make_string(arena, "Open");
         items[1] = make_string(arena, "Open Recent");
         items[0] = make_string(arena, "Save");
-        Closure empty;
+        Closure empty = {};
         draw_menu(file_x, platform.height-size-40, "file_menu",
                   items, 4, empty);
         
@@ -1621,7 +1617,7 @@ draw_menu_bar(){
         items[2] = make_string(arena, "Undo History");
         items[1] = make_string(arena, "Repeat");
         items[0] = make_string(arena, "Preferences");
-        Closure empty;
+        Closure empty = {};
         draw_menu(edit_x, platform.height-size-40, "edit_menu",
                   items, 5, empty);
         
@@ -1632,7 +1628,7 @@ draw_menu_bar(){
         Arena* arena = &renderer.temp_string_arena;
         items[1] = make_string(arena, "About");
         items[0] = make_string(arena, "Splash Screen");
-        Closure empty;
+        Closure empty = {};
         draw_menu(help_x, platform.height-size-40, "help_menu",
                   items, 2, empty);
         

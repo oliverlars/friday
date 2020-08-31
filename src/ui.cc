@@ -85,7 +85,8 @@ struct Widget {
 };
 
 global struct {
-    Widget* widgets;
+    Widget* widgets = nullptr;
+    Widget* widgets_tail = nullptr;
     UI_ID hover_id;
     UI_ID clicked_id;
     UI_ID menu_id;
@@ -191,17 +192,13 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     widget->next = nullptr;
     widget->closure = closure;
     
-    if(ui_state.widgets){
-        Widget* widgets;
-        for(widgets = ui_state.widgets; widgets->next; widgets = widgets->next){
-            
-        }
-        widgets->next = widget;
-    }else{
+    if(!ui_state.widgets_tail){
         ui_state.widgets = widget;
+        ui_state.widgets_tail = ui_state.widgets;
+    }else{
+        ui_state.widgets_tail->next = widget;
+        ui_state.widgets_tail = ui_state.widgets_tail->next;
     }
-    
-    
     return widget;
 }
 
@@ -421,7 +418,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type type){
 }
 
 struct Animation_State {
-    UI_ID id = -1;
+    UI_ID id = U64Max;
     f32 x_offset = 0;
     f32 y_offset = 0;
     f32 x_scale = 0;

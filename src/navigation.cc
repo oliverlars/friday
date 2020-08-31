@@ -18,9 +18,11 @@ navigate_graph(Presenter* presenter){
     if(navigator.mode == NV_COMMAND){
         if(platform.keys_pressed[SDL_SCANCODE_D]){
             auto node = presenter->active_present_node;
-            friday.node_pool.clear(node->node);
-            platform.keys_pressed[SDL_SCANCODE_D] = 0;
+            auto node_to_delete = node->node;
+            remove_node_at(node_to_delete);
+            friday.node_pool.clear(node_to_delete);
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_J]){
             auto node = presenter->active_present_node;
             if(node->down){
@@ -42,19 +44,27 @@ navigate_graph(Presenter* presenter){
                     presenter->active_present_node = right->down;
                 }
             }
-            platform.keys_pressed[SDL_SCANCODE_J] = 0;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_K]){
             auto node = presenter->active_present_node;
             if(node->up){
-                presenter->active_present_node = presenter->active_present_node->up;
+                auto node_up = node->up;
+                while(node_up->left){
+                    node_up = node_up->left;
+                }
+                presenter->active_present_node = node_up;
             }else if(node->left){
                 auto left = node->left;
                 while(left->left){
                     left = left->left;
                 }
                 if(left->up){
-                    presenter->active_present_node = left->up;
+                    auto left_up = left->up;
+                    while(left_up->left){
+                        left_up = left_up->left;
+                    }
+                    presenter->active_present_node = left_up;
                 }
             }else if(node->right){
                 auto right = node->right;
@@ -65,44 +75,42 @@ navigate_graph(Presenter* presenter){
                     presenter->active_present_node = right->up;
                 }
             }
-            platform.keys_pressed[SDL_SCANCODE_K] = 0;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_L]){
             auto node = presenter->active_present_node;
             if(node->right){
                 presenter->active_present_node = presenter->active_present_node->right;
             }
-            debug_print("%d\n", (int)presenter->active_present_node);
-            platform.keys_pressed[SDL_SCANCODE_L] = 0;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_H]){
             auto node = presenter->active_present_node;
             if(node->left){
                 presenter->active_present_node = presenter->active_present_node->left;
             }
-            platform.keys_pressed[SDL_SCANCODE_H] = 0;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_I]){
             navigator.mode = NV_TEXT_EDIT;
             presenter->should_edit = true;
-            platform.keys_pressed[SDL_SCANCODE_I] = 0;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_M]){
             navigator.mode = NV_MAKE;
         }
     }
+    
     if(navigator.mode == NV_TEXT_EDIT){
         if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
            platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
             navigator.mode = NV_COMMAND;
             
             presenter->should_edit = false;
-            platform.keys_pressed[SDL_SCANCODE_LCTRL] = 0;
-            platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET] = 0;
-            
         }
     }
     if(navigator.mode == NV_MAKE){
+        
         if(platform.keys_pressed[SDL_SCANCODE_B]){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
@@ -112,42 +120,49 @@ navigate_graph(Presenter* presenter){
         if(platform.keys_pressed[SDL_SCANCODE_D]){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
-            if(node->node->next){
-                auto temp = node->node->next;
-                node->node->next = decl;
-                node->node->next->next = temp;
-            }else {
-                node->node->next = decl;
-            }
-            
+            insert_node_at(decl, node->node);
             navigator.mode = NV_COMMAND;
-            platform.keys_pressed[SDL_SCANCODE_D] = 0;
+        }
+        
+        if(platform.keys_pressed[SDL_SCANCODE_C]){
+            auto node = presenter->active_present_node;
+            auto decl = make_conditional_node(&friday.node_pool, "untitled");
+            insert_node_at(decl, node->node);
+            navigator.mode = NV_COMMAND;
+        }
+        
+        if(platform.keys_pressed[SDL_SCANCODE_L]){
+            auto node = presenter->active_present_node;
+            auto decl = make_loop_node(&friday.node_pool, "untitled");
+            insert_node_at(decl, node->node);
+            navigator.mode = NV_COMMAND;
         }
         if(platform.keys_pressed[SDL_SCANCODE_F]){
             auto node = presenter->active_present_node;
             auto func = make_function_node(&friday.node_pool, "untitled");
-            if(node->node->next){
-                auto temp = node->node->next;
-                node->node->next = func;
-                node->node->next->next = temp;
-            }else {
-                node->node->next = func;
-            }
+            insert_node_at(func, node->node);
             navigator.mode = NV_COMMAND;
         }
         if(platform.keys_pressed[SDL_SCANCODE_A]){
             auto node = presenter->active_present_node;
-            auto param = make_declaration_node(&friday.node_pool, "arg");
-            auto params = node->node->function.parameters;
-            while(params->next){
-                params = params->next;
+            if(node->node->type == NODE_FUNCTION){
+                auto param = make_declaration_node(&friday.node_pool, "arg");
+                auto params = node->node->function.parameters;
+                while(params->next){
+                    params = params->next;
+                }
+                params->next = param;
             }
-            params->next = param;
-            params->next->declaration.type_usage = _u16;
             navigator.mode = NV_COMMAND;
-            platform.keys_pressed[SDL_SCANCODE_A] = 0;
             
         }
+    }
+    if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
+       platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
+        navigator.mode = NV_COMMAND;
+        
+        presenter->should_edit = false;
+        
     }
     
 }

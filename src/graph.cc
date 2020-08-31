@@ -162,12 +162,14 @@ make_scope_node(Pool* pool, char* name){
     return result;
 }
 
+
 internal Node*
 make_function_node(Pool* pool, char* name){
     Node* result = make_node(pool, NODE_FUNCTION, name);
     result->function.parameters = make_dummy_node(pool);
     result->function.scope = make_scope_node(pool, "scope");
     result->function.scope->next = make_dummy_node(pool);
+    result->function.return_type = _u16;
     return result;
 }
 

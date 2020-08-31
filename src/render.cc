@@ -259,15 +259,14 @@ init_font(char* font_name, int font_size){
 
 internal void
 insert_command(Command* next_command){
-    if(!renderer.tail){
+    
+    if(!renderer.head){
         renderer.head = next_command;
         renderer.tail = renderer.head;
     }else {
         renderer.tail->next = next_command;
         renderer.tail = renderer.tail->next;
     }
-    return;
-    
 }
 
 internal inline GLuint

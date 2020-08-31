@@ -564,7 +564,15 @@ present_function_node(Presenter* presenter, Node* node){
     //present_x_insertable(presenter, closure, node->name);
     present_x_insertable(presenter, closure, "arg%d", (u64)node);
     
-    present_misc(presenter, ") {");
+    present_misc(presenter, ")");
+    if(function->return_type){
+        present_space(presenter);
+        present_misc(presenter, "->");
+        present_space(presenter);
+        present_graph(presenter, function->return_type);
+    }
+    present_space(presenter);
+    present_misc(presenter, "{");
     
     present_new_line(presenter);
     

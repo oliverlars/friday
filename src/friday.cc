@@ -92,7 +92,7 @@ main(int argc, char** args){
     Node* global_scope = make_node(pool, NODE_SCOPE, "global");
     global_scope->scope.statements = make_node(pool, NODE_DUMMY);
     global_scope->scope.statements->next = make_struct_node(pool, "mat4x4");
-    global_scope->scope.statements->next->next = make_node(pool, NODE_FUNCTION, "entry");
+    global_scope->scope.statements->next->next = make_function_node(pool, "entry");
     global_scope->scope.statements->next->next->function.parameters = make_node(pool, NODE_DUMMY, "parameters");
     
     global_scope->scope.statements->next->next->function.scope = make_node(pool, NODE_SCOPE);
@@ -195,7 +195,7 @@ main(int argc, char** args){
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
         
-        memset(platform.keys_pressed, 0, 4096);
+        memset(platform.keys_pressed, 0, 4096*sizeof(bool));
         
         
         while(SDL_PollEvent(&event)){

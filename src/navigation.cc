@@ -167,8 +167,9 @@ navigate_graph(Presenter* presenter){
             
         }
     }
-    if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
-       platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
+    const u8* state = SDL_GetKeyboardState(nullptr);
+    if(state[SDL_SCANCODE_LCTRL] &&
+       state[SDL_SCANCODE_LEFTBRACKET]){
         navigator.mode = NV_COMMAND;
         
         presenter->should_edit = false;

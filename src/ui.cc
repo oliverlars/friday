@@ -171,8 +171,8 @@ internal Widget*
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
              Closure closure, bool has_parameters = false){
     
-    //auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
-    auto widget = (Widget*)calloc(1, sizeof(Widget));
+    auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
+    //auto widget = (Widget*)calloc(1, sizeof(Widget));
     widget->x = x;
     widget->y = y;
     widget->width = width;
@@ -181,7 +181,7 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     widget->next = nullptr;
     widget->closure = closure;
     
-    if(!ui_state.widgets_tail){
+    if(!ui_state.widgets){
         ui_state.widgets = widget;
         ui_state.widgets_tail = ui_state.widgets;
     }else{
@@ -221,7 +221,7 @@ process_widgets_and_handle_events(){
         CLICK_MIDDLE,
     };
     Click_Type click_type;
-    for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
+    for(Widget* widget = ui_state.widgets; widget->next; widget = widget->next){
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
             ui_state.hover_id = widget->id;

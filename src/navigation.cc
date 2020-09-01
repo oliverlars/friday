@@ -132,14 +132,25 @@ navigate_graph(Presenter* presenter){
         
         if(platform.keys_pressed[SDL_SCANCODE_E]){
             auto node = presenter->active_present_node;
+            auto np = &friday.node_pool;
+            auto token_list = make_expr_token_node(np, "(");
+            token_list->next = make_expr_token_node(np, "1");
+            token_list->next->next = make_expr_token_node(np, "+");
+            token_list->next->next->next = make_expr_token_node(np, "2");
+            token_list->next->next->next->next = make_expr_token_node(np, ")");
+            token_list->next->next->next->next->next = make_expr_token_node(np, "*");
+            token_list->next->next->next->next->next->next = make_expr_token_node(np, "3");
+#if 0
             auto expr = make_binary_node(&friday.node_pool, "binary");
             expr->binary.left = make_literal_node(&friday.node_pool, 1);
             expr->binary.right = make_literal_node(&friday.node_pool, 2);
             expr->binary.op_type = OP_PLUS;
-            node->node->declaration.expression = expr;
+#endif
+            node->node->declaration.expression = token_list;
             node->node->declaration.is_initialised = true;
             navigator.mode = NV_COMMAND;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_C]){
             auto node = presenter->active_present_node;
             auto decl = make_conditional_node(&friday.node_pool, "untitled");
@@ -153,12 +164,14 @@ navigate_graph(Presenter* presenter){
             insert_node_at(decl, node->node);
             navigator.mode = NV_COMMAND;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_F]){
             auto node = presenter->active_present_node;
             auto func = make_function_node(&friday.node_pool, "untitled");
             insert_node_at(func, node->node);
             navigator.mode = NV_COMMAND;
         }
+        
         if(platform.keys_pressed[SDL_SCANCODE_A]){
             auto node = presenter->active_present_node;
             if(node->node->type == NODE_FUNCTION){

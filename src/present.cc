@@ -42,6 +42,8 @@ struct Presenter {
     v4f cursor_target_rect;
     Colour cursor_colour;
     Colour cursor_target_colour;
+    
+    String8 token_list;
 };
 
 
@@ -608,6 +610,17 @@ insert_type_for_declaration(u8* parameters){
     decl->type_usage->type_usage.type_reference = node_list[0];
 }
 
+
+internal void
+present_expr_token_node(Presenter* presenter, Node* node){
+    auto token = node;
+    
+    for(;token; token = token->next){
+        present_misc(presenter, token->name);
+        present_space(presenter);
+    }
+}
+
 internal void
 present_declaration_node(Presenter* presenter, Node* node){
     
@@ -742,8 +755,6 @@ present_graph(Presenter* presenter, Node* root){
         }break;
         case NODE_STRUCT: {
             present_struct_node(presenter, root);
-            present_new_line(presenter);
-            present_new_line(presenter);
         }break;
         case NODE_ENUM: {
         }break;
@@ -771,7 +782,9 @@ present_graph(Presenter* presenter, Node* root){
         }break;
         case NODE_CALL: {
         }break;
-        
+        case NODE_EXPR_TOKEN:{
+            present_expr_token_node(presenter, root);
+        }break;
     }
     
 }
@@ -872,12 +885,12 @@ draw_status_bar(Presenter* active_presenter){
             push_string(x, size/2-renderer.fonts[0].line_height/4, 
                         str, theme.text.packed);
         }break;
-        NV_TEXT_EDIT:{
+        case NV_TEXT_EDIT:{
             char* str = "text edit";
             push_string(x, size/2-renderer.fonts[0].line_height/4, 
                         str, theme.text.packed);
         }break;
-        NV_DELETE:{
+        case NV_DELETE:{
             char* str = "delete";
             push_string(x, size/2-renderer.fonts[0].line_height/4, 
                         str, theme.text.packed);

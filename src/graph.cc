@@ -15,6 +15,7 @@ enum Node_Type {
     NODE_CONDITIONAL,
     NODE_LOOP,
     NODE_CALL,
+    NODE_EXPR_TOKEN,
     NODE_DUMMY,
 };
 
@@ -97,6 +98,7 @@ struct Node {
         
         struct {
             Node* statements;
+            Node* outer;
         } scope;
         
         struct {
@@ -119,6 +121,10 @@ struct Node {
             Node* arguments;
         } call;
         
+        struct {
+            Node* reference;
+            
+        } expr_token;
     };
 };
 
@@ -178,6 +184,13 @@ make_function_node(Pool* pool, char* name){
     result->function.scope = make_scope_node(pool, "scope");
     result->function.scope->next = make_dummy_node(pool);
     result->function.return_type = make_type_usage_node(pool, name);
+    return result;
+}
+
+internal Node*
+make_expr_token_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_EXPR_TOKEN, name);
+    result->expr_token.reference = nullptr;
     return result;
 }
 

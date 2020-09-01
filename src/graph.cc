@@ -15,7 +15,7 @@ enum Node_Type {
     NODE_CONDITIONAL,
     NODE_LOOP,
     NODE_CALL,
-    NODE_EXPR_TOKEN,
+    NODE_TOKEN,
     NODE_DUMMY,
 };
 
@@ -36,6 +36,12 @@ enum Literal_Type {
     LIT_FLOAT,
     LIT_INTEGER,
     LIT_STRING,
+};
+
+enum Token_Type {
+    TOKEN_MISC,
+    TOKEN_REFERENCE,
+    TOKEN_LITERAL,
 };
 
 struct Node {
@@ -123,8 +129,8 @@ struct Node {
         
         struct {
             Node* reference;
-            
-        } expr_token;
+            Token_Type token_type;
+        } token;
     };
 };
 
@@ -188,9 +194,30 @@ make_function_node(Pool* pool, char* name){
 }
 
 internal Node*
-make_expr_token_node(Pool* pool, char* name){
-    Node* result = make_node(pool, NODE_EXPR_TOKEN, name);
-    result->expr_token.reference = nullptr;
+make_token_node(Pool* pool, char* name){
+    Node* result = make_node(pool, NODE_TOKEN, name);
+    result->token.reference = nullptr;
+    return result;
+}
+
+internal Node*
+make_token_misc_node(Pool* pool, char* name){
+    Node* result = make_token_node(pool, name);
+    result->token.token_type = TOKEN_MISC;
+    return result;
+}
+
+internal Node*
+make_token_literal_node(Pool* pool, char* name){
+    Node* result = make_token_node(pool, name);
+    result->token.token_type = TOKEN_LITERAL;
+    return result;
+}
+
+internal Node*
+make_token_reference_node(Pool* pool, char* name){
+    Node* result = make_token_node(pool, name);
+    result->token.token_type = TOKEN_REFERENCE;
     return result;
 }
 

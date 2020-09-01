@@ -610,13 +610,75 @@ insert_type_for_declaration(u8* parameters){
     decl->type_usage->type_usage.type_reference = node_list[0];
 }
 
+internal void
+present_editable_token_list(Presenter* presenter, Node* node){
+    
+    auto token = node;
+    
+#if 0
+    auto id = gen_id(node->name);
+    auto widget = ui_push_widget(get_presenter_x(presenter),
+                                 get_presenter_y(presenter),
+                                 get_text_width(node->name),
+                                 renderer.fonts[0].line_height, 
+                                 id, {});
+    
+    
+    if(id == ui_state.clicked_id || 
+       (is_active_present_node(presenter) && presenter->should_edit)){
+        presenter->active_string = &node->name;
+        presenter->cursor_index = node->name.length;
+        f32 text_width = get_text_width(node->name);
+        f32 offset = 5.0f;
+        f32 width = text_width + offset;
+        f32 line_height = renderer.fonts[0].line_height;
+        f32 height = line_height;
+        f32 x = get_presenter_x(presenter) - offset/2;
+        f32 y = get_presenter_y(presenter) - line_height*0.25;
+        
+        if(presenter->active_string == &node->name){
+            f32 cursor_pos = get_text_width(node->name);
+            push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
+            edit_string(presenter, &node->name);
+        }
+    }else if(id == ui_state.hover_id){
+    }
+    
+    if(is_active_present_node(presenter) && !presenter->should_edit){
+        present_highlighted_string(presenter, node->name, colour);
+    }else{
+        present_string(presenter, node->name, colour);
+    }
+#endif
+}
 
 internal void
-present_expr_token_node(Presenter* presenter, Node* node){
+present_editable_token_list(Presenter* presenter, String8 string, u32 colour){
+    
+    if(is_active_present_node(presenter)){
+        present_highlighted_string(presenter, string, colour);
+    }else {
+        present_misc(presenter, string, colour);
+    }
+    
+}
+
+internal void
+present_token_node(Presenter* presenter, Node* node){
     auto token = node;
     
     for(;token; token = token->next){
-        present_misc(presenter, token->name);
+        Colour colour = theme.text_misc;
+        switch(token->token.token_type){
+            case TOKEN_LITERAL:{
+                colour = theme.text_literal;
+            }break;
+            case TOKEN_REFERENCE:{
+                colour = theme.text;
+            }break;
+        }
+        set_current_right_node(presenter, token);
+        present_editable_token_list(presenter, token->name, colour.packed);
         present_space(presenter);
     }
 }
@@ -782,8 +844,8 @@ present_graph(Presenter* presenter, Node* root){
         }break;
         case NODE_CALL: {
         }break;
-        case NODE_EXPR_TOKEN:{
-            present_expr_token_node(presenter, root);
+        case NODE_TOKEN:{
+            present_token_node(presenter, root);
         }break;
     }
     

@@ -134,12 +134,24 @@ navigate_graph(Presenter* presenter){
             auto node = presenter->active_present_node;
             auto np = &friday.node_pool;
             auto token_list = make_token_misc_node(np, "(");
+            token_list->prev = nullptr;
             token_list->next = make_token_literal_node(np, "1");
+            token_list->next->prev = token_list;
             token_list->next->next = make_token_misc_node(np, "+");
+            token_list->next->next->prev = token_list->next;
+            
             token_list->next->next->next = make_token_literal_node(np, "2");
+            token_list->next->next->next->prev = token_list->next->next;
+            
             token_list->next->next->next->next = make_token_misc_node(np, ")");
+            token_list->next->next->next->next->prev = token_list->next->next->next;
+            
             token_list->next->next->next->next->next = make_token_misc_node(np, "*");
+            token_list->next->next->next->next->next->prev = token_list->next->next->next->next;
+            
             token_list->next->next->next->next->next->next = make_token_literal_node(np, "3");
+            token_list->next->next->next->next->next->next->prev = token_list->next->next->next->next->next;
+            
 #if 0
             auto expr = make_binary_node(&friday.node_pool, "binary");
             expr->binary.left = make_literal_node(&friday.node_pool, 1);

@@ -1,5 +1,7 @@
 // NOTE(Oliver): stuff!
 
+#define SDL_SCANCODE_NUMBER(x) SDL_SCANCODE_##x
+
 internal void
 navigate_graph(Presenter* presenter){
     Present_Node* node_list = presenter->node_list;
@@ -17,6 +19,20 @@ navigate_graph(Presenter* presenter){
             auto node = presenter->active_present_node;
             if(node->node->type == NODE_TYPE_USAGE){
                 node->node->type_usage.number_of_pointers++;
+            }
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_9]){
+            auto node = presenter->active_present_node;
+            if(node->node->type == NODE_TOKEN){
+                auto token = make_token_misc_node(&friday.node_pool, "(");
+                insert_node_at(token, node->node);
+            }
+        }
+        if(platform.keys_pressed[SDL_SCANCODE_0]){
+            auto node = presenter->active_present_node;
+            if(node->node->type == NODE_TOKEN){
+                auto token = make_token_misc_node(&friday.node_pool, ")");
+                insert_node_at(token, node->node);
             }
         }
         if(platform.keys_pressed[SDL_SCANCODE_J]){

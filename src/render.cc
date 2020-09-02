@@ -1428,6 +1428,45 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     return id;
 }
 
+
+internal UI_ID
+small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
+    auto id = gen_unique_id(label);
+    auto widget = _push_widget(x, y, size, size, id, closure);
+    
+    f32 line_height = renderer.fonts[0].line_height;
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 0.1f;
+    }
+    if(id == ui_state.clicked_id){
+        unanimate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else if(id == ui_state.hover_id){
+        animate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else{
+        unanimate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }
+    
+    return id;
+}
+
+
 Bitmap bitmap;
 Bitmap move_icon;
 Bitmap add_icon;
@@ -1657,4 +1696,116 @@ draw_view_buttons(){
         
     }
     
+}
+
+
+Bitmap search_icon;
+Bitmap run_icon;
+Bitmap layers_icon;
+Bitmap document_icon;
+
+internal void 
+draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
+    if(!root) return;
+    auto id = gen_unique_id("panel");
+    f32 new_width = width;
+    f32 new_height = height;
+    f32 new_posx = posx;
+    f32 new_posy = posy;
+    
+    for(int i = 0; i < 2; i++){
+        
+        if(root->children[i]){
+            switch(root->children[i]->split_type){
+                case PANEL_SPLIT_HORIZONTAL:{
+                    new_height *= root->children[i]->split_ratio;
+                    new_posy += new_height;
+                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
+                }break;
+                case PANEL_SPLIT_VERTICAL:{
+                    new_width *= root->children[i]->split_ratio;
+                    new_posx += new_width;
+                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
+                }break;
+            }
+        }
+        new_posx = 0;
+        new_posy = 0;
+    }
+    
+    //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
+    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
+        panel_resize = 1;
+        old_width = width;
+        active_panel = root;
+        split_ratio = root->split_ratio;
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+        SDL_SetCursor(cursor);
+        
+    }
+    
+    
+    if(!panel_resize){
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+        SDL_SetCursor(cursor);
+    }else if(panel_resize){
+        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
+        if(root == active_panel){
+            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
+        }else {
+            root->split_ratio = clampf(split_ratio - delta, 0, 1);
+        }
+    }
+    auto callback = [](u8* parameters){
+        return;
+    };
+    
+    
+    Closure closure = make_closure(callback, 0);
+    auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
+                               new_width-PANEL_BORDER*2, new_width-PANEL_BORDER*2, id,
+                               closure);
+    
+    if(root->type == PANEL_PROPERTIES){
+        
+#if 0
+        push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
+                       30, new_height-PANEL_BORDER*2, 5, theme.background.packed);
+#endif
+        Bitmap icons[] = {
+            search_icon,
+            run_icon,
+            layers_icon,
+            document_icon,
+        };
+        char* icon_labels[] = {
+            "search",
+            "run",
+            "layers",
+            "document"
+        };
+        f32 x = posx + PANEL_BORDER;
+        f32 y = new_height-PANEL_BORDER;
+        f32 spacing = 15;
+        f32 size = 40;
+        for(int i = 0; i < 4; i++){
+            auto callback = [](u8* parameters){};
+            Closure closure = make_closure(callback, 0);
+            small_icon_button(icon_labels[i], x, y, size, icons[i], closure);
+            y -= size + spacing;
+            
+        }
+        
+        push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
+                       new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
+    }else {
+        
+        push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
+                       new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
+        
+    }
+    present(root->presenter);
+    reset_presenter(root->presenter);
 }

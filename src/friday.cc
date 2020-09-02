@@ -121,6 +121,11 @@ main(int argc, char** args){
     options_icon = make_bitmap("options_icon.png");
     bin_icon = make_bitmap("bin_icon.png");
     
+    search_icon = make_bitmap("search_icon.png");
+    run_icon = make_bitmap("running_icon.png");
+    layers_icon = make_bitmap("layers_icon.png");
+    document_icon = make_bitmap("document_icon.png");
+    
     cursor_bitmap = make_bitmap("arrow.png");
     
     load_theme_ayu();
@@ -137,8 +142,9 @@ main(int argc, char** args){
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;
     root->split_ratio = 1.0f;
+    root->type = PANEL_EDITOR;
     
-    split_panel(root, 0.75, PANEL_SPLIT_VERTICAL);
+    split_panel(root, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     
     
     bool previous_mouse_left_clicked = 0;

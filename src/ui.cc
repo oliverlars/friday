@@ -275,7 +275,8 @@ internal void present(Presenter* presenter);
 internal void reset_presenter(Presenter* presenter);
 
 struct Panel {
-    Panel_Split_Type type;
+    Panel_Split_Type split_type;
+    Panel_Type type;
     f32 split_ratio;
     Panel* children[2];
     Presenter* presenter;
@@ -303,7 +304,7 @@ process_panels(Panel* root, f32 delta_split){
     if(!root) return;
     for(int i = 0; i < 2;i++){
         if(root->children[i]){
-            switch(root->children[i]->type){
+            switch(root->children[i]->split_type){
                 case PANEL_SPLIT_HORIZONTAL:{
                     root->children[i]->split_ratio = delta_split;
                     process_panels(root->children[i], delta_split);
@@ -318,76 +319,7 @@ process_panels(Panel* root, f32 delta_split){
 }
 
 internal void 
-draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
-    if(!root) return;
-    auto id = gen_unique_id("panel");
-    f32 new_width = width;
-    f32 new_height = height;
-    f32 new_posx = posx;
-    f32 new_posy = posy;
-    
-    for(int i = 0; i < 2; i++){
-        
-        if(root->children[i]){
-            switch(root->children[i]->type){
-                case PANEL_SPLIT_HORIZONTAL:{
-                    new_height *= root->children[i]->split_ratio;
-                    new_posy += new_height;
-                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
-                }break;
-                case PANEL_SPLIT_VERTICAL:{
-                    new_width *= root->children[i]->split_ratio;
-                    new_posx += new_width;
-                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
-                }break;
-            }
-        }
-        new_posx = 0;
-        new_posy = 0;
-    }
-    
-    //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
-    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
-        panel_resize = 1;
-        old_width = width;
-        active_panel = root;
-        split_ratio = root->split_ratio;
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-        SDL_SetCursor(cursor);
-        
-    }
-    
-    
-    if(!panel_resize){
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-        SDL_SetCursor(cursor);
-    }else if(panel_resize){
-        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
-        if(root == active_panel){
-            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
-        }else {
-            root->split_ratio = clampf(split_ratio - delta, 0, 1);
-        }
-    }
-    auto callback = [](u8* parameters){
-        return;
-    };
-    
-    
-    Closure closure = make_closure(callback, 0);
-    auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
-                               new_width-PANEL_BORDER*2, new_width-PANEL_BORDER*2, id,
-                               closure);
-    push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
-                   new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
-    present(root->presenter);
-    reset_presenter(root->presenter);
-}
-
-internal void 
-split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type type){
+split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
     if(!panel) return;
     
     if(panel->children[0] && panel->children[1]){
@@ -396,11 +328,13 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type type){
         //panel->children[1] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
         panel->children[1] = (Panel*)calloc(1, sizeof(Panel));
         panel->children[1]->split_ratio = split_ratio;
+        panel->children[1]->split_type = split_type;
         panel->children[1]->type = type;
     }else {
         //panel->children[0] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
         panel->children[0] = (Panel*)calloc(1, sizeof(Panel));
         panel->children[0]->split_ratio = split_ratio;
+        panel->children[0]->split_type = split_type;
         panel->children[0]->type = type;
     }
     

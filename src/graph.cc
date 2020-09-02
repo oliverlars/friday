@@ -298,6 +298,10 @@ internal void
 remove_node_at(Node* at){
     if(!at) return;
     
+    if(!at->prev && at->next){
+        at->next->prev = nullptr;
+    }
+    
     if(at->next){
         at->next->prev = at->prev;
     }
@@ -305,6 +309,6 @@ remove_node_at(Node* at){
     if(at->prev){
         at->prev->next = at->next;
     }else {
-        at = at->next;
+        
     }
 }

@@ -576,6 +576,28 @@ struct {
 } platform;
 
 
+enum Key {
+#define Key(name, str) KEY_##name,
+#include "key_list.h"
+#undef Key
+    KEY_MAX
+};
+
+internal char *
+get_key_name(s32 key) {
+    static char* key_names[KEY_MAX] = {
+#define Key(name, str) str,
+#include "key_list.h"
+#undef Key
+    };
+    char *key_name = "(Invalid Key)";
+    if(key >= 0 && key < KEY_MAX)
+    {
+        key_name = key_names[key];
+    }
+    return key_name;
+}
+
 internal f32
 clampf(f32 value, f32 min, f32 max){
     if(value < min) return min;
@@ -594,6 +616,44 @@ debug_print(char* fmt, ...){
     OutputDebugStringA(output);
 }
 
+struct Key_State {
+    bool was_down;
+    int half_transition_count;
+};
+
+#define INPUT_COUNT 8
+union Input {
+    Key_State actions[INPUT_COUNT];
+    struct{
+        Key_State navigate_left;
+        Key_State navigate_right;
+        Key_State navigate_up;
+        Key_State navigate_down;
+        
+        Key_State enter_text_edit_mode;
+        Key_State enter_command_mode;
+        Key_State enter_make_mode;
+        
+        Key_State backspace;
+    };
+} input;
+
+
+internal b32
+was_pressed(Key_State state){
+    bool result = ((state.half_transition_count > 1) || 
+                   ((state.half_transition_count == 1) && (state.was_down)));
+    
+    return result;
+}
+
+internal void
+process_keyboard_event(Key_State* state, bool is_down){
+    if(state->was_down != is_down){
+        state->was_down = is_down;
+        state->half_transition_count += 1;
+    }
+}
 
 internal void
 debug_print(String8 string){

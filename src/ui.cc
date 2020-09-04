@@ -228,19 +228,15 @@ process_widgets_and_handle_events(){
             
             active_hover = widget;
             if(platform.mouse_left_clicked){
-                active = widget;
-                ui_state.clicked_id = widget->id;
-                click_type = CLICK_LEFT;
+                if(ui_state.clicked_id == widget->id){
+                    ui_state.clicked_id = -1;
+                }else{
+                    active = widget;
+                    ui_state.clicked_id = widget->id;
+                    click_type = CLICK_LEFT;
+                }
             }
-#if 0
-            else if(platform.mouse_right_clicked){
-                active = widget;
-                click_type = CLICK_RIGHT;
-            }else if(platform.mouse_left_double_clicked){
-                active = widget;
-                click_type = CLICK_LEFT_DOUBLE;
-            }
-#endif
+            
         }
     }
     if(!hovered){
@@ -402,24 +398,26 @@ update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, 
     anim_state->last_updated = platform.tick;
 }
 
-internal void
+internal bool
 unanimate(Animation_State* anim_state){
-    if(!anim_state) return; 
+    if(!anim_state) return false;
     anim_state->rect.x += (anim_state->source_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
     anim_state->rect.y += (anim_state->source_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
     anim_state->rect.z += (anim_state->source_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
     anim_state->rect.w += (anim_state->source_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
     anim_state->last_updated = platform.tick;
-    
+    return rects_similar(anim_state->rect, anim_state->source_rect, 1.0f);
 }
 
-internal void
+internal bool
 animate(Animation_State* anim_state){
-    if(!anim_state) return; 
+    if(!anim_state) return false; 
     anim_state->rect.x += (anim_state->target_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
     anim_state->rect.y += (anim_state->target_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
     anim_state->rect.z += (anim_state->target_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
     anim_state->rect.w += (anim_state->target_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
     
     anim_state->last_updated = platform.tick;
+    return rects_similar(anim_state->rect, anim_state->target_rect, 1.0f);
 }
+

@@ -23,7 +23,6 @@
 
 global SDL_Window* global_window;
 
-
 int 
 main(int argc, char** args){
 #define TITLE "Friday"
@@ -200,9 +199,9 @@ main(int argc, char** args){
         free(platform.text_input);
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
-        
-        memset(platform.keys_pressed, 0, 4096*sizeof(bool));
-        
+        for(int i = 0; i < INPUT_COUNT; i++){
+            input.actions[i].half_transition_count = 0;
+        }
         
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -267,18 +266,96 @@ main(int argc, char** args){
                 *text_input++ = *event.text.text;
             }
             
-            if(event.type == SDL_KEYDOWN){
-                SDL_Keycode key = event.key.keysym.sym;
-                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 1;
+            if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP){
+                SDL_Keycode sdl_key = event.key.keysym.sym;
+                u16 mod = event.key.keysym.mod;
+                u64 key = 0;
+                bool is_down = (event.key.state == SDL_PRESSED);
+                
+                if(event.key.repeat == 0){
+                    if((sdl_key >= 'a' && sdl_key <= 'z') || (sdl_key >= '0' && sdl_key <= '9')){
+                        key = (sdl_key >= 'a' && sdl_key <= 'z') ? KEY_A + (sdl_key-'a') : KEY_0 + (sdl_key-'0');
+                    } else {
+                        if(sdl_key == SDLK_ESCAPE){
+                            key = KEY_ESC;
+                        }
+                        else if(sdl_key >= VK_F1 && sdl_key <= VK_F12) {
+                            key = KEY_F1 + sdl_key - VK_F1;
+                        }
+                        else if(sdl_key == SDLK_BACKQUOTE) {
+                            key = KEY_GRAVE_ACCENT;
+                        }
+                        else if(sdl_key == SDLK_MINUS) {
+                            key = KEY_MINUS;
+                        }
+                        else if(sdl_key == SDLK_PLUS) {
+                            key = KEY_EQUAL;
+                        }
+                        else if(sdl_key == SDLK_BACKSPACE) {
+                            key = KEY_BACKSPACE;
+                        }
+                        else if(sdl_key == SDLK_TAB) {
+                            key = KEY_TAB;
+                        }
+                        else if(sdl_key == SDLK_SPACE) {
+                            key = KEY_SPACE;
+                        }
+                        else if(sdl_key == SDLK_RETURN) {
+                            key = KEY_ENTER;
+                        }
+                        else if(sdl_key == SDLK_LCTRL) {
+                            key = KEY_CTRL;
+                        }
+                        else if(sdl_key == SDLK_LSHIFT) {
+                            key = KEY_SHIFT;
+                        }
+                        else if(sdl_key == SDLK_MENU) {
+                            key = KEY_ALT;
+                        }
+                        else if(sdl_key == SDLK_UP) {
+                            key = KEY_UP;
+                        }
+                        else if(sdl_key == SDLK_LEFT) {
+                            key = KEY_LEFT;
+                        }
+                        else if(sdl_key == SDLK_DOWN) {
+                            key = KEY_DOWN;
+                        }
+                        else if(sdl_key == SDLK_RIGHT) {
+                            key = KEY_RIGHT;
+                        }
+                        else if(sdl_key == SDLK_DELETE) {
+                            key = KEY_DELETE;
+                        }
+                        else if(sdl_key == SDLK_PRIOR) {
+                            key = KEY_PAGE_UP;
+                        }
+                        else if(sdl_key == SDLK_PAGEDOWN) {
+                            key = KEY_PAGE_DOWN;
+                        }
+                        else if(sdl_key = SDLK_LEFTBRACKET){
+                            key = KEY_LBRACKET;
+                        }
+                    }
+                    if(key == KEY_J){
+                        debug_print("we hit j\n");
+                        process_keyboard_event(&input.navigate_down, is_down);
+                    }
+                    if(key == KEY_K){
+                        process_keyboard_event(&input.navigate_up, is_down);
+                    }
+                    if(key == KEY_I){
+                        process_keyboard_event(&input.enter_text_edit_mode, is_down);
+                    }
+                    if(SDL_GetModState() & KMOD_CTRL && key == KEY_LBRACKET){
+                        process_keyboard_event(&input.enter_command_mode, is_down);
+                    }
+                    if(key == KEY_BACKSPACE){
+                        process_keyboard_event(&input.backspace, is_down);
+                    }
+                }
                 
             }
-            
-            if(event.type == SDL_KEYUP){
-                SDL_Keycode key = event.key.keysym.sym;
-                platform.keys_pressed[SDL_GetScancodeFromKey(key)] = 0;
-                
-            }
-            
             if(event.type == SDL_MOUSEMOTION){
                 if(platform.mouse_left_down){
                     platform.mouse_drag = 1;

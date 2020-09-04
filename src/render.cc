@@ -1194,8 +1194,8 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW,
-                                    attribs);
+                                    MAX_DRAW*BYTES_PER_CIRCLE,
+                                    circles);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
                     glUseProgram(get_program_circle());
@@ -1699,6 +1699,43 @@ draw_view_buttons(){
 }
 
 
+internal void
+radio_button(char* label, f32 x, f32 y, bool* state, Closure closure){
+    auto id = gen_unique_id(label);
+    
+    f32 height = renderer.fonts[0].line_height;
+    f32 width = height*2;
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = width-height;
+    }
+    f32 start_x = x;
+    
+    if(ui_state.clicked_id == id){
+        if(!*state){
+            if(animate(anim_state)){
+                *state = true;
+            }
+        }
+        
+    }
+    
+    
+    push_string(x, y, label, theme.text.packed);
+    x += get_text_width(label);
+    
+    auto widget = _push_widget(x+5, y-5, width, height, id,
+                               closure);
+    
+    Colour back_colour = theme.view_button;
+    if(anim_state->rect.x ==  anim_state->target_rect.x){
+        back_colour = theme.text_literal;
+    }
+    push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
+    push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
+}
+
 Bitmap search_icon;
 Bitmap run_icon;
 Bitmap layers_icon;
@@ -1799,7 +1836,11 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         }
         
         push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
-                       new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
+                       new_width-PANEL_BORDER*2-35, new_height-PANEL_BORDER*2, 5, colour);
+        
+        static bool state = 0;
+        radio_button("test", posx+PANEL_BORDER + (new_width-PANEL_BORDER*2-35)/2, posy+PANEL_BORDER + (new_height-PANEL_BORDER*2)/2, &state, {});
+        
     }else {
         
         push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 

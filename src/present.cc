@@ -191,7 +191,7 @@ edit_string(Presenter* presenter, String8* string){
         presenter->cursor_index++;
         platform.keys_pressed[SDL_SCANCODE_RIGHT] = 0;
     }
-    if(platform.keys_pressed[SDL_SCANCODE_BACKSPACE]){
+    if(was_pressed(input.backspace)){
         platform.keys_pressed[SDL_SCANCODE_BACKSPACE] = 0;
         pop_from_string(string, presenter->cursor_index);
         presenter->cursor_index--;

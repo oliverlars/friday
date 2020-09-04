@@ -1,41 +1,39 @@
 // NOTE(Oliver): stuff!
 
-#define SDL_SCANCODE_NUMBER(x) SDL_SCANCODE_##x
 
 internal void
 navigate_graph(Presenter* presenter){
     Present_Node* node_list = presenter->node_list;
-    const u8* state = SDL_GetKeyboardState(nullptr);
     
     if(navigator.mode == NV_COMMAND){
-        if(platform.keys_pressed[SDL_SCANCODE_D]){
+        if(platform.keys_pressed[KEY_D]){
             auto node = presenter->active_present_node;
             auto node_to_delete = node->node;
             remove_node_at(node_to_delete);
             friday.node_pool.clear(node_to_delete);
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_P]){
+        if(platform.keys_pressed[KEY_P]){
             auto node = presenter->active_present_node;
             if(node->node->type == NODE_TYPE_USAGE){
                 node->node->type_usage.number_of_pointers++;
             }
         }
-        if(platform.keys_pressed[SDL_SCANCODE_9]){
+        if(platform.keys_pressed[KEY_9]){
             auto node = presenter->active_present_node;
             if(node->node->type == NODE_TOKEN){
                 auto token = make_token_misc_node(&friday.node_pool, "(");
                 insert_node_at(token, node->node);
             }
         }
-        if(platform.keys_pressed[SDL_SCANCODE_0]){
+        if(platform.keys_pressed[KEY_0]){
             auto node = presenter->active_present_node;
             if(node->node->type == NODE_TOKEN){
                 auto token = make_token_misc_node(&friday.node_pool, ")");
                 insert_node_at(token, node->node);
             }
         }
-        if(platform.keys_pressed[SDL_SCANCODE_J]){
+        if(was_pressed(input.navigate_down)){
             auto node = presenter->active_present_node;
             if(node->down){
                 presenter->active_present_node = presenter->active_present_node->down;
@@ -58,7 +56,7 @@ navigate_graph(Presenter* presenter){
             }
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_K]){
+        if(was_pressed(input.navigate_up)){
             auto node = presenter->active_present_node;
             if(node->up){
                 auto node_up = node->up;
@@ -89,33 +87,33 @@ navigate_graph(Presenter* presenter){
             }
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_L]){
+        if(platform.keys_pressed[KEY_L]){
             auto node = presenter->active_present_node;
             if(node->right){
                 presenter->active_present_node = presenter->active_present_node->right;
             }
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_H]){
+        if(platform.keys_pressed[KEY_H]){
             auto node = presenter->active_present_node;
             if(node->left){
                 presenter->active_present_node = presenter->active_present_node->left;
             }
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_I]){
+        if(was_pressed(input.enter_text_edit_mode)){
             navigator.mode = NV_TEXT_EDIT;
             presenter->should_edit = true;
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_M]){
+        if(platform.keys_pressed[KEY_M]){
             navigator.mode = NV_MAKE;
         }
     }
     
     if(navigator.mode == NV_TEXT_EDIT){
-        if(platform.keys_pressed[SDL_SCANCODE_LCTRL] &&
-           platform.keys_pressed[SDL_SCANCODE_LEFTBRACKET]){
+        if(platform.keys_pressed[KEY_CTRL] &&
+           platform.keys_pressed[KEY_LBRACKET]){
             navigator.mode = NV_COMMAND;
             
             presenter->should_edit = false;
@@ -123,7 +121,7 @@ navigate_graph(Presenter* presenter){
     }
     if(navigator.mode == NV_MAKE){
         
-        if(platform.keys_pressed[SDL_SCANCODE_B]){
+        if(platform.keys_pressed[KEY_B]){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
             switch(node->node->type){
@@ -139,14 +137,14 @@ navigate_graph(Presenter* presenter){
             }
             navigator.mode = NV_COMMAND;
         }
-        if(platform.keys_pressed[SDL_SCANCODE_D]){
+        if(platform.keys_pressed[KEY_D]){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
             insert_node_at(decl, node->node);
             navigator.mode = NV_COMMAND;
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_E]){
+        if(platform.keys_pressed[KEY_E]){
             auto node = presenter->active_present_node;
             auto np = &friday.node_pool;
             auto token_list = make_token_misc_node(np, "(");
@@ -168,32 +166,26 @@ navigate_graph(Presenter* presenter){
             token_list->next->next->next->next->next->next = make_token_literal_node(np, "3");
             token_list->next->next->next->next->next->next->prev = token_list->next->next->next->next->next;
             
-#if 0
-            auto expr = make_binary_node(&friday.node_pool, "binary");
-            expr->binary.left = make_literal_node(&friday.node_pool, 1);
-            expr->binary.right = make_literal_node(&friday.node_pool, 2);
-            expr->binary.op_type = OP_PLUS;
-#endif
             node->node->declaration.expression = token_list;
             node->node->declaration.is_initialised = true;
             navigator.mode = NV_COMMAND;
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_C]){
+        if(platform.keys_pressed[KEY_C]){
             auto node = presenter->active_present_node;
             auto decl = make_conditional_node(&friday.node_pool, "untitled");
             insert_node_at(decl, node->node);
             navigator.mode = NV_COMMAND;
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_L]){
+        if(platform.keys_pressed[KEY_L]){
             auto node = presenter->active_present_node;
             auto decl = make_loop_node(&friday.node_pool, "untitled");
             insert_node_at(decl, node->node);
             navigator.mode = NV_COMMAND;
         }
         
-        if(platform.keys_pressed[SDL_SCANCODE_F]){
+        if(platform.keys_pressed[KEY_F]){
             auto node = presenter->active_present_node;
             auto func = make_function_node(&friday.node_pool, "untitled");
             insert_node_at(func, node->node);
@@ -214,8 +206,7 @@ navigate_graph(Presenter* presenter){
             
         }
     }
-    if(state[SDL_SCANCODE_LCTRL] &&
-       state[SDL_SCANCODE_LEFTBRACKET]){
+    if(was_pressed(input.enter_command_mode)){
         navigator.mode = NV_COMMAND;
         
         presenter->should_edit = false;

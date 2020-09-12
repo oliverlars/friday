@@ -87,14 +87,14 @@ navigate_graph(Presenter* presenter){
             }
         }
         
-        if(platform.keys_pressed[KEY_L]){
+        if(was_pressed(input.navigate_right)){
             auto node = presenter->active_present_node;
             if(node->right){
                 presenter->active_present_node = presenter->active_present_node->right;
             }
         }
         
-        if(platform.keys_pressed[KEY_H]){
+        if(was_pressed(input.navigate_left)){
             auto node = presenter->active_present_node;
             if(node->left){
                 presenter->active_present_node = presenter->active_present_node->left;

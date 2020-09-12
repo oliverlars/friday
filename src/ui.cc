@@ -71,6 +71,8 @@ struct Widget {
     Closure hover;
     Closure right_click;
     Closure middle_click;
+    
+    b32* clicked;
 };
 
 global struct {
@@ -172,7 +174,6 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
              Closure closure, bool has_parameters = false){
     
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
-    //auto widget = (Widget*)calloc(1, sizeof(Widget));
     widget->x = x;
     widget->y = y;
     widget->width = width;
@@ -180,6 +181,7 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     widget->id = id;
     widget->next = nullptr;
     widget->closure = closure;
+    widget->clicked = nullptr;
     
     if(!ui_state.widgets){
         ui_state.widgets = widget;
@@ -193,7 +195,7 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
 
 
 internal Widget* 
-ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
+ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
                Closure closure, bool has_parameters = false){
     
     return _push_widget(x, y, width, height, id, closure, has_parameters);
@@ -228,6 +230,9 @@ process_widgets_and_handle_events(){
             
             active_hover = widget;
             if(platform.mouse_left_clicked){
+                if(widget->clicked){
+                    *widget->clicked  = !*widget->clicked;
+                }
                 if(ui_state.clicked_id == widget->id){
                     ui_state.clicked_id = -1;
                 }else{
@@ -253,6 +258,7 @@ process_widgets_and_handle_events(){
         if(active->closure.callback){
             active->closure.callback(active->closure.parameters);
         }
+        
     }
 }
 

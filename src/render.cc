@@ -1700,7 +1700,7 @@ draw_view_buttons(){
 
 
 internal void
-radio_button(char* label, f32 x, f32 y, bool* state, Closure closure){
+radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
     auto id = gen_unique_id(label);
     
     f32 height = renderer.fonts[0].line_height;
@@ -1712,26 +1712,22 @@ radio_button(char* label, f32 x, f32 y, bool* state, Closure closure){
     }
     f32 start_x = x;
     
-    if(ui_state.clicked_id == id){
-        if(!*state){
-            if(animate(anim_state)){
-                *state = true;
-            }
-        }
-        
-    }
-    
-    
     push_string(x, y, label, theme.text.packed);
     x += get_text_width(label);
     
     auto widget = _push_widget(x+5, y-5, width, height, id,
                                closure);
-    
     Colour back_colour = theme.view_button;
-    if(anim_state->rect.x ==  anim_state->target_rect.x){
-        back_colour = theme.text_literal;
+    
+    widget->clicked = state;
+    if(*widget->clicked){
+        animate(anim_state);
+    }else {
+        unanimate(anim_state);
     }
+    
+    
+    
     push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
     push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
 }
@@ -1838,7 +1834,7 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
                        new_width-PANEL_BORDER*2-35, new_height-PANEL_BORDER*2, 5, colour);
         
-        static bool state = 0;
+        static b32 state = false;
         radio_button("test", posx+PANEL_BORDER + (new_width-PANEL_BORDER*2-35)/2, posy+PANEL_BORDER + (new_height-PANEL_BORDER*2)/2, &state, {});
         
     }else {

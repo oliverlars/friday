@@ -621,7 +621,7 @@ struct Key_State {
     int half_transition_count;
 };
 
-#define INPUT_COUNT 8
+#define INPUT_COUNT 64
 union Input {
     Key_State actions[INPUT_COUNT];
     struct{
@@ -635,6 +635,7 @@ union Input {
         Key_State enter_make_mode;
         
         Key_State backspace;
+        
     };
 } input;
 

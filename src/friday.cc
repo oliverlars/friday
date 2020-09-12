@@ -338,7 +338,6 @@ main(int argc, char** args){
                         }
                     }
                     if(key == KEY_J){
-                        debug_print("we hit j\n");
                         process_keyboard_event(&input.navigate_down, is_down);
                     }
                     if(key == KEY_K){
@@ -347,11 +346,19 @@ main(int argc, char** args){
                     if(key == KEY_I){
                         process_keyboard_event(&input.enter_text_edit_mode, is_down);
                     }
-                    if(SDL_GetModState() & KMOD_CTRL && key == KEY_LBRACKET){
+                    if(key == KEY_ENTER){
                         process_keyboard_event(&input.enter_command_mode, is_down);
                     }
                     if(key == KEY_BACKSPACE){
                         process_keyboard_event(&input.backspace, is_down);
+                    }
+                    if(key == KEY_H){
+                        process_keyboard_event(&input.navigate_left, is_down);
+                        
+                    }
+                    if(key == KEY_L){
+                        process_keyboard_event(&input.navigate_right, is_down);
+                        
                     }
                 }
                 

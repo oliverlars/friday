@@ -1,6 +1,7 @@
 
 #define internal static
 #define global static
+#define local_persist static
 #define assert assert
 
 #include <inttypes.h>

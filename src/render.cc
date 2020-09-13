@@ -1430,17 +1430,17 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
 
 
 internal UI_ID
-small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
+small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, b32* state, Closure closure){
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
-    
+    widget->clicked = state;
     f32 line_height = renderer.fonts[0].line_height;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
         anim_state->target_rect.x = 0.1f;
     }
-    if(id == ui_state.clicked_id){
+    if(*state){
         unanimate(anim_state);
         
         f32 sx = (1.0 + anim_state->rect.x);
@@ -1823,18 +1823,38 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         f32 y = new_height-PANEL_BORDER;
         f32 spacing = 15;
         f32 size = 40;
+        local_persist b32 previous_states[4] = {true, false, false, false};
+        local_persist b32 property_states[4] = {true, false, false, false};
+        bool dummy = false;
+        int index = -1;
         for(int i = 0; i < 4; i++){
             auto callback = [](u8* parameters){};
             Closure closure = make_closure(callback, 0);
-            small_icon_button(icon_labels[i], x, y, size, icons[i], closure);
+            
+            small_icon_button(icon_labels[i], x, y, size, icons[i], &property_states[i], closure);
+            
             y -= size + spacing;
             
         }
-        
+        for(int i = 0; i < 4; i++){
+            if(property_states[i] && !previous_states[i]){
+                
+                property_states[0] = false;
+                property_states[1] = false;
+                property_states[2] = false;
+                property_states[3] = false;
+                property_states[i] = true;
+                
+                previous_states[0] = property_states[0];
+                previous_states[1] = property_states[1];
+                previous_states[2] = property_states[2];
+                previous_states[3] = property_states[3];
+            }
+        }
         push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
                        new_width-PANEL_BORDER*2-35, new_height-PANEL_BORDER*2, 5, colour);
         
-        static b32 state = false;
+        local_persist b32 state = false;
         radio_button("test", posx+PANEL_BORDER + (new_width-PANEL_BORDER*2-35)/2, posy+PANEL_BORDER + (new_height-PANEL_BORDER*2)/2, &state, {});
         
     }else {

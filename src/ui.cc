@@ -85,6 +85,11 @@ global struct {
     
     Arena frame_arena;
     Arena parameter_arena;
+    
+    f32 x_start;
+    f32 y_start;
+    f32 x_offset;
+    f32 y_offset;
 } ui_state;
 
 struct Arg_Type {
@@ -205,6 +210,40 @@ internal bool
 is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
     return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
         platform.mouse_y <= (y + height) && platform.mouse_y >= y;
+}
+
+#define PANEL_MARGIN 5
+
+internal void
+ui_begin_panel(f32 x, f32 y, f32 width, f32 height){
+    ui_state.x_start = x + PANEL_MARGIN;
+    ui_state.y_start = height - (y - PANEL_MARGIN);
+    ui_state.x_offset = 0;
+    ui_state.y_offset = 0;
+}
+
+internal void
+ui_end_panel(){
+    ui_state.x_start = 0;
+    ui_state.y_start = 0;
+    ui_state.x_offset = 0;
+    ui_state.y_offset = 0;
+}
+
+internal f32
+ui_get_x(){
+    return ui_state.x_start + ui_state.x_offset;
+}
+
+internal f32
+ui_get_y(){
+    return ui_state.y_start + ui_state.y_offset;
+}
+
+internal void
+ui_new_line(){
+    ui_state.x_offset = 0;
+    ui_state.y_offset -= 60.0f;
 }
 
 

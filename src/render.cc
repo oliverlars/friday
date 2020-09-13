@@ -1392,6 +1392,76 @@ button(f32 x, f32 y, char* text, Closure closure){
 }
 
 internal UI_ID
+text_button(char* text, f32 x, f32 y, b32* state, Closure closure){
+    auto id = gen_unique_id(text);
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+                               id, closure);
+    widget->clicked = state;
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 border = 5.0f;
+    if(*state){
+        
+        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
+                       theme.view_button.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else if(id == ui_state.hover_id){
+        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
+                       theme.view_button.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else{
+        
+        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
+                       theme.button_highlight.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }
+    
+    return id;
+}
+
+internal UI_ID
+text_button(char* text, b32* state, Closure closure){
+    f32 x = ui_get_x();
+    f32 y = ui_get_y();
+    auto id = gen_unique_id(text);
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+                               id, closure);
+    widget->clicked = state;
+    f32 line_height = renderer.fonts[0].line_height;
+    f32 border = 5.0f;
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 0.2f;
+    }
+    if(*state){
+        animate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
+                       theme.view_button.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else if(id == ui_state.hover_id){
+        animate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
+                       theme.view_button.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }else{
+        unanimate(anim_state);
+        f32 sx = (1.0 + anim_state->rect.x);
+        
+        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
+                       theme.button_highlight.packed);
+        push_string(x, y+line_height/4, text, theme.text.packed);
+    }
+    
+    ui_state.x_offset += get_text_width(text)+border*2 + 30.0f;
+    
+    return id;
+}
+
+internal UI_ID
 icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
@@ -1699,8 +1769,44 @@ draw_view_buttons(){
 }
 
 
-internal void
+internal UI_ID
 radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
+    auto id = gen_unique_id(label);
+    
+    f32 height = renderer.fonts[0].line_height;
+    f32 width = height*2;
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = width-height;
+    }
+    f32 start_x = x;
+    
+    push_string(x, y, label, theme.text.packed);
+    x += get_text_width(label);
+    
+    auto widget = _push_widget(x+5, y-5, width, height, id,
+                               closure);
+    Colour back_colour = theme.view_button;
+    
+    widget->clicked = state;
+    if(*widget->clicked){
+        animate(anim_state);
+    }else {
+        unanimate(anim_state);
+    }
+    
+    push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
+    push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
+    
+    return id;
+}
+
+internal UI_ID
+radio_button(char* label, b32* state, Closure closure){
+    f32 x = ui_get_x();
+    f32 y = ui_get_y();
+    
     auto id = gen_unique_id(label);
     
     f32 height = renderer.fonts[0].line_height;
@@ -1730,6 +1836,10 @@ radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
     
     push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
     push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
+    
+    ui_state.x_offset += get_text_width(label) +  width + 5 + 30;
+    
+    return id;
 }
 
 Bitmap search_icon;
@@ -1798,15 +1908,11 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
     
     Closure closure = make_closure(callback, 0);
     auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
-                               new_width-PANEL_BORDER*2, new_width-PANEL_BORDER*2, id,
+                               new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, id,
                                closure);
-    
     if(root->type == PANEL_PROPERTIES){
+        ui_begin_panel(posx+PANEL_BORDER+50, posy+PANEL_BORDER, new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2);
         
-#if 0
-        push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
-                       30, new_height-PANEL_BORDER*2, 5, theme.background.packed);
-#endif
         Bitmap icons[] = {
             search_icon,
             run_icon,
@@ -1854,15 +1960,27 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
                        new_width-PANEL_BORDER*2-35, new_height-PANEL_BORDER*2, 5, colour);
         
+        local_persist b32 button_states[6] = {0};
         local_persist b32 state = false;
-        radio_button("test", posx+PANEL_BORDER + (new_width-PANEL_BORDER*2-35)/2, posy+PANEL_BORDER + (new_height-PANEL_BORDER*2)/2, &state, {});
+        if(property_states[0]){
+            radio_button("test", &state, {});
+        }else if(property_states[1]){
+            text_button("compile", &button_states[0], {});
+            text_button("edit", &button_states[1], {});
+            ui_new_line();
+            
+            radio_button("flip", &button_states[2], {});
+            text_button("interpret", &button_states[3], {});
+        }
         
     }else {
+        ui_begin_panel(posx+PANEL_BORDER, posy+PANEL_BORDER, new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2);
         
         push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
                        new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
         
     }
+    ui_end_panel();
     present(root->presenter);
     reset_presenter(root->presenter);
 }

@@ -23,7 +23,7 @@
 
 global SDL_Window* global_window;
 
-int 
+int
 main(int argc, char** args){
 #define TITLE "Friday"
     
@@ -55,12 +55,12 @@ main(int argc, char** args){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
     
-    global_window = 
+    global_window =
         SDL_CreateWindow(TITLE,
                          SDL_WINDOWPOS_UNDEFINED,
                          SDL_WINDOWPOS_UNDEFINED,
                          platform.width, platform.height,
-                         SDL_WINDOW_RESIZABLE | 
+                         SDL_WINDOW_RESIZABLE |
                          SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
     
     
@@ -73,8 +73,11 @@ main(int argc, char** args){
     SDL_ShowWindow(global_window);
     renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
+    load_sdf_font("../fonts/friday_default.fnt");
+    
     init_opengl_renderer();
     init_shaders();
+    
     int start = 0;
     int end = 0;
     SDL_Event event;
@@ -163,7 +166,6 @@ main(int argc, char** args){
         u32 mouse_state = SDL_GetMouseState(&x, &y);
         platform.mouse_x = x;
         platform.mouse_y = platform.height - y;
-        
         f32 offset = 5;
         //code panel
         draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
@@ -197,6 +199,7 @@ main(int argc, char** args){
         platform.mouse_left_clicked = 0;
         
         free(platform.text_input);
+        
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
         for(int i = 0; i < INPUT_COUNT; i++){
@@ -212,6 +215,7 @@ main(int argc, char** args){
                     if(!platform.mouse_drag){
                         platform.mouse_drag_x = platform.mouse_x;
                         platform.mouse_drag_y = platform.mouse_y;
+                        
                     }
                     platform.mouse_left_down = 1;
                 }
@@ -231,6 +235,7 @@ main(int argc, char** args){
                     
                 }
             }
+            
             if(event.type == SDL_MOUSEBUTTONUP){
                 if(event.button.button == SDL_BUTTON_LEFT){
                     if(platform.mouse_left_down){
@@ -337,6 +342,9 @@ main(int argc, char** args){
                             key = KEY_LBRACKET;
                         }
                     }
+                    if(key == KEY_M){
+                        process_keyboard_event(&input.enter_make_mode, is_down);
+                    }
                     if(key == KEY_J){
                         process_keyboard_event(&input.navigate_down, is_down);
                     }
@@ -359,6 +367,21 @@ main(int argc, char** args){
                     if(key == KEY_L){
                         process_keyboard_event(&input.navigate_right, is_down);
                         
+                    }
+                    if(key == KEY_A){
+                        process_keyboard_event(&input.make_arg, is_down);
+                    }
+                    if(key == KEY_D){
+                        process_keyboard_event(&input.make_decl, is_down);
+                    }
+                    if(key == KEY_F){
+                        process_keyboard_event(&input.make_func, is_down);
+                    }
+                    if(key == KEY_L){
+                        process_keyboard_event(&input.make_loop, is_down);
+                    }
+                    if(key == KEY_C){
+                        process_keyboard_event(&input.make_cond, is_down);
                     }
                 }
                 

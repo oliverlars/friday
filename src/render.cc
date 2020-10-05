@@ -37,6 +37,197 @@ make_bitmap(char* filename){
     return result;
 }
 
+internal Bitmap 
+make_bitmap(String8 filename){
+    int x, y, n;
+    char filename_cstr[512];
+    for(int i = 0; i < filename.length; i++){
+        filename_cstr[i] = filename.text[i];
+    }
+    filename_cstr[filename.length] = 0;
+    return make_bitmap(filename_cstr);
+}
+
+struct Character { 
+    
+    int x;
+    int y;
+    int width;
+    int height;
+    
+    int x_offset;
+    int y_offset;
+    int x_advance;
+};
+
+struct SDFFont {
+    Character characters[256];
+    Bitmap bitmap;
+};
+
+struct Lexer {
+    char* pos;
+};
+
+internal void
+advance_lexer(Lexer* l){
+    l->pos++;
+}
+
+#define is_newline(x) ((x) == '\n' || (x) == '\r')
+#define is_whitespace(x) ((x) == ' ' || (x) == '\t' || (x) == '\v' || (x) == '\f' || is_newline(x))
+#define is_digit(x) ((x) <= '9' && (x) >= '0')
+#define is_upper_hex(x) (is_digit(x) || ((x) <= 'F' && (x) >= 'A'))
+#define is_lower_hex(x) (is_digit(x) || ((x) <= 'f' && (x) >= 'a'))
+#define is_hex(x) (is_upper(x)  || is_lower_hex(x))
+#define is_lower_alpha(x) ((x) <= 'z' && (x) >= 'a')
+#define is_upper_alpha(x) ((x) <= 'Z' && (x) >= 'A')
+#define is_alpha(x) ((is_lower_alpha(x) || is_upper_alpha(x)))
+
+internal void
+gobble_whitespace(Lexer* l){
+    while(is_whitespace(*l->pos)){
+        advance_lexer(l);
+    }
+}
+
+internal String8
+read_token(Lexer* l){
+    gobble_whitespace(l);
+    
+    char c = *l->pos;
+    String8 token = {};
+    token.text = l->pos;
+    token.length = 1;
+    advance_lexer(l);
+    switch(c){
+        case '\0':{}break;
+        case ':':{} break;
+        case ',':{} break;
+        case '=':{} break;
+        case '\"':{
+            if(*l->pos != '\"'){
+                while(*l->pos != '\"'){
+                    advance_lexer(l);
+                }
+                token.length = l->pos - token.text;
+            }
+            
+            advance_lexer(l);
+        } break;
+        
+        default:{
+            if(is_alpha(c)){
+                while(is_alpha(*l->pos)){advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }else if(is_digit(c)){
+                while(is_digit(*l->pos)){ advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }else if(c == '-'){
+                while(is_digit(*l->pos)){ advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }
+        }break;
+    }
+    return token;
+}
+
+internal void
+expect_token(Lexer* l, char* string){
+    assert(string_eq(read_token(l), string));
+}
+
+internal SDFFont
+load_sdf_font(char* filename){
+    FILE* file = fopen(filename, "r");
+    
+    char* buffer = 0;
+    if(file){
+        fseek(file, 0, SEEK_END);
+        u64 size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        
+        buffer = (char*)calloc(size+2, sizeof(char));
+        buffer[size] = 0;
+        buffer[size-1] = '\n';
+        fread(buffer, size, 1, file);
+        fclose(file);
+    }
+    
+    SDFFont font = {};
+    Lexer l = {buffer};
+    while(!string_eq(read_token(&l), "file")){
+        gobble_whitespace(&l);
+    }
+    
+    expect_token(&l, "=");
+    font.bitmap = make_bitmap(read_token(&l));
+    
+    expect_token(&l, "chars");
+    gobble_whitespace(&l);
+    expect_token(&l, "count");
+    expect_token(&l, "=");
+    read_token(&l);
+    
+    while(string_eq(read_token(&l), "char")){
+        gobble_whitespace(&l);
+        expect_token(&l, "id");
+        expect_token(&l, "=");
+        int id = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "x");
+        expect_token(&l, "=");
+        font.characters[id].x = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "y");
+        expect_token(&l, "=");
+        font.characters[id].y = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "width");
+        expect_token(&l, "=");
+        font.characters[id].width = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "height");
+        expect_token(&l, "=");
+        font.characters[id].height = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "xoffset");
+        expect_token(&l, "=");
+        font.characters[id].x_offset = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "yoffset");
+        expect_token(&l, "=");
+        font.characters[id].y_offset = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "xadvance");
+        expect_token(&l, "=");
+        font.characters[id].x_advance = string_to_int(read_token(&l));
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "page");
+        expect_token(&l, "=");
+        expect_token(&l, "0");
+        
+        gobble_whitespace(&l);
+        expect_token(&l, "chnl");
+        expect_token(&l, "=");
+        expect_token(&l, "0");
+        
+        gobble_whitespace(&l);
+        
+    }
+    
+    
+    return font;
+}
+
 enum Menu_Type {
     MENU_TYPE_USAGE,
     MENU_CREATE_NODE

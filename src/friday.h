@@ -355,6 +355,21 @@ string_eq(String8 a, char* b){
     return true;
 }
 
+internal int
+string_to_int(String8 string){
+    
+    int result = 0;
+    bool is_negative = string.text[0] == '-';
+    for(int i = string.length-1; i >= 0 + is_negative; i--){
+        result = result*10 + (string.text[i] - '0');
+    }
+    
+    if(is_negative){
+        result *= -1;
+    }
+    return result;
+}
+
 internal void
 insert_in_string(String8* string, char* insertable, u64 index){
     if(!insertable) return;
@@ -636,7 +651,13 @@ union Input {
         Key_State enter_make_mode;
         
         Key_State backspace;
-        
+        Key_State add_pointers;
+        Key_State make_arg;
+        Key_State make_decl;
+        Key_State make_func;
+        Key_State make_scope;
+        Key_State make_loop;
+        Key_State make_cond;
     };
 } input;
 

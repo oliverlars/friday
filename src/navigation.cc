@@ -106,7 +106,7 @@ navigate_graph(Presenter* presenter){
             presenter->should_edit = true;
         }
         
-        if(platform.keys_pressed[KEY_M]){
+        if(was_pressed(input.enter_make_mode)){
             navigator.mode = NV_MAKE;
         }
     }
@@ -137,7 +137,7 @@ navigate_graph(Presenter* presenter){
             }
             navigator.mode = NV_COMMAND;
         }
-        if(platform.keys_pressed[KEY_D]){
+        if(was_pressed(input.make_decl)){
             auto node = presenter->active_present_node;
             auto decl = make_declaration_node(&friday.node_pool, "untitled");
             insert_node_at(decl, node->node);

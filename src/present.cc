@@ -61,6 +61,7 @@ allocate_present_node(Presenter* presenter){
 
 internal inline void
 set_current_node(Presenter* presenter, Node* node){
+    
     if(!presenter->node_list){
         presenter->node_list = allocate_present_node(presenter);
         presenter->node_list->node = node;

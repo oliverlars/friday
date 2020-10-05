@@ -68,7 +68,7 @@ struct Node {
         struct {
             Literal_Type lit_type;
             union {
-                f32 _float; 
+                f32 _float;
                 s32 _int;
             };
         } literal;
@@ -154,7 +154,7 @@ internal Node*
 make_node(Pool* pool, Node_Type type, char* name){
     Node* result = (Node*)pool_allocate(pool);
     u8* backing = (u8*)result + sizeof(Node);
-    result->name = make_string(backing, name, 256); 
+    result->name = make_string(backing, name, 256);
     result->type = type;
     result->next = nullptr;
     result->prev = nullptr;
@@ -170,7 +170,7 @@ make_dummy_node(Pool* pool){
 internal Node*
 make_scope_node(Pool* pool, char* name){
     Node* result = make_node(pool, NODE_SCOPE, name);
-    result->scope.statements = make_node(pool, NODE_DUMMY); 
+    result->scope.statements = make_node(pool, NODE_DUMMY);
     return result;
 }
 

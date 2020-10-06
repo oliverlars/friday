@@ -106,13 +106,11 @@ read_token(Lexer* l){
         case ',':{} break;
         case '=':{} break;
         case '\"':{
-            if(*l->pos != '\"'){
-                while(*l->pos != '\"'){
-                    advance_lexer(l);
-                }
-                token.length = l->pos - token.text;
+            while(*l->pos != '\"'){
+                advance_lexer(l);
             }
-            
+            token.text++;
+            token.length = l->pos - token.text;
             advance_lexer(l);
         } break;
         
@@ -157,70 +155,62 @@ load_sdf_font(char* filename){
     SDFFont font = {};
     Lexer l = {buffer};
     while(!string_eq(read_token(&l), "file")){
-        gobble_whitespace(&l);
     }
     
     expect_token(&l, "=");
-    font.bitmap = make_bitmap(read_token(&l));
     
+    {
+        Temp_Arena temp_arena(platform.permanent_arena);
+        String8 filename = prepend_to_string(&temp_arena.arena, "../fonts/", read_token(&l));
+        font.bitmap = make_bitmap(filename);
+    }
+    
+    assert(font.bitmap.data);
     expect_token(&l, "chars");
-    gobble_whitespace(&l);
     expect_token(&l, "count");
     expect_token(&l, "=");
     read_token(&l);
     
     while(string_eq(read_token(&l), "char")){
-        gobble_whitespace(&l);
         expect_token(&l, "id");
         expect_token(&l, "=");
         int id = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "x");
         expect_token(&l, "=");
         font.characters[id].x = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "y");
         expect_token(&l, "=");
         font.characters[id].y = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "width");
         expect_token(&l, "=");
         font.characters[id].width = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "height");
         expect_token(&l, "=");
         font.characters[id].height = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "xoffset");
         expect_token(&l, "=");
         font.characters[id].x_offset = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "yoffset");
         expect_token(&l, "=");
         font.characters[id].y_offset = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "xadvance");
         expect_token(&l, "=");
         font.characters[id].x_advance = string_to_int(read_token(&l));
         
-        gobble_whitespace(&l);
         expect_token(&l, "page");
         expect_token(&l, "=");
         expect_token(&l, "0");
         
-        gobble_whitespace(&l);
         expect_token(&l, "chnl");
         expect_token(&l, "=");
         expect_token(&l, "0");
-        
-        gobble_whitespace(&l);
         
     }
     

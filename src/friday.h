@@ -205,8 +205,15 @@ struct Arena_Block {
 };
 
 struct Arena {
+    
     Arena_Block* first = nullptr;
     Arena_Block* active = nullptr;
+};
+
+struct Temp_Arena {
+    Temp_Arena(Arena _arena) { arena = _arena; };
+    ~Temp_Arena() {}
+    Arena arena;
 };
 
 internal void* 
@@ -339,6 +346,20 @@ append_to_string(Arena* arena, String8 string, char* appendee){
     return result;
 }
 
+internal String8
+prepend_to_string(Arena* arena, char* prependee, String8 string){
+    String8 result = make_string(arena, "result");
+    int prependee_length = strlen(prependee);
+    for(int i = 0; i < string.length; i++){
+        result.text[i+prependee_length] = string.text[i];
+    }
+    for(int i = 0; i < prependee_length; i++){
+        result.text[i] = prependee[i];
+    }
+    result.length = prependee_length + string.length;
+    return result;
+}
+
 internal bool
 string_eq(String8 a, char* b){
     if(!a.text || !a.length) return false;
@@ -361,7 +382,7 @@ string_to_int(String8 string){
     int result = 0;
     bool is_negative = string.text[0] == '-';
     for(int i = string.length-1; i >= 0 + is_negative; i--){
-        result = result*10 + (string.text[i] - '0');
+        result += result*10 + (string.text[i] - '0');
     }
     
     if(is_negative){

@@ -141,7 +141,7 @@ get_presenter_y(Presenter* presenter) {
 
 internal inline void
 present_new_line(Presenter* presenter){
-    presenter->y_offset -= renderer.font.size;
+    presenter->y_offset -= get_font_line_height();
     presenter->x_offset = 0;
 }
 internal void
@@ -202,11 +202,10 @@ edit_string(Presenter* presenter, String8* string){
 internal void
 present_highlighted_string(Presenter* presenter, String8 string, u32 colour = theme.panel.packed){
     
-    f32 line_height = renderer.font.size;
-    presenter->cursor_target_rect.x = get_presenter_x(presenter);
-    presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
-    presenter->cursor_target_rect.z = get_text_width(string);
-    presenter->cursor_target_rect.w = line_height;
+    f32 line_height = get_font_line_height();
+    presenter->cursor_target_rect = get_text_bbox(get_presenter_x(presenter),
+                                                  get_presenter_y(presenter),
+                                                  string);
     
     presenter->cursor_rect = add_rects(presenter->cursor_rect, 
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
@@ -220,11 +219,10 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
 internal void
 present_highlighted_string(Presenter* presenter, char* string, u32 colour = theme.panel.packed){
     
-    f32 line_height = renderer.font.size;
-    presenter->cursor_target_rect.x = get_presenter_x(presenter);
-    presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
-    presenter->cursor_target_rect.z = get_text_width(string);
-    presenter->cursor_target_rect.w = line_height;
+    f32 line_height = get_font_line_height();
+    presenter->cursor_target_rect = get_text_bbox(get_presenter_x(presenter),
+                                                  get_presenter_y(presenter),
+                                                  string);
     
     presenter->cursor_rect = add_rects(presenter->cursor_rect, 
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
@@ -254,7 +252,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
         f32 text_width = get_text_width(*string);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.font.size;
+        f32 line_height = get_font_line_height();
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
@@ -292,7 +290,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
         f32 text_width = get_text_width(node->name);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.font.size;
+        f32 line_height = get_font_line_height();
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
@@ -354,7 +352,7 @@ present_x_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
-                                 renderer.font.size, 
+                                 get_font_line_height(), 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
@@ -632,7 +630,7 @@ present_editable_token_list(Presenter* presenter, Node* node){
         f32 text_width = get_text_width(node->name);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.font.size;
+        f32 line_height = get_font_line_height();
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;

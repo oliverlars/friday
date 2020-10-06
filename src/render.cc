@@ -63,7 +63,9 @@ struct Character {
 struct SDFFont {
     Character characters[256];
     Bitmap bitmap;
+    int line_height;
     int size;
+    f32 scale;
 };
 
 struct Lexer {
@@ -155,6 +157,20 @@ load_sdf_font(char* filename){
     
     SDFFont font = {};
     Lexer l = {buffer};
+    
+    while(!string_eq(read_token(&l), "size")){
+        
+    }
+    expect_token(&l, "=");
+    int size = string_to_int(read_token(&l));
+    
+    
+    while(!string_eq(read_token(&l), "lineHeight")){
+        
+    }
+    expect_token(&l, "=");
+    int line_height = string_to_int(read_token(&l));
+    
     while(!string_eq(read_token(&l), "file")){
     }
     
@@ -217,7 +233,10 @@ load_sdf_font(char* filename){
         
     }
     
-    
+    font.size = size;
+    assert(font.size == 55);
+    font.line_height = line_height;
+    font.scale = 20.0f/(f32)font.size;
     return font;
 }
 
@@ -338,21 +357,6 @@ struct Command {
     };
 };
 
-struct Font {
-    stbtt_fontinfo info;
-    f32 line_height;
-    f32 scale;
-    f32 ascent;
-    f32 descent;
-    // NOTE(Oliver): we store the font
-    // texture here
-#define FONT_BITMAP_SIZE 4096
-    u8* bitmap;
-    
-#define CHAR_INFO_SIZE ('~' - ' ')
-    stbtt_packedchar char_infos[CHAR_INFO_SIZE];
-};
-
 const int MAX_DRAW = 8192;
 
 global struct {
@@ -367,12 +371,8 @@ global struct {
     
     GLuint resolution_uniforms[COMMAND_COUNT];
     
-    
     GLuint texture;
     
-    // NOTE(Oliver): this should probably just be static
-    // we do have a max draw value anyway
-    //Array<Command*> commands;
     Command* head = nullptr;
     Command* tail = nullptr;
     
@@ -383,6 +383,12 @@ global struct {
     Arena temp_string_arena;
 } renderer;
 
+
+internal int
+get_font_line_height() {
+    return renderer.font.line_height*renderer.font.scale;
+}
+
 internal Command*
 make_command(Command_Type type){
     Command* command = (Command*)arena_allocate(&renderer.frame_arena, sizeof(Command));
@@ -391,53 +397,6 @@ make_command(Command_Type type){
     command->previous = nullptr;
     return command;
 }
-
-internal Font
-init_font(char* font_name, int font_size){
-    
-    Font result;
-    
-    FILE* font_file = fopen(font_name, "rb");
-    fseek(font_file, 0, SEEK_END);
-    u64 size = ftell(font_file); 
-    fseek(font_file, 0, SEEK_SET);
-    
-    u8* ttf_buffer = (u8*)malloc(size);
-    
-    fread(ttf_buffer, size, 1, font_file);
-    fclose(font_file);
-    
-    
-    assert(stbtt_InitFont(&result.info, ttf_buffer, 0));
-    
-    result.line_height = font_size;
-    result.scale = stbtt_ScaleForPixelHeight(&result.info, result.line_height);
-    int ascent, descent, line_gap;
-    stbtt_GetFontVMetrics(&result.info, &ascent, &descent, &line_gap);
-    result.ascent = result.scale * ascent;
-    result.descent = result.scale * descent;
-    
-    int advance_x, left_side_bearing;
-    stbtt_GetCodepointHMetrics(&result.info, ' ', 
-                               &advance_x, &left_side_bearing);
-    assert(advance_x > 0);
-    
-    result.bitmap = (u8*)malloc(FONT_BITMAP_SIZE*FONT_BITMAP_SIZE);
-    
-    stbtt_pack_context context;
-    assert(stbtt_PackBegin(&context, result.bitmap, FONT_BITMAP_SIZE, 
-                           FONT_BITMAP_SIZE, 0, 1, nullptr));
-    
-    
-    stbtt_PackFontRange(&context, ttf_buffer, 0, result.line_height,
-                        ' ', CHAR_INFO_SIZE, result.char_infos);
-    
-    
-    stbtt_PackEnd(&context);
-    
-    return result;
-}
-
 
 internal void
 insert_command(Command* next_command){
@@ -540,6 +499,19 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour){
 }
 
 internal inline void
+push_rectangle(v4f rect, f32 radius, u32 colour){
+    
+    auto rectangle = make_command(COMMAND_RECTANGLE);
+    rectangle->rectangle.x = rect.x;
+    rectangle->rectangle.y = rect.y;
+    rectangle->rectangle.width = rect.width;
+    rectangle->rectangle.height = rect.height;
+    rectangle->rectangle.corner_radius = radius;
+    rectangle->colour.packed = colour;
+    insert_command(rectangle);
+}
+
+internal inline void
 push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto rectangle = make_command(COMMAND_RECTANGLE_OUTLINE);
@@ -572,7 +544,7 @@ push_glyph(v4f positions, v4f uvs, u32 colour){
     x0 = positions.x0;
     x1 = positions.x1;
     y0 = -positions.y0;
-    y1 = -positions.y0;
+    y1 = -positions.y1;
     
     s0 = uvs.x0; s1 = uvs.x1;
     t0 = uvs.y0; t1 = uvs.y1;
@@ -608,31 +580,32 @@ push_rectangle_textured(f32 x, f32 y, f32 width, f32 height, f32 radius, Bitmap 
 }
 
 internal void
-push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF, f32 scale = 1.0f){
+push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
     
     y = -y;
-    
+    y -= get_font_line_height();
     // NOTE(Oliver): '#' is used for ID purposes
     while(*text && *text != '#'){
         if(*text >= 32 && *text < 128){
             auto font = renderer.font;
             auto c  = font.characters[*text];
-            f32 base_line = y + c.y_offset;
-            v4f positions = v4f(x + c.x_offset*font.size*scale, y + c.y_offset*font.size*scale, 
-                                x + c.x_offset*font.size*scale + c.width*font.size*scale,
-                                y + c.y_offset*font.size*scale + c.height*font.size*scale);
-            v4f uvs = v4f(c.x, c.y, c.x + c.width, c.y+c.height);
+            v4f positions = v4f(x + c.x_offset*font.scale, 
+                                y + c.y_offset*font.scale, 
+                                x + c.x_offset*font.scale + c.width*font.scale,
+                                y + c.y_offset*font.scale + c.height*font.scale);
+            v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += c.x_advance;
+            x += c.x_advance*font.scale;
         }
         text++;
     }
 }
 
 internal void
-push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF, f32 scale = 1.0f){
+push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
     
     y = -y;
+    y -= get_font_line_height();
     
     // NOTE(Oliver): '#' is used for ID purposes
     for(int i = 0; i < string.length; i++){
@@ -642,13 +615,13 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF, f32 scale = 
         if(text >= 32 && text < 128){
             auto font = renderer.font;
             auto c  = font.characters[text];
-            f32 base_line = y + c.y_offset;
-            v4f positions = v4f(x + c.x_offset*font.size*scale, y + c.y_offset*font.size*scale, 
-                                x + c.x_offset*font.size*scale + c.width*font.size*scale,
-                                y + c.y_offset*font.size*scale + c.height*font.size*scale);
-            v4f uvs = v4f(c.x, c.y, c.x + c.width, c.y+c.height);
+            v4f positions = v4f(x + c.x_offset*font.scale, 
+                                y + c.y_offset*font.scale, 
+                                x + c.x_offset*font.scale + c.width*font.scale,
+                                y + c.y_offset*font.scale + c.height*font.scale);
+            v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += c.x_advance;
+            x += c.x_advance*font.scale;
         }
     }
 }
@@ -659,10 +632,10 @@ get_text_width(char* text){
     while(text && *text){
         if(*text == '#') break;
         int id = *text;
-        result += renderer.font.characters[id].x_advance;
+        result += renderer.font.characters[id].x_advance*renderer.font.scale;
         text++;
     }
-    return result*renderer.font.size;
+    return result;
 }
 
 internal f32
@@ -670,10 +643,25 @@ get_text_width(String8 string){
     f32 result = 0;
     for(int i = 0; i < string.length; i++){
         int id = string[i];
-        result += renderer.font.characters[id].x_advance;
-        //result += x1 - x0;
+        result += renderer.font.characters[id].x_advance*renderer.font.scale;
     }
-    return result*renderer.font.size;
+    return result;
+}
+
+internal v4f
+get_text_bbox(f32 x, f32 y, String8 string, f32 border = 5.0f){
+    f32 width = get_text_width(string) + border*2;
+    f32 height = get_font_line_height();
+    x -= border;
+    return v4f(x, y, width, height);
+}
+
+internal v4f
+get_text_bbox(f32 x, f32 y, char* string, f32 border = 5.0f){
+    f32 width = get_text_width(string) + border*2;
+    f32 height = get_font_line_height();
+    x -= border;
+    return v4f(x, y, width, height);
 }
 
 
@@ -1151,12 +1139,12 @@ init_shaders(){
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             
-            "const float width = 0.5;\n"
+            "float width = 0.49;\n"
             "const float edge = 0.1;\n"
             
             "void main(){\n"
             "float distance = 1.0 - texture(atlas, frag_uv).a;\n"
-            "float alpha = 1.0 smoothstep(0.5, 0.5 + edge, distance);\n"
+            "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
@@ -1169,7 +1157,7 @@ init_shaders(){
         glGenTextures(1, &renderer.texture);
         glBindTexture(GL_TEXTURE_2D, renderer.texture);
         
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512,
                      512, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                      renderer.font.bitmap.data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -1554,19 +1542,17 @@ button(f32 x, f32 y, char* text, Closure closure){
     auto id = gen_unique_id(text);
     auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
-    f32 line_height = renderer.font.size;
-    f32 border = 5.0f;
+    f32 line_height = get_font_line_height();
     if(id == ui_state.clicked_id){
-        
-        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
-                       theme.button_highlight.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.button_highlight.packed);
+        push_string(x, y, text, theme.text.packed);
     }else if(id == ui_state.hover_id){
-        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
-                       theme.button_highlight.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.button_highlight.packed);
+        push_string(x, y, text, theme.text.packed);
     }else{
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        push_string(x, y, text, theme.text.packed);
     }
     
     return id;
@@ -1578,22 +1564,20 @@ text_button(char* text, f32 x, f32 y, b32* state, Closure closure){
     auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.font.size;
+    f32 line_height = get_font_line_height();
     f32 border = 5.0f;
     if(*state){
-        
-        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
-                       theme.view_button.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.view_button.packed);
+        push_string(x, y, text, theme.text.packed);
     }else if(id == ui_state.hover_id){
-        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
-                       theme.view_button.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.view_button.packed);
+        push_string(x, y, text, theme.text.packed);
     }else{
-        
-        push_rectangle(x-border, y, get_text_width(text)+border*2, line_height, 10,
-                       theme.button_highlight.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.button_highlight.packed);
+        push_string(x, y, text, theme.text.packed);
     }
     
     return id;
@@ -1607,7 +1591,7 @@ text_button(char* text, b32* state, Closure closure){
     auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.font.size;
+    f32 line_height = get_font_line_height();
     f32 border = 5.0f;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
@@ -1618,23 +1602,24 @@ text_button(char* text, b32* state, Closure closure){
         animate(anim_state);
         
         f32 sx = (1.0 + anim_state->rect.x);
-        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
-                       theme.view_button.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10, theme.view_button.packed);
+        push_string(x, y, text, theme.text.packed);
     }else if(id == ui_state.hover_id){
         animate(anim_state);
         
         f32 sx = (1.0 + anim_state->rect.x);
-        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10,
                        theme.view_button.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        push_string(x, y, text, theme.text.packed);
     }else{
         unanimate(anim_state);
         f32 sx = (1.0 + anim_state->rect.x);
-        
-        push_rectangle(x, y, get_text_width(text)+border*2*sx, line_height*sx, 10,
+        v4f bbox = get_text_bbox(x, y, text);
+        push_rectangle(bbox, 10,
                        theme.button_highlight.packed);
-        push_string(x, y+line_height/4, text, theme.text.packed);
+        push_string(x, y, text, theme.text.packed);
     }
     
     ui_state.x_offset += get_text_width(text)+border*2 + 30.0f;
@@ -1647,7 +1632,7 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
     
-    f32 line_height = renderer.font.size;
+    f32 line_height = get_font_line_height();
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
@@ -1685,7 +1670,7 @@ small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, b32* state
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.font.size;
+    f32 line_height = get_font_line_height();
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
@@ -1790,7 +1775,7 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
                            lerp(anim_state->y_scale, 1.2, 0.2f));
     //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
     //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
-    f32 line_height = renderer.font.size;
+    f32 line_height = get_font_line_height();
     f32 height = 40*anim_state->y_scale;
     f32 size_x = 200*anim_state->x_scale;
     f32 size_y = num_rows*height;
@@ -1954,7 +1939,7 @@ internal UI_ID
 radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
     auto id = gen_unique_id(label);
     
-    f32 height = renderer.font.size;
+    f32 height = get_font_line_height();
     f32 width = height*2;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
@@ -1990,7 +1975,7 @@ radio_button(char* label, b32* state, Closure closure){
     
     auto id = gen_unique_id(label);
     
-    f32 height = renderer.font.size;
+    f32 height = get_font_line_height();
     f32 width = height*2;
     auto anim_state = get_animation_state(id);
     if(!anim_state){

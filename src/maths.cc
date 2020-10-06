@@ -179,6 +179,12 @@ union v4f {
         f32 b;
         f32 a;
     };
+    struct {
+        f32 x;
+        f32 y;
+        f32 width;
+        f32 height;
+    };
 };
 
 internal v2i

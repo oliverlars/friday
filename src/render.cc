@@ -647,7 +647,7 @@ get_text_width(char* text){
     while(text && *text){
         if(*text == '#') break;
         int id = *text;
-        result += renderer.font.characters[id].x_advance*renderer.font.scale;
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*renderer.font.scale;
         text++;
     }
     return result;
@@ -1154,7 +1154,7 @@ init_shaders(){
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             
-            "float width = 0.49;\n"
+            "float width = 0.5;\n"
             "const float edge = 0.1;\n"
             
             "void main(){\n"
@@ -1637,7 +1637,7 @@ text_button(char* text, b32* state, Closure closure){
         push_string(x, y, text, theme.text.packed);
     }
     
-    ui_state.x_offset += get_text_width(text)+border*2 + 30.0f;
+    ui_state.x_offset += get_text_width(text) + 30.0f;
     
     return id;
 }
@@ -2028,6 +2028,9 @@ Bitmap run_icon;
 Bitmap layers_icon;
 Bitmap document_icon;
 
+
+global bool cursor_size = 0;
+global f32 start_width = 0;
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
     if(!root) return;
@@ -2042,12 +2045,12 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         if(root->children[i]){
             switch(root->children[i]->split_type){
                 case PANEL_SPLIT_HORIZONTAL:{
-                    new_height *= root->children[i]->split_ratio;
+                    new_height = root->children[i]->height;
                     new_posy += new_height;
                     draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
                 }break;
                 case PANEL_SPLIT_VERTICAL:{
-                    new_width *= root->children[i]->split_ratio;
+                    new_width = root->children[i]->width;
                     new_posx += new_width;
                     draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
                 }break;
@@ -2058,28 +2061,31 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
     }
     
     //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
-    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
-        panel_resize = 1;
-        old_width = width;
-        active_panel = root;
-        split_ratio = root->split_ratio;
+    v4f panel_border = v4f(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER);
+    if(is_mouse_in_rect(panel_border)){
         SDL_Cursor* cursor;
         cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
         SDL_SetCursor(cursor);
-        
-    }
-    
-    
-    if(!panel_resize){
+        cursor_size = true;
+    }else if(!cursor_size){
         SDL_Cursor* cursor;
         cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
         SDL_SetCursor(cursor);
-    }else if(panel_resize){
-        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
+    }else {
+        cursor_size = 0;
+    }
+    if(!panel_resize && is_mouse_dragged(panel_border)){
+        panel_resize = 1;
+        old_width = width;
+        active_panel = root;
+        start_width = root->width;
+    }
+    
+    if(panel_resize){
+        
+        f32 delta =  (platform.mouse_x-platform.mouse_drag_x);
         if(root == active_panel){
-            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
-        }else {
-            root->split_ratio = clampf(split_ratio - delta, 0, 1);
+            root->width = start_width + delta;
         }
     }
     auto callback = [](u8* parameters){

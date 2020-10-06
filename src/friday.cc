@@ -143,7 +143,8 @@ main(int argc, char** args){
     
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;
-    root->split_ratio = 1.0f;
+    root->width = platform.width;
+    root->height = platform.height;
     root->type = PANEL_EDITOR;
     
     split_panel(root, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);

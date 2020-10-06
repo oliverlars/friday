@@ -179,8 +179,6 @@ edit_string(Presenter* presenter, String8* string){
         insert_in_string(string, platform.text_input, presenter->cursor_index);
         presenter->cursor_index += strlen(platform.text_input);
         platform.has_text_input = 0;
-        OutputDebugStringA(platform.text_input);
-        OutputDebugStringA("\n");
     }
     
     if(platform.keys_pressed[SDL_SCANCODE_LEFT]){
@@ -254,12 +252,13 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
         f32 width = text_width + offset;
         f32 line_height = get_font_line_height();
         f32 height = line_height;
-        f32 x = get_presenter_x(presenter) - offset/2;
-        f32 y = get_presenter_y(presenter) - line_height*0.25;
+        f32 x = get_presenter_x(presenter);
+        f32 y = get_presenter_y(presenter);
         
         if(presenter->active_string == string){
             f32 cursor_pos = get_text_width(*string);
-            push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
+            v4f bbox = get_text_bbox(x, y, *string);
+            push_rectangle(bbox, 0.1, theme.cursor.packed);
             edit_string(presenter, string);
         }
     }else if(id == ui_state.hover_id){

@@ -313,6 +313,9 @@ enum Command_Type {
     COMMAND_GLYPH,
     COMMAND_RECTANGLE_TEXTURED,
     
+    COMMAND_CLIP_RANGE_BEGIN,
+    COMMAND_CLIP_RANGE_END,
+    
     COMMAND_COUNT
 };
 
@@ -369,6 +372,11 @@ struct Command {
             
             Bitmap bitmap;
         }rectangle_textured;
+        
+        struct {
+            f32 x, y;
+            f32 width, height;
+        } clip_range;
     };
 };
 
@@ -511,6 +519,22 @@ push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour){
     rectangle->rectangle.corner_radius = radius;
     rectangle->colour.packed = colour;
     insert_command(rectangle);
+}
+
+internal inline void
+push_clip_range_begin(f32 x, f32 y, f32 width, f32 height){
+    auto clip_range = make_command(COMMAND_CLIP_RANGE_BEGIN);
+    clip_range->clip_range.x = x;
+    clip_range->clip_range.y = y;
+    clip_range->clip_range.width = width;
+    clip_range->clip_range.height = height;
+    insert_command(clip_range);
+}
+
+internal inline void
+push_clip_range_end(){
+    auto clip_range = make_command(COMMAND_CLIP_RANGE_END);
+    insert_command(clip_range);
 }
 
 internal inline void
@@ -1266,10 +1290,20 @@ process_and_draw_commands(){
     
     // TODO(Oliver): batch these in chunks to preserve draw order!
     
+    v4f clip_range = v4f(0, 0, platform.width, platform.height);
+    bool should_clip = false;
     for(Command* command = renderer.head; command; command = command->next){
         Command* previous_command = command;
         
         switch(command->type){
+            case COMMAND_CLIP_RANGE_BEGIN: {
+                should_clip = true;
+                auto clip = command->clip_range;
+                clip_range = v4f(clip.x, clip.y, clip.width, clip.height);
+            }break;
+            case COMMAND_CLIP_RANGE_END:{
+                should_clip = false;
+            }break;
             case COMMAND_RECTANGLE:{
                 
                 int num_verts = 0;
@@ -1279,18 +1313,41 @@ process_and_draw_commands(){
                     
                     auto rectangle = _command;
                     for(int i = 0; i < 6; i++){
-                        *attribs++ = rectangle->rectangle.x;
-                        *attribs++ = rectangle->rectangle.y;
-                        *attribs++ = rectangle->rectangle.width;
-                        *attribs++ = rectangle->rectangle.height;
-                        *attribs++ = rectangle->rectangle.corner_radius;
-                        *attribs++ = (rectangle->colour.a/255.0f);
-                        *attribs++ = (rectangle->colour.b/255.0f);
-                        *attribs++ = (rectangle->colour.g/255.0f);
-                        *attribs++ = (rectangle->colour.r/255.0f);
-                        
+                        v4f r = v4f(rectangle->rectangle.x,
+                                    rectangle->rectangle.y,
+                                    rectangle->rectangle.width,
+                                    rectangle->rectangle.height);
+                        if(!should_clip || (should_clip && is_rect_inside_rect(r, clip_range))){
+                            *attribs++ = rectangle->rectangle.x;
+                            *attribs++ = rectangle->rectangle.y;
+                            *attribs++ = rectangle->rectangle.width;
+                            *attribs++ = rectangle->rectangle.height;
+                            *attribs++ = rectangle->rectangle.corner_radius;
+                            *attribs++ = (rectangle->colour.a/255.0f);
+                            *attribs++ = (rectangle->colour.b/255.0f);
+                            *attribs++ = (rectangle->colour.g/255.0f);
+                            *attribs++ = (rectangle->colour.r/255.0f);
+                            num_verts++;
+                            
+                        }else {
+                            *attribs++ = rectangle->rectangle.x;
+                            *attribs++ = rectangle->rectangle.y;
+                            if(rectangle->rectangle.x + rectangle->rectangle.width < clip_range.x + clip_range.width){
+                                *attribs++ = rectangle->rectangle.width;
+                            }else {
+                                *attribs++ = clip_range.width - rectangle->rectangle.x;
+                            }
+                            
+                            *attribs++ = rectangle->rectangle.height;
+                            *attribs++ = rectangle->rectangle.corner_radius;
+                            *attribs++ = (rectangle->colour.a/255.0f);
+                            *attribs++ = (rectangle->colour.b/255.0f);
+                            *attribs++ = (rectangle->colour.g/255.0f);
+                            *attribs++ = (rectangle->colour.r/255.0f);
+                            num_verts++;
+                            
+                        }
                     }
-                    num_verts += 6;
                 }
                 // NOTE(Oliver): draw filled rects data
                 {
@@ -1402,22 +1459,27 @@ process_and_draw_commands(){
                     _command = _command->next){
                     auto glyph = _command;
                     for(int i = 0; i < 6; i++){
-                        *attribs++ = glyph->glyph.x;
-                        *attribs++ = glyph->glyph.y;
-                        *attribs++ = glyph->glyph.width;
-                        *attribs++ = glyph->glyph.height;
-                        *attribs++ = glyph->glyph.u;
-                        *attribs++ = glyph->glyph.v;
-                        *attribs++ = glyph->glyph.u_width;
-                        *attribs++ = glyph->glyph.v_height;
-                        *attribs++ = glyph->colour.a/255.0f;
-                        *attribs++ = glyph->colour.b/255.0f;
-                        *attribs++ = glyph->colour.g/255.0f;
-                        *attribs++ = glyph->colour.r/255.0f;
-                        
+                        v4f r = v4f(glyph->glyph.x,
+                                    glyph->glyph.y,
+                                    glyph->glyph.width,
+                                    glyph->glyph.height);
+                        if(!should_clip || (should_clip && is_rect_inside_rect(r, clip_range))){
+                            *attribs++ = glyph->glyph.x;
+                            *attribs++ = glyph->glyph.y;
+                            *attribs++ = glyph->glyph.width;
+                            *attribs++ = glyph->glyph.height;
+                            *attribs++ = glyph->glyph.u;
+                            *attribs++ = glyph->glyph.v;
+                            *attribs++ = glyph->glyph.u_width;
+                            *attribs++ = glyph->glyph.v_height;
+                            *attribs++ = glyph->colour.a/255.0f;
+                            *attribs++ = glyph->colour.b/255.0f;
+                            *attribs++ = glyph->colour.g/255.0f;
+                            *attribs++ = glyph->colour.r/255.0f;
+                            num_verts++;
+                            
+                        }
                     }
-                    num_verts += 6;
-                    
                 }
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
@@ -2031,6 +2093,7 @@ Bitmap document_icon;
 
 global bool cursor_size = 0;
 global f32 start_width = 0;
+
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
     if(!root) return;
@@ -2059,7 +2122,6 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         new_posx = 0;
         new_posy = 0;
     }
-    
     //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
     v4f panel_border = v4f(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER);
     if(is_mouse_in_rect(panel_border)){
@@ -2091,7 +2153,6 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
     auto callback = [](u8* parameters){
         return;
     };
-    
     
     Closure closure = make_closure(callback, 0);
     auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
@@ -2165,9 +2226,10 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         
         push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
                        new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
+        present(root->presenter);
         
     }
     ui_end_panel();
-    present(root->presenter);
+    
     reset_presenter(root->presenter);
 }

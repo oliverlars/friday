@@ -879,6 +879,7 @@ draw_status_bar(Presenter* active_presenter){
     push_string(x, size/2-renderer.font.size/4, 
                 file, theme.text_misc.packed);
     x += get_text_width(file);
+    if(!active_presenter->active_present_node) return;
     switch(active_presenter->active_present_node->node->type){
         case NODE_DECLARATION:{
             char* str = "declaration";

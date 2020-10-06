@@ -297,6 +297,12 @@ rects_similar(v4f a, v4f b, f32 tolerance){
         (fabs(a.z - b.z) < tolerance) && (fabs(a.w - b.w) < tolerance);
 }
 
+internal b32
+is_rect_inside_rect(v4f a, v4f b){
+    return (a.x >= b.x) && (a.x + a.width <= b.x + b.width) &&
+        (a.y >= b.y) && (a.y + a.height <= b.y + b.height);
+}
+
 // NOTE(Oliver): 0xAABBGGRR 
 union Colour {
     u32 packed;

@@ -66,6 +66,7 @@ struct SDFFont {
     int line_height;
     int size;
     f32 scale;
+    v4i padding;
 };
 
 struct Lexer {
@@ -164,6 +165,19 @@ load_sdf_font(char* filename){
     expect_token(&l, "=");
     int size = string_to_int(read_token(&l));
     
+    while(!string_eq(read_token(&l), "padding")){
+        
+    }
+    expect_token(&l, "=");
+    v4i padding = {};
+    padding.x = string_to_int(read_token(&l));
+    expect_token(&l, ",");
+    padding.y = string_to_int(read_token(&l));
+    expect_token(&l, ",");
+    padding.z = string_to_int(read_token(&l));
+    expect_token(&l, ",");
+    padding.w = string_to_int(read_token(&l));
+    
     
     while(!string_eq(read_token(&l), "lineHeight")){
         
@@ -237,6 +251,7 @@ load_sdf_font(char* filename){
     assert(font.size == 55);
     font.line_height = line_height;
     font.scale = 20.0f/(f32)font.size;
+    font.padding = padding;
     return font;
 }
 
@@ -595,7 +610,7 @@ push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
                                 y + c.y_offset*font.scale + c.height*font.scale);
             v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += c.x_advance*font.scale;
+            x += (c.x_advance-font.padding.x)*font.scale;
         }
         text++;
     }
@@ -621,7 +636,7 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
                                 y + c.y_offset*font.scale + c.height*font.scale);
             v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += c.x_advance*font.scale;
+            x += (c.x_advance - font.padding.x)*font.scale;
         }
     }
 }
@@ -643,7 +658,7 @@ get_text_width(String8 string){
     f32 result = 0;
     for(int i = 0; i < string.length; i++){
         int id = string[i];
-        result += renderer.font.characters[id].x_advance*renderer.font.scale;
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*renderer.font.scale;
     }
     return result;
 }

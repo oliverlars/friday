@@ -141,7 +141,7 @@ get_presenter_y(Presenter* presenter) {
 
 internal inline void
 present_new_line(Presenter* presenter){
-    presenter->y_offset -= renderer.fonts[0].line_height;
+    presenter->y_offset -= renderer.font.size;
     presenter->x_offset = 0;
 }
 internal void
@@ -202,7 +202,7 @@ edit_string(Presenter* presenter, String8* string){
 internal void
 present_highlighted_string(Presenter* presenter, String8 string, u32 colour = theme.panel.packed){
     
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     presenter->cursor_target_rect.x = get_presenter_x(presenter);
     presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
     presenter->cursor_target_rect.z = get_text_width(string);
@@ -220,7 +220,7 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
 internal void
 present_highlighted_string(Presenter* presenter, char* string, u32 colour = theme.panel.packed){
     
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     presenter->cursor_target_rect.x = get_presenter_x(presenter);
     presenter->cursor_target_rect.y = (get_presenter_y(presenter)-line_height/4);
     presenter->cursor_target_rect.z = get_text_width(string);
@@ -243,7 +243,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
                                  get_text_width(*string),
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, {});
     
     
@@ -254,7 +254,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
         f32 text_width = get_text_width(*string);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.fonts[0].line_height;
+        f32 line_height = renderer.font.size;
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
@@ -281,7 +281,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
                                  get_text_width(node->name),
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, {});
     
     
@@ -292,7 +292,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
         f32 text_width = get_text_width(node->name);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.fonts[0].line_height;
+        f32 line_height = renderer.font.size;
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
@@ -319,7 +319,7 @@ present_selectable_string(Presenter* presenter, char* string, u32 colour = theme
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
                                  get_text_width(string),
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, {});
     
     
@@ -354,7 +354,7 @@ present_x_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
@@ -378,7 +378,7 @@ present_x_insertable(Presenter* presenter, Closure closure, String8 label){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
@@ -416,13 +416,13 @@ present_y_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_Y_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_Y_WIDTH,
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
-        anim_state->target_rect.y = renderer.fonts[0].line_height;
+        anim_state->target_rect.y = renderer.font.size;
     }
     if(ui_state.hover_id == id){
         animate(anim_state);
@@ -440,13 +440,13 @@ present_y_insertable(Presenter* presenter, Closure closure, String8 label){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_Y_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_Y_WIDTH,
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
-        anim_state->target_rect.y = renderer.fonts[0].line_height;
+        anim_state->target_rect.y = renderer.font.size;
     }
     if(ui_state.hover_id == id){
         animate(anim_state);
@@ -621,7 +621,7 @@ present_editable_token_list(Presenter* presenter, Node* node){
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
                                  get_text_width(node->name),
-                                 renderer.fonts[0].line_height, 
+                                 renderer.font.size, 
                                  id, {});
     
     
@@ -632,7 +632,7 @@ present_editable_token_list(Presenter* presenter, Node* node){
         f32 text_width = get_text_width(node->name);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = renderer.fonts[0].line_height;
+        f32 line_height = renderer.font.size;
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
@@ -879,48 +879,48 @@ draw_status_bar(Presenter* active_presenter){
     push_rectangle(x, -size, width, size*2, 10, theme.panel.packed);
     
     char* file = " active node: "; 
-    push_string(x, size/2-renderer.fonts[0].line_height/4, 
+    push_string(x, size/2-renderer.font.size/4, 
                 file, theme.text_misc.packed);
     x += get_text_width(file);
     switch(active_presenter->active_present_node->node->type){
         case NODE_DECLARATION:{
             char* str = "declaration";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_TYPE_USAGE:{
             char* str = "type usage";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_FUNCTION:{
             char* str = "function";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_LOOP:{
             char* str = "loop";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_CONDITIONAL:{
             char* str = "conditional";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_LITERAL:{
             char* str = "literal";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_BINARY:{
             char* str = "binary";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NODE_STRUCT:{
             char* str = "struct";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
     }
@@ -928,34 +928,34 @@ draw_status_bar(Presenter* active_presenter){
     x = width/3;
     char* mode = "active mode: ";
     
-    push_string(x, size/2-renderer.fonts[0].line_height/4, 
+    push_string(x, size/2-renderer.font.size/4, 
                 mode, theme.text_misc.packed);
     x += get_text_width(file);
     
     switch(navigator.mode){
         case NV_COMMAND:{
             char* str = "command";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NV_MAKE:{
             char* str = "make";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NV_EDIT:{
             char* str = "edit";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NV_TEXT_EDIT:{
             char* str = "text edit";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
         case NV_DELETE:{
             char* str = "delete";
-            push_string(x, size/2-renderer.fonts[0].line_height/4, 
+            push_string(x, size/2-renderer.font.size/4, 
                         str, theme.text.packed);
         }break;
     }

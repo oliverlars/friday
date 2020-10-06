@@ -63,6 +63,7 @@ struct Character {
 struct SDFFont {
     Character characters[256];
     Bitmap bitmap;
+    int size;
 };
 
 struct Lexer {
@@ -211,6 +212,8 @@ load_sdf_font(char* filename){
         expect_token(&l, "chnl");
         expect_token(&l, "=");
         expect_token(&l, "0");
+        
+        gobble_whitespace(&l);
         
     }
     
@@ -373,9 +376,7 @@ global struct {
     Command* head = nullptr;
     Command* tail = nullptr;
     
-    // TODO(Oliver): remove last array and 
-    // move to arena
-    Array<Font> fonts;
+    SDFFont font;
     
     Arena shape_attribs;
     Arena frame_arena;
@@ -565,16 +566,16 @@ push_circle(f32 x, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
 
 
 internal void
-push_glyph(stbtt_aligned_quad quad, u32 colour){
+push_glyph(v4f positions, v4f uvs, u32 colour){
     
     f32 x0, x1, y0, y1, s0, s1, t0, t1;
-    x0 = quad.x0;
-    x1 = quad.x1;
-    y0 = -quad.y0;
-    y1 = -quad.y1;
+    x0 = positions.x0;
+    x1 = positions.x1;
+    y0 = -positions.y0;
+    y1 = -positions.y0;
     
-    s0 = quad.s0; s1 = quad.s1;
-    t0 = quad.t0; t1 = quad.t1;
+    s0 = uvs.x0; s1 = uvs.x1;
+    t0 = uvs.y0; t1 = uvs.y1;
     
     auto glyph = make_command(COMMAND_GLYPH);
     glyph->glyph.x = x0;
@@ -607,24 +608,29 @@ push_rectangle_textured(f32 x, f32 y, f32 width, f32 height, f32 radius, Bitmap 
 }
 
 internal void
-push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
+push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF, f32 scale = 1.0f){
     
     y = -y;
     
     // NOTE(Oliver): '#' is used for ID purposes
     while(*text && *text != '#'){
         if(*text >= 32 && *text < 128){
-            stbtt_aligned_quad quad;
-            stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
-                                *text-32, &x, &y, &quad, 1);
-            push_glyph(quad, colour);
+            auto font = renderer.font;
+            auto c  = font.characters[*text];
+            f32 base_line = y + c.y_offset;
+            v4f positions = v4f(x + c.x_offset*font.size*scale, y + c.y_offset*font.size*scale, 
+                                x + c.x_offset*font.size*scale + c.width*font.size*scale,
+                                y + c.y_offset*font.size*scale + c.height*font.size*scale);
+            v4f uvs = v4f(c.x, c.y, c.x + c.width, c.y+c.height);
+            push_glyph(positions, uvs, colour);
+            x += c.x_advance;
         }
         text++;
     }
 }
 
 internal void
-push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
+push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF, f32 scale = 1.0f){
     
     y = -y;
     
@@ -634,10 +640,15 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
         if(text == '#'){break;}
         //while(string.text && *string.text && *string.text != '#'){
         if(text >= 32 && text < 128){
-            stbtt_aligned_quad quad;
-            stbtt_GetPackedQuad(renderer.fonts[0].char_infos, 4096, 4096,
-                                text-32, &x, &y, &quad, 1);
-            push_glyph(quad, colour);
+            auto font = renderer.font;
+            auto c  = font.characters[text];
+            f32 base_line = y + c.y_offset;
+            v4f positions = v4f(x + c.x_offset*font.size*scale, y + c.y_offset*font.size*scale, 
+                                x + c.x_offset*font.size*scale + c.width*font.size*scale,
+                                y + c.y_offset*font.size*scale + c.height*font.size*scale);
+            v4f uvs = v4f(c.x, c.y, c.x + c.width, c.y+c.height);
+            push_glyph(positions, uvs, colour);
+            x += c.x_advance;
         }
     }
 }
@@ -647,37 +658,22 @@ get_text_width(char* text){
     f32 result = 0;
     while(text && *text){
         if(*text == '#') break;
-        s32 advance_x;
-        s32 left_side_bearing;
-        stbtt_GetCodepointHMetrics(&renderer.fonts[0].info, *text, &advance_x, &left_side_bearing);
-        int x0, x1, y0, y1;;
-        stbtt_GetCodepointBitmapBox(&renderer.fonts[0].info, *text, renderer.fonts[0].scale, 
-                                    renderer.fonts[0].scale,
-                                    &x0, &y0, &x1, &y1);
-        result += advance_x;
-        result += x1 - x0;
+        int id = *text;
+        result += renderer.font.characters[id].x_advance;
         text++;
     }
-    return result*renderer.fonts[0].scale;
+    return result*renderer.font.size;
 }
 
 internal f32
 get_text_width(String8 string){
     f32 result = 0;
     for(int i = 0; i < string.length; i++){
-        char text = string[i];
-        if(text == '#') break;
-        s32 advance_x;
-        s32 left_side_bearing;
-        stbtt_GetCodepointHMetrics(&renderer.fonts[0].info, text, &advance_x, &left_side_bearing);
-        int x0, x1, y0, y1;
-        stbtt_GetCodepointBitmapBox(&renderer.fonts[0].info, text, renderer.fonts[0].scale, 
-                                    renderer.fonts[0].scale,
-                                    &x0, &y0, &x1, &y1);
-        result += advance_x;
+        int id = string[i];
+        result += renderer.font.characters[id].x_advance;
         //result += x1 - x0;
     }
-    return result*renderer.fonts[0].scale;
+    return result*renderer.font.size;
 }
 
 
@@ -1155,8 +1151,12 @@ init_shaders(){
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             
+            "const float width = 0.5;\n"
+            "const float edge = 0.1;\n"
+            
             "void main(){\n"
-            "float alpha = texture(atlas, frag_uv).r;\n"
+            "float distance = 1.0 - texture(atlas, frag_uv).a;\n"
+            "float alpha = 1.0 smoothstep(0.5, 0.5 + edge, distance);\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
@@ -1169,9 +1169,9 @@ init_shaders(){
         glGenTextures(1, &renderer.texture);
         glBindTexture(GL_TEXTURE_2D, renderer.texture);
         
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, FONT_BITMAP_SIZE,
-                     FONT_BITMAP_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE,
-                     renderer.fonts[0].bitmap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512,
+                     512, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     renderer.font.bitmap.data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
         
@@ -1552,9 +1552,9 @@ display_modes(){
 internal UI_ID
 button(f32 x, f32 y, char* text, Closure closure){
     auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     f32 border = 5.0f;
     if(id == ui_state.clicked_id){
         
@@ -1575,10 +1575,10 @@ button(f32 x, f32 y, char* text, Closure closure){
 internal UI_ID
 text_button(char* text, f32 x, f32 y, b32* state, Closure closure){
     auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     f32 border = 5.0f;
     if(*state){
         
@@ -1604,10 +1604,10 @@ text_button(char* text, b32* state, Closure closure){
     f32 x = ui_get_x();
     f32 y = ui_get_y();
     auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.fonts[0].line_height,
+    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
                                id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     f32 border = 5.0f;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
@@ -1647,7 +1647,7 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
     
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
@@ -1685,7 +1685,7 @@ small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, b32* state
     auto id = gen_unique_id(label);
     auto widget = _push_widget(x, y, size, size, id, closure);
     widget->clicked = state;
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
@@ -1790,7 +1790,7 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
                            lerp(anim_state->y_scale, 1.2, 0.2f));
     //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
     //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
-    f32 line_height = renderer.fonts[0].line_height;
+    f32 line_height = renderer.font.size;
     f32 height = 40*anim_state->y_scale;
     f32 size_x = 200*anim_state->x_scale;
     f32 size_y = num_rows*height;
@@ -1954,7 +1954,7 @@ internal UI_ID
 radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
     auto id = gen_unique_id(label);
     
-    f32 height = renderer.fonts[0].line_height;
+    f32 height = renderer.font.size;
     f32 width = height*2;
     auto anim_state = get_animation_state(id);
     if(!anim_state){
@@ -1990,7 +1990,7 @@ radio_button(char* label, b32* state, Closure closure){
     
     auto id = gen_unique_id(label);
     
-    f32 height = renderer.fonts[0].line_height;
+    f32 height = renderer.font.size;
     f32 width = height*2;
     auto anim_state = get_animation_state(id);
     if(!anim_state){

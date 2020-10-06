@@ -71,9 +71,9 @@ main(int argc, char** args){
     load_opengl();
     
     SDL_ShowWindow(global_window);
-    renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
+    //renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
-    load_sdf_font("../fonts/friday_default.fnt");
+    renderer.font = load_sdf_font("../fonts/friday_default.fnt");
     
     init_opengl_renderer();
     init_shaders();

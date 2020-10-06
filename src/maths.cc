@@ -168,6 +168,12 @@ union v4f {
         f32 w;
     };
     struct {
+        f32 x0;
+        f32 y0;
+        f32 x1;
+        f32 y1;
+    };
+    struct {
         f32 r;
         f32 g;
         f32 b;

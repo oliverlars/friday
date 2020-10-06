@@ -381,8 +381,8 @@ string_to_int(String8 string){
     
     int result = 0;
     bool is_negative = string.text[0] == '-';
-    for(int i = string.length-1; i >= 0 + is_negative; i--){
-        result += result*10 + (string.text[i] - '0');
+    for(int i = is_negative; i < string.length; i++){
+        result = result*10 + (string.text[i] - '0');
     }
     
     if(is_negative){

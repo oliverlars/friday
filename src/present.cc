@@ -929,6 +929,7 @@ draw_status_bar(Presenter* active_presenter){
     push_string(x, size/2-renderer.font.size/4, 
                 mode, theme.text_misc.packed);
     x += get_text_width(file);
+    // TODO(Oliver): FIX THE MOUSE TO USE NEW INPUT HANDLE  was_pressed(input.mouse_left) !!!!!!!!!!!!!!!!!!!!!!!
     
     switch(navigator.mode){
         case NV_COMMAND:{

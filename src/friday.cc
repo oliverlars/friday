@@ -179,8 +179,8 @@ main(int argc, char** args){
         
         //present_graph(global_scope->scope.statements->next);
         
-        draw_menu_bar();
         draw_status_bar(&presenter);
+        draw_menu_bar();
         
         display_modes();
         navigate_graph(&presenter);
@@ -194,6 +194,7 @@ main(int argc, char** args){
         
         process_widgets_and_handle_events();
         opengl_end_frame();
+        // TODO(Oliver): FIX THE MOUSE TO USE NEW INPUT HANDLE  was_pressed(input.mouse_left) !!!!!!!!!!!!!!!!!!!!!!!
         
         platform.mouse_drag = 0;
         platform.has_text_input = 0;

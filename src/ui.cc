@@ -273,7 +273,7 @@ process_widgets_and_handle_events(){
         CLICK_MIDDLE,
     };
     Click_Type click_type;
-    for(Widget* widget = ui_state.widgets; widget->next; widget = widget->next){
+    for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
             ui_state.hover_id = widget->id;
@@ -284,7 +284,7 @@ process_widgets_and_handle_events(){
                     *widget->clicked  = !*widget->clicked;
                 }
                 if(ui_state.clicked_id == widget->id){
-                    ui_state.clicked_id = -1;
+                    ui_state.clicked_id = HASH_INITIAL;
                 }else{
                     active = widget;
                     ui_state.clicked_id = widget->id;
@@ -295,9 +295,7 @@ process_widgets_and_handle_events(){
         }
     }
     if(!hovered){
-        ui_state.hover_id = -1;
-    }else {
-        
+        ui_state.hover_id = HASH_INITIAL;
     }
     if(active_hover){
         if(active_hover->hover.callback){

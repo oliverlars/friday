@@ -1617,15 +1617,14 @@ display_modes(){
 internal UI_ID
 button(f32 x, f32 y, char* text, Closure closure){
     auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
-                               id, closure);
-    f32 line_height = get_font_line_height();
+    
+    v4f bbox = get_text_bbox(x, y, text);
+    
+    auto widget = ui_push_widget(bbox.x, bbox.y, bbox.width, bbox.height, id, closure);
     if(id == ui_state.clicked_id){
-        v4f bbox = get_text_bbox(x, y, text);
         push_rectangle(bbox, 10, theme.button_highlight.packed);
         push_string(x, y, text, theme.text.packed);
     }else if(id == ui_state.hover_id){
-        v4f bbox = get_text_bbox(x, y, text);
         push_rectangle(bbox, 10, theme.button_highlight.packed);
         push_string(x, y, text, theme.text.packed);
     }else{
@@ -1638,10 +1637,10 @@ button(f32 x, f32 y, char* text, Closure closure){
 internal UI_ID
 text_button(char* text, f32 x, f32 y, b32* state, Closure closure){
     auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
+    f32 line_height = get_font_line_height();
+    auto widget = _push_widget(x, y, get_text_width(text), line_height,
                                id, closure);
     widget->clicked = state;
-    f32 line_height = get_font_line_height();
     f32 border = 5.0f;
     if(*state){
         v4f bbox = get_text_bbox(x, y, text);
@@ -1839,7 +1838,7 @@ global bool menu_open = 0;
 
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
-    auto menu_id = gen_unique_id(label);
+    auto menu_id = gen_id(label);
     //debug_print("%d", menu_id);
     auto anim_state = get_animation_state(menu_id);
     if(!anim_state){
@@ -1904,48 +1903,56 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
 internal void
 draw_menu_bar(){
     int size = 40;
-    int x = 0;
-    push_rectangle(x += 5, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
-    push_rectangle_textured(x += 10,platform.height-size/2-30/2, 30, 30, 1, bitmap);
+    int x = 5;
+    push_rectangle(x, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
+    x += 10;
+    push_rectangle_textured(x,platform.height-size/2-30/2, 30, 30, 1, bitmap);
     
-    UI_ID file_id, edit_id, help_id;
+    UI_ID file_id = 0;
+    UI_ID edit_id = 0;
+    UI_ID help_id = 0;
     
-    f32 file_x;
-    f32 edit_x;
-    f32 help_x;
+    f32 file_x = 0;
+    f32 edit_x = 0;
+    f32 help_x = 0;
+    
+    auto menu_callback = [](u8* parameters){
+        menu_open = 1;
+    };
     
     f32 gap = 30.0f;
     {
         char* file = "File"; 
-        auto file_menu_callback = [](u8* parameters){
-            menu_open = 1;
-        };
-        Closure file_menu = make_closure(file_menu_callback, 0);
-        file_id = button(x+=get_text_width(file), platform.height-size+5, file, file_menu);
+        
+        Closure file_menu = make_closure(menu_callback, 0);
+        x+=get_text_width(file);
+        file_id = button(x, platform.height-size+5, file, file_menu);
         file_x = x;
         
     }
     
     {
-        auto edit_menu_callback = [](u8* parameters){
-            menu_open = 1;
-        };
+        
         char* edit = "Edit"; 
-        Closure edit_menu = make_closure(edit_menu_callback, 0);
-        edit_id = button(x+=get_text_width(edit)+gap, platform.height-size+5, edit, edit_menu);
+        Closure edit_menu = make_closure(menu_callback, 0);
+        x+=get_text_width(edit)+gap;
+        edit_id = button(x, platform.height-size+5, edit, edit_menu);
         edit_x = x;
     }
     
     {
-        auto help_menu_callback = [](u8* parameters){
-            menu_open = 1;
-        };
+        
         char* help = "Help"; 
-        Closure help_menu = make_closure(help_menu_callback, 0);
-        help_id = button(x+=get_text_width(help)+gap, platform.height-size+5, help, help_menu);
+        Closure help_menu = make_closure(menu_callback, 0);
+        x += get_text_width(help)+gap;
+        
+        help_id = button(x, platform.height-size+5, help, help_menu);
         help_x = x;
     }
     
+    if(help_id == ui_state.hover_id){
+        int x = 5;
+    }
     
     if(menu_open && file_id == ui_state.clicked_id){
         String8 items[4] = {};

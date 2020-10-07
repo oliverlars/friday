@@ -36,6 +36,8 @@ struct Presenter {
     Present_Node* active_present_node;
     b32 should_edit;
     
+    f32 font_scale = 2.0f;
+    f32 target_font_scale = 2.0f;
     
     v4f cursor_rect;
     v4f cursor_target_rect;
@@ -135,12 +137,16 @@ get_presenter_x(Presenter* presenter) {
 
 internal inline int
 get_presenter_y(Presenter* presenter) {
-    return presenter->y_start + presenter->y_offset - platform.mouse_scroll_source;
+    f32 scroll_amount = 0;
+    if(was_pressed(input.editor_zoom)){
+        scroll_amount =  platform.mouse_scroll_source;
+    }
+    return presenter->y_start + presenter->y_offset - scroll_amount;
 }
 
 internal inline void
 present_new_line(Presenter* presenter){
-    presenter->y_offset -= get_font_line_height();
+    presenter->y_offset -= get_font_line_height(presenter->font_scale);
     presenter->x_offset = 0;
 }
 internal void
@@ -150,26 +156,26 @@ present_space(Presenter* presenter){
 
 internal void
 present_string(Presenter* presenter, char* string, u32 colour = 0xFFFFFFFF){
-    push_string(get_presenter_x(presenter), get_presenter_y(presenter), string, colour);
-    presenter->x_offset += get_text_width(string);
+    push_string(get_presenter_x(presenter), get_presenter_y(presenter), string, colour, presenter->font_scale);
+    presenter->x_offset += get_text_width(string, presenter->font_scale);
 }
 
 internal void
 present_string(Presenter* presenter, String8 string, u32 colour = 0xFFFFFFFF){
-    push_string8(get_presenter_x(presenter), get_presenter_y(presenter), string, colour);
-    presenter->x_offset += get_text_width(string);
+    push_string8(get_presenter_x(presenter), get_presenter_y(presenter), string, colour, presenter->font_scale);
+    presenter->x_offset += get_text_width(string, presenter->font_scale);
 }
 
 internal void
 present_string(Presenter* presenter, f32 x, f32 y, String8 string, u32 colour = 0xFFFFFFFF){
-    push_string8(x, y, string, colour);
-    presenter->x_offset += get_text_width(string);
+    push_string8(x, y, string, colour, presenter->font_scale);
+    presenter->x_offset += get_text_width(string, presenter->font_scale);
 }
 
 internal void
 present_string(Presenter* presenter, f32 x, f32 y, char* string, u32 colour = 0xFFFFFFFF){
-    push_string(x, y, string, colour);
-    presenter->x_offset += get_text_width(string);
+    push_string(x, y, string, colour, presenter->font_scale);
+    presenter->x_offset += get_text_width(string, presenter->font_scale);
 }
 
 internal void
@@ -199,10 +205,10 @@ edit_string(Presenter* presenter, String8* string){
 internal void
 present_highlighted_string(Presenter* presenter, String8 string, u32 colour = theme.panel.packed){
     
-    f32 line_height = get_font_line_height();
+    f32 line_height = get_font_line_height(presenter->font_scale);
     presenter->cursor_target_rect = get_text_bbox(get_presenter_x(presenter),
                                                   get_presenter_y(presenter),
-                                                  string);
+                                                  string, presenter->font_scale);
     
     presenter->cursor_rect = add_rects(presenter->cursor_rect, 
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
@@ -216,10 +222,10 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
 internal void
 present_highlighted_string(Presenter* presenter, char* string, u32 colour = theme.panel.packed){
     
-    f32 line_height = get_font_line_height();
+    f32 line_height = get_font_line_height(presenter->font_scale);
     presenter->cursor_target_rect = get_text_bbox(get_presenter_x(presenter),
                                                   get_presenter_y(presenter),
-                                                  string);
+                                                  string, presenter->font_scale);
     
     presenter->cursor_rect = add_rects(presenter->cursor_rect, 
                                        lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
@@ -237,7 +243,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
     auto id = gen_id(*string);
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
-                                 get_text_width(*string),
+                                 get_text_width(*string, presenter->font_scale),
                                  renderer.font.size, 
                                  id, {});
     
@@ -246,17 +252,17 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
        (is_active_present_node(presenter) && presenter->should_edit)){
         presenter->active_string = string;
         presenter->cursor_index = string->length;
-        f32 text_width = get_text_width(*string);
+        f32 text_width = get_text_width(*string, presenter->font_scale);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = get_font_line_height();
+        f32 line_height = get_font_line_height(presenter->font_scale);
         f32 height = line_height;
         f32 x = get_presenter_x(presenter);
         f32 y = get_presenter_y(presenter);
         
         if(presenter->active_string == string){
-            f32 cursor_pos = get_text_width(*string);
-            v4f bbox = get_text_bbox(x, y, *string);
+            f32 cursor_pos = get_text_width(*string, presenter->font_scale);
+            v4f bbox = get_text_bbox(x, y, *string, presenter->font_scale);
             push_rectangle(bbox, 0.1, theme.cursor.packed);
             edit_string(presenter, string);
         }
@@ -276,7 +282,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
     auto id = gen_id(node->name);
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
-                                 get_text_width(node->name),
+                                 get_text_width(node->name, presenter->font_scale),
                                  renderer.font.size, 
                                  id, {});
     
@@ -285,16 +291,16 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
        (is_active_present_node(presenter) && presenter->should_edit)){
         presenter->active_string = &node->name;
         presenter->cursor_index = node->name.length;
-        f32 text_width = get_text_width(node->name);
+        f32 text_width = get_text_width(node->name, presenter->font_scale);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = get_font_line_height();
+        f32 line_height = get_font_line_height(presenter->font_scale);
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
         
         if(presenter->active_string == &node->name){
-            f32 cursor_pos = get_text_width(node->name);
+            f32 cursor_pos = get_text_width(node->name, presenter->font_scale);
             push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
             edit_string(presenter, &node->name);
         }
@@ -314,7 +320,7 @@ present_selectable_string(Presenter* presenter, char* string, u32 colour = theme
     auto id = gen_id(string);
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
-                                 get_text_width(string),
+                                 get_text_width(string, presenter->font_scale),
                                  renderer.font.size, 
                                  id, {});
     
@@ -350,7 +356,7 @@ present_x_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     auto widget = ui_push_widget(get_presenter_x(presenter)-INSERTABLE_WIDTH/2,
                                  get_presenter_y(presenter),
                                  INSERTABLE_WIDTH,
-                                 get_font_line_height(), 
+                                 get_font_line_height(presenter->font_scale), 
                                  id, closure);
     
     auto anim_state = get_animation_state(id);
@@ -616,7 +622,7 @@ present_editable_token_list(Presenter* presenter, Node* node){
     auto id = gen_id(node->name);
     auto widget = ui_push_widget(get_presenter_x(presenter),
                                  get_presenter_y(presenter),
-                                 get_text_width(node->name),
+                                 get_text_width(node->name, presenter->font_scale),
                                  renderer.font.size, 
                                  id, {});
     
@@ -625,16 +631,16 @@ present_editable_token_list(Presenter* presenter, Node* node){
        (is_active_present_node(presenter) && presenter->should_edit)){
         presenter->active_string = &node->name;
         presenter->cursor_index = node->name.length;
-        f32 text_width = get_text_width(node->name);
+        f32 text_width = get_text_width(node->name, presenter->font_scale);
         f32 offset = 5.0f;
         f32 width = text_width + offset;
-        f32 line_height = get_font_line_height();
+        f32 line_height = get_font_line_height(presenter->font_scale);
         f32 height = line_height;
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
         
         if(presenter->active_string == &node->name){
-            f32 cursor_pos = get_text_width(node->name);
+            f32 cursor_pos = get_text_width(node->name, presenter->font_scale);
             push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
             edit_string(presenter, &node->name);
         }
@@ -851,8 +857,11 @@ present_graph(Presenter* presenter, Node* root){
 internal void
 present(Presenter* presenter){
     if(!presenter) return;
+    if(is_pressed(input.editor_zoom)){
+        presenter->target_font_scale -= platform.mouse_scroll_delta/100.0f;
+    }
+    presenter->font_scale += lerp(presenter->font_scale, presenter->target_font_scale, 0.1f);
     present_graph(presenter, presenter->root);
-    
 }
 
 

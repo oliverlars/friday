@@ -207,6 +207,7 @@ main(int argc, char** args){
         for(int i = 0; i < INPUT_COUNT; i++){
             input.actions[i].half_transition_count = 0;
         }
+        platform.mouse_scroll_delta = 0;
         
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -364,7 +365,6 @@ main(int argc, char** args){
                     }
                     if(key == KEY_H){
                         process_keyboard_event(&input.navigate_left, is_down);
-                        
                     }
                     if(key == KEY_L){
                         process_keyboard_event(&input.navigate_right, is_down);
@@ -385,6 +385,9 @@ main(int argc, char** args){
                     if(key == KEY_C){
                         process_keyboard_event(&input.make_cond, is_down);
                     }
+                    if(key == KEY_CTRL){
+                        process_keyboard_event(&input.editor_zoom, is_down);
+                    }
                 }
                 
             }
@@ -397,7 +400,9 @@ main(int argc, char** args){
                 }
             }
             if(event.type == SDL_MOUSEWHEEL){
+                f32 temp_scroll = platform.mouse_scroll_target;
                 platform.mouse_scroll_target += event.wheel.y*50;
+                platform.mouse_scroll_delta = event.wheel.y*50;
             }
         }
         platform.mouse_scroll_source += lerp(platform.mouse_scroll_source, platform.mouse_scroll_target, 0.1f);

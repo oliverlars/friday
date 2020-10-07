@@ -587,8 +587,10 @@ struct {
     bool mouse_left_up;
     bool mouse_left_down;
     
+    f32 mouse_scroll_delta;
     f32 mouse_scroll_source;
     f32 mouse_scroll_target;
+    
     bool mouse_middle_up;
     bool mouse_middle_down;
     
@@ -672,6 +674,8 @@ union Input {
         Key_State enter_command_mode;
         Key_State enter_make_mode;
         
+        Key_State editor_zoom;
+        
         Key_State backspace;
         Key_State add_pointers;
         Key_State make_arg;
@@ -689,6 +693,12 @@ was_pressed(Key_State state){
     bool result = ((state.half_transition_count > 1) || 
                    ((state.half_transition_count == 1) && (state.was_down)));
     
+    return result;
+}
+
+internal b32
+is_pressed(Key_State state){
+    bool result = state.was_down;
     return result;
 }
 

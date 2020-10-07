@@ -408,8 +408,9 @@ global struct {
 
 
 internal int
-get_font_line_height() {
-    return renderer.font.line_height*renderer.font.scale;
+get_font_line_height(f32 font_scale = 1.0f) {
+    font_scale *= renderer.font.scale;
+    return renderer.font.line_height*font_scale;
 }
 
 internal Command*
@@ -619,32 +620,34 @@ push_rectangle_textured(f32 x, f32 y, f32 width, f32 height, f32 radius, Bitmap 
 }
 
 internal void
-push_string(f32 x, f32 y, char* text, u32 colour = 0xFF00FFFF){
+push_string(f32 x, f32 y, char* text, u32 colour, f32 font_scale = 1.0f){
     
     y = -y;
-    y -= get_font_line_height();
+    y -= get_font_line_height(font_scale);
+    font_scale *= renderer.font.scale;
     // NOTE(Oliver): '#' is used for ID purposes
     while(*text && *text != '#'){
         if(*text >= 32 && *text < 128){
             auto font = renderer.font;
             auto c  = font.characters[*text];
-            v4f positions = v4f(x + c.x_offset*font.scale, 
-                                y + c.y_offset*font.scale, 
-                                x + c.x_offset*font.scale + c.width*font.scale,
-                                y + c.y_offset*font.scale + c.height*font.scale);
+            v4f positions = v4f(x + c.x_offset*font_scale, 
+                                y + c.y_offset*font_scale, 
+                                x + c.x_offset*font_scale + c.width*font_scale,
+                                y + c.y_offset*font_scale + c.height*font_scale);
             v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += (c.x_advance-font.padding.x)*font.scale;
+            x += (c.x_advance-font.padding.x)*font_scale;
         }
         text++;
     }
 }
 
 internal void
-push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
+push_string8(f32 x, f32 y, String8 string, u32 colour, f32 font_scale = 1.0f){
     
     y = -y;
-    y -= get_font_line_height();
+    y -= get_font_line_height(font_scale);
+    font_scale *= renderer.font.scale;
     
     // NOTE(Oliver): '#' is used for ID purposes
     for(int i = 0; i < string.length; i++){
@@ -654,51 +657,53 @@ push_string8(f32 x, f32 y, String8 string, u32 colour = 0xFF00FFFF){
         if(text >= 32 && text < 128){
             auto font = renderer.font;
             auto c  = font.characters[text];
-            v4f positions = v4f(x + c.x_offset*font.scale, 
-                                y + c.y_offset*font.scale, 
-                                x + c.x_offset*font.scale + c.width*font.scale,
-                                y + c.y_offset*font.scale + c.height*font.scale);
+            v4f positions = v4f(x + c.x_offset*font_scale, 
+                                y + c.y_offset*font_scale, 
+                                x + c.x_offset*font_scale + c.width*font_scale,
+                                y + c.y_offset*font_scale + c.height*font_scale);
             v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += (c.x_advance - font.padding.x)*font.scale;
+            x += (c.x_advance - font.padding.x)*font_scale;
         }
     }
 }
 
 internal f32
-get_text_width(char* text){
+get_text_width(char* text, f32 font_scale = 1.0f){
+    font_scale *= renderer.font.scale;
     f32 result = 0;
     while(text && *text){
         if(*text == '#') break;
         int id = *text;
-        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*renderer.font.scale;
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
         text++;
     }
     return result;
 }
 
 internal f32
-get_text_width(String8 string){
+get_text_width(String8 string, f32 font_scale = 1.0f){
+    font_scale *= renderer.font.scale;
     f32 result = 0;
     for(int i = 0; i < string.length; i++){
         int id = string[i];
-        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*renderer.font.scale;
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
     }
     return result;
 }
 
 internal v4f
-get_text_bbox(f32 x, f32 y, String8 string, f32 border = 5.0f){
-    f32 width = get_text_width(string) + border*2;
-    f32 height = get_font_line_height();
+get_text_bbox(f32 x, f32 y, String8 string, f32 font_scale = 1.0f, f32 border = 5.0f){
+    f32 width = get_text_width(string, font_scale) + border*2;
+    f32 height = get_font_line_height(font_scale);
     x -= border;
     return v4f(x, y, width, height);
 }
 
 internal v4f
-get_text_bbox(f32 x, f32 y, char* string, f32 border = 5.0f){
-    f32 width = get_text_width(string) + border*2;
-    f32 height = get_font_line_height();
+get_text_bbox(f32 x, f32 y, char* string, f32 font_scale = 1.0f, f32 border = 5.0f){
+    f32 width = get_text_width(string, font_scale) + border*2;
+    f32 height = get_font_line_height(font_scale);
     x -= border;
     return v4f(x, y, width, height);
 }

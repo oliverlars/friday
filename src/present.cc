@@ -19,7 +19,6 @@ struct Presenter {
     int x_offset = 0;
     int y_start = 480;
     int y_offset;
-    int scroll_amount;
     int indent;
     
     String8* active_string;
@@ -136,7 +135,7 @@ get_presenter_x(Presenter* presenter) {
 
 internal inline int
 get_presenter_y(Presenter* presenter) {
-    return presenter->y_start + presenter->y_offset + platform.mouse_scroll_amount;
+    return presenter->y_start + presenter->y_offset - platform.mouse_scroll_source;
 }
 
 internal inline void

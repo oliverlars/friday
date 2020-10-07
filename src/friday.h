@@ -587,7 +587,8 @@ struct {
     bool mouse_left_up;
     bool mouse_left_down;
     
-    f32 mouse_scroll_amount;
+    f32 mouse_scroll_source;
+    f32 mouse_scroll_target;
     bool mouse_middle_up;
     bool mouse_middle_down;
     

@@ -397,9 +397,11 @@ main(int argc, char** args){
                 }
             }
             if(event.type == SDL_MOUSEWHEEL){
-                platform.mouse_scroll_amount -= event.wheel.y*50;
+                platform.mouse_scroll_target += event.wheel.y*50;
             }
         }
+        platform.mouse_scroll_source += lerp(platform.mouse_scroll_source, platform.mouse_scroll_target, 0.1f);
+        
         SDL_GL_SwapWindow(global_window);
         platform.tick++;
         end_time = SDL_GetTicks();

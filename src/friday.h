@@ -601,6 +601,8 @@ struct {
     bool mouse_drag;
     f32 mouse_drag_x;
     f32 mouse_drag_y;
+    f32 mouse_delta_x;
+    f32 mouse_delta_y;
     
     bool keys_pressed[4096];
     bool keys_down[4096];

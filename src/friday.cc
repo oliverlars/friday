@@ -188,8 +188,6 @@ main(int argc, char** args){
         
         if(platform.mouse_middle_down && platform.mouse_drag){
             
-            friday.delta_x = platform.mouse_x - platform.mouse_drag_x;
-            friday.delta_y = platform.mouse_y - platform.mouse_drag_y;
         }
         
         process_widgets_and_handle_events();
@@ -218,8 +216,8 @@ main(int argc, char** args){
                     if(!platform.mouse_drag){
                         platform.mouse_drag_x = platform.mouse_x;
                         platform.mouse_drag_y = platform.mouse_y;
-                        
                     }
+                    
                     platform.mouse_left_down = 1;
                 }
                 
@@ -231,9 +229,11 @@ main(int argc, char** args){
                 
                 if(event.button.button == SDL_BUTTON_MIDDLE){
                     if(!platform.mouse_drag){
+                        
                         platform.mouse_drag_x = platform.mouse_x;
                         platform.mouse_drag_y = platform.mouse_y;
                     }
+                    
                     platform.mouse_middle_down = 1;
                     
                 }
@@ -263,6 +263,7 @@ main(int argc, char** args){
                         friday.pan_offset_y += friday.delta_y;
                         friday.delta_x = 0;
                         friday.delta_y = 0;
+                        
                     }
                     
                 }
@@ -398,6 +399,8 @@ main(int argc, char** args){
                 if(platform.mouse_middle_down){
                     platform.mouse_drag = 1;
                 }
+                platform.mouse_delta_x = event.motion.xrel;
+                platform.mouse_delta_y = -event.motion.yrel;
             }
             if(event.type == SDL_MOUSEWHEEL){
                 f32 temp_scroll = platform.mouse_scroll_target;

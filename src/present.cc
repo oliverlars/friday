@@ -18,7 +18,11 @@ struct Presenter {
     int x_start = 300;
     int x_offset = 0;
     int y_start = 480;
-    int y_offset;
+    int y_offset = 0;
+    
+    int y_scroll = 0;
+    int y_scroll_target = 0;
+    
     int indent;
     
     String8* active_string;
@@ -36,8 +40,8 @@ struct Presenter {
     Present_Node* active_present_node;
     b32 should_edit;
     
-    f32 font_scale = 2.0f;
-    f32 target_font_scale = 2.0f;
+    f32 font_scale = 0.8f;
+    f32 target_font_scale = 1.0f;
     
     v4f cursor_rect;
     v4f cursor_target_rect;
@@ -137,11 +141,7 @@ get_presenter_x(Presenter* presenter) {
 
 internal inline int
 get_presenter_y(Presenter* presenter) {
-    f32 scroll_amount = 0;
-    if(was_pressed(input.editor_zoom)){
-        scroll_amount =  platform.mouse_scroll_source;
-    }
-    return presenter->y_start + presenter->y_offset - scroll_amount;
+    return presenter->y_start + presenter->y_offset - presenter->y_scroll;
 }
 
 internal inline void
@@ -461,12 +461,12 @@ present_y_insertable(Presenter* presenter, Closure closure, String8 label){
 
 internal void
 present_pop_indent(Presenter* presenter){
-    presenter->indent -= 40;
+    presenter->indent -= 40*presenter->font_scale;
 }
 
 internal void
 present_push_indent(Presenter* presenter){
-    presenter->indent += 40;
+    presenter->indent += 40*presenter->font_scale;
 }
 
 #define present_indent(presenter) defer_loop(present_push_indent(presenter), present_pop_indent(presenter))
@@ -858,9 +858,18 @@ internal void
 present(Presenter* presenter){
     if(!presenter) return;
     if(is_pressed(input.editor_zoom)){
-        presenter->target_font_scale -= platform.mouse_scroll_delta/100.0f;
+        presenter->target_font_scale += platform.mouse_scroll_delta/250.0f;
+    }else {
+        presenter->y_scroll_target += platform.mouse_scroll_delta;
     }
     presenter->font_scale += lerp(presenter->font_scale, presenter->target_font_scale, 0.1f);
+    presenter->y_scroll += lerp(presenter->y_scroll, presenter->y_scroll_target, 0.1f);
+    
+    if(platform.mouse_drag){
+        presenter->x_start += platform.mouse_delta_x;
+        presenter->y_start += platform.mouse_delta_y;
+    }
+    
     present_graph(presenter, presenter->root);
 }
 

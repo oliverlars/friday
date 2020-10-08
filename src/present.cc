@@ -27,6 +27,8 @@ struct Presenter {
     
     String8* active_string;
     int cursor_index;
+    v4f edit_cursor_source;
+    v4f edit_cursor_target;
     
     Node* hover_node;
     
@@ -236,6 +238,16 @@ present_highlighted_string(Presenter* presenter, char* string, u32 colour = them
     
 }
 
+internal void
+present_cursor(Presenter* presenter, String8 string, int index) {
+    int cursor_width = 4;
+    int line_height = get_font_line_height(presenter->font_scale);
+    f32 x = get_presenter_x(presenter) + get_text_width_n(string, index, presenter->font_scale);
+    f32 y = get_presenter_y(presenter);
+    presenter->edit_cursor_target = v4f(x, y, cursor_width, line_height);
+    lerp_rects(&presenter->edit_cursor_source, presenter->edit_cursor_target, 0.3f);
+    push_rectangle(presenter->edit_cursor_source, 2, theme.cursor.packed);
+}
 
 internal void
 present_editable_string(Presenter* presenter, String8* string, u32 colour = theme.text.packed){
@@ -263,7 +275,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
         if(presenter->active_string == string){
             f32 cursor_pos = get_text_width(*string, presenter->font_scale);
             v4f bbox = get_text_bbox(x, y, *string, presenter->font_scale);
-            push_rectangle(bbox, 0.1, theme.cursor.packed);
+            present_cursor(presenter, *string, presenter->cursor_index);
             edit_string(presenter, string);
         }
     }else if(id == ui_state.hover_id){
@@ -300,8 +312,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
         f32 y = get_presenter_y(presenter) - line_height*0.25;
         
         if(presenter->active_string == &node->name){
-            f32 cursor_pos = get_text_width(node->name, presenter->font_scale);
-            push_rectangle(3+x+cursor_pos, y, 3, height, 0.1, theme.cursor.packed);
+            present_cursor(presenter, node->name, presenter->cursor_index);
             edit_string(presenter, &node->name);
         }
     }else if(id == ui_state.hover_id){
@@ -865,7 +876,7 @@ present(Presenter* presenter){
     presenter->font_scale += lerp(presenter->font_scale, presenter->target_font_scale, 0.1f);
     presenter->y_scroll += lerp(presenter->y_scroll, presenter->y_scroll_target, 0.1f);
     
-    if(platform.mouse_drag){
+    if(platform.mouse_middle_down && platform.mouse_drag){
         presenter->x_start += platform.mouse_delta_x;
         presenter->y_start += platform.mouse_delta_y;
     }

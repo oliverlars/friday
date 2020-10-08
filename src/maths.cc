@@ -274,6 +274,14 @@ lerp_rects(v4f a, v4f b, f32 amount){
     return result;
 }
 
+internal void
+lerp_rects(v4f* a, v4f b, f32 amount){
+    a->x += (b.x - a->x)*amount;
+    a->y += (b.y - a->y)*amount;
+    a->z += (b.z - a->z)*amount;
+    a->w += (b.w - a->w)*amount;
+}
+
 internal v4f
 add_rects(v4f a, v4f b){
     v4f result = {};
@@ -300,7 +308,7 @@ rects_similar(v4f a, v4f b, f32 tolerance){
 internal b32
 is_rect_inside_rect(v4f a, v4f b){
     return (a.x >= b.x) && (a.x + a.width <= b.x + b.width) &&
-        (a.y >= b.y) && (a.y + a.height <= b.y + b.height);
+        (a.y >= b.y) && (a.y <= b.y + b.height);
 }
 
 // NOTE(Oliver): 0xAABBGGRR 

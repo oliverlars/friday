@@ -394,10 +394,10 @@ main(int argc, char** args){
             }
             if(event.type == SDL_MOUSEMOTION){
                 if(platform.mouse_left_down){
-                    platform.mouse_drag = 1;
+                    platform.mouse_drag = true;
                 }
                 if(platform.mouse_middle_down){
-                    platform.mouse_drag = 1;
+                    platform.mouse_drag = true;
                 }
                 platform.mouse_delta_x = event.motion.xrel;
                 platform.mouse_delta_y = -event.motion.yrel;

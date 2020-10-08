@@ -692,6 +692,32 @@ get_text_width(String8 string, f32 font_scale = 1.0f){
     return result;
 }
 
+internal f32
+get_text_width_n(char* text, int n, f32 font_scale = 1.0f){
+    font_scale *= renderer.font.scale;
+    f32 result = 0;
+    int i = 0;
+    while(text && *text && i < n){
+        if(*text == '#') break;
+        int id = *text;
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
+        text++;
+        i++;
+    }
+    return result;
+}
+
+internal f32
+get_text_width_n(String8 string, int n, f32 font_scale = 1.0f){
+    font_scale *= renderer.font.scale;
+    f32 result = 0;
+    for(int i = 0; (i < string.length) &&  i < n; i++){
+        int id = string[i];
+        result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
+    }
+    return result;
+}
+
 internal v4f
 get_text_bbox(f32 x, f32 y, String8 string, f32 font_scale = 1.0f, f32 border = 5.0f){
     f32 width = get_text_width(string, font_scale) + border*2;

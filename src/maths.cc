@@ -254,6 +254,15 @@ lerp(f32 source, f32 target, f32 value){
     return (target - source)*value;
 }
 
+internal void
+lerp(f32* source, f32 target, f32 value){
+    *source += (target - *source)*value;
+}
+
+internal void
+lerp(int* source, int target, f32 value){
+    *source += (target - *source)*value;
+}
 
 internal f32
 smooth_step(f32 source, f32 target, f32 value){
@@ -340,4 +349,10 @@ add_colours(Colour a, Colour b){
     result.g = a.g + b.g;
     result.r = a.r + b.r;
     return result;
+}
+
+internal inline bool
+between(f32 value, f32 min, f32 max){
+    return (value < max) && value > min;
+    
 }

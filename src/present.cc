@@ -51,6 +51,8 @@ struct Presenter {
     Colour cursor_target_colour;
     
     String8 token_list;
+    
+    int LOD = 3;
 };
 
 
@@ -130,6 +132,7 @@ set_current_down_node(Presenter* presenter, Node* node){
     }
     
 }
+
 
 internal b32
 is_active_present_node(Presenter* presenter){
@@ -212,8 +215,7 @@ present_highlighted_string(Presenter* presenter, String8 string, u32 colour = th
                                                   get_presenter_y(presenter),
                                                   string, presenter->font_scale);
     
-    presenter->cursor_rect = add_rects(presenter->cursor_rect, 
-                                       lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
+    lerp_rects(&presenter->cursor_rect, presenter->cursor_target_rect, 0.2f);
     v4f r = presenter->cursor_rect;
     v4f rt = presenter->cursor_target_rect;
     push_rectangle(r.x, r.y, r.z, r.w, 10, theme.button_highlight.packed);
@@ -229,8 +231,7 @@ present_highlighted_string(Presenter* presenter, char* string, u32 colour = them
                                                   get_presenter_y(presenter),
                                                   string, presenter->font_scale);
     
-    presenter->cursor_rect = add_rects(presenter->cursor_rect, 
-                                       lerp_rects(presenter->cursor_rect, presenter->cursor_target_rect, 0.2f));
+    lerp_rects(&presenter->cursor_rect, presenter->cursor_target_rect, 0.2f);
     v4f r = presenter->cursor_rect;
     v4f rt = presenter->cursor_target_rect;
     push_rectangle(r.x, r.y, r.z, r.w, 10, theme.button_highlight.packed);
@@ -240,13 +241,13 @@ present_highlighted_string(Presenter* presenter, char* string, u32 colour = them
 
 internal void
 present_cursor(Presenter* presenter, String8 string, int index) {
-    int cursor_width = 4;
+    int cursor_width = 3;
     int line_height = get_font_line_height(presenter->font_scale);
     f32 x = get_presenter_x(presenter) + get_text_width_n(string, index, presenter->font_scale);
     f32 y = get_presenter_y(presenter);
     presenter->edit_cursor_target = v4f(x, y, cursor_width, line_height);
     lerp_rects(&presenter->edit_cursor_source, presenter->edit_cursor_target, 0.3f);
-    push_rectangle(presenter->edit_cursor_source, 2, theme.cursor.packed);
+    push_rectangle(presenter->edit_cursor_source, 1.5, theme.cursor.packed);
 }
 
 internal void
@@ -591,8 +592,15 @@ present_function_node(Presenter* presenter, Node* node){
     
     present_new_line(presenter);
     
-    present_indent(presenter){
-        present_graph(presenter, function->scope);
+    if(presenter->LOD == 3){
+        present_indent(presenter){
+            present_graph(presenter, function->scope);
+        }
+    }else {
+        present_indent(presenter){
+            present_misc(presenter, "...");
+        }
+        present_new_line(presenter);
     }
     
     
@@ -735,18 +743,24 @@ present_struct_node(Presenter* presenter, Node* node){
     present_misc(presenter, " :: struct {");
     present_new_line(presenter);
     
-    present_indent(presenter){
-        for(Node* stmt = _struct->members; stmt; stmt = stmt->next){
-            if(stmt->type != NODE_DUMMY){
-                present_declaration_node(presenter, stmt);
+    if(presenter->LOD == 3){
+        present_indent(presenter){
+            for(Node* stmt = _struct->members; stmt; stmt = stmt->next){
+                if(stmt->type != NODE_DUMMY){
+                    present_declaration_node(presenter, stmt);
+                }
             }
         }
+    }else {
+        present_indent(presenter){
+            present_misc(presenter, "...");
+        }
+        present_new_line(presenter);
     }
     Closure closure = make_closure(insert_members_for_struct, 1, arg(_struct->members));
     present_y_insertable(presenter, closure, "member%d", get_presenter_y(presenter));
     present_misc(presenter, "}");
 }
-
 
 internal void
 present_scope_node(Presenter* presenter, Node* node){
@@ -873,14 +887,21 @@ present(Presenter* presenter){
     }else {
         presenter->y_scroll_target += platform.mouse_scroll_delta;
     }
-    presenter->font_scale += lerp(presenter->font_scale, presenter->target_font_scale, 0.1f);
-    presenter->y_scroll += lerp(presenter->y_scroll, presenter->y_scroll_target, 0.1f);
+    lerp(&presenter->font_scale, presenter->target_font_scale, 0.1f);
+    lerp(&presenter->y_scroll, presenter->y_scroll_target, 0.1f);
     
     if(platform.mouse_middle_down && platform.mouse_drag){
         presenter->x_start += platform.mouse_delta_x;
         presenter->y_start += platform.mouse_delta_y;
     }
-    
+    if(presenter->font_scale > 0.8f){
+        presenter->LOD = 3;
+    }
+    else if(between(presenter->font_scale, 0.5f, 0.8f)){
+        presenter->LOD = 2;
+    }else {
+        presenter->LOD = 1;
+    }
     present_graph(presenter, presenter->root);
 }
 
@@ -900,8 +921,8 @@ internal void
 draw_status_bar(Presenter* active_presenter){
     int size = 40;
     int x = 0;
-    int width = platform.width-10;
-    push_rectangle(x, -size, width, size*2, 10, theme.panel.packed);
+    int width = platform.width;
+    push_rectangle(x, -size, width, size*2, 0, theme.panel.packed);
     
     char* file = " active node: "; 
     push_string(x, size/2-renderer.font.size/4, 

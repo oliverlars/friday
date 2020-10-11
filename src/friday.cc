@@ -12,6 +12,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../ext/stb_image.h"
 
+
 #include <string.h>
 
 #include "graph.cc"
@@ -28,7 +29,7 @@ main(int argc, char** args){
 #define TITLE "Friday"
     
     
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS);
     
     platform.width = 1280;
     platform.height = 720;
@@ -70,8 +71,8 @@ main(int argc, char** args){
     
     load_opengl();
     
+    
     SDL_ShowWindow(global_window);
-    //renderer.fonts.insert(init_font("../fonts/JetBrainsMono-Regular.ttf", 30));
     
     renderer.font = load_sdf_font("../fonts/friday_default.fnt");
     
@@ -143,8 +144,7 @@ main(int argc, char** args){
     
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;
-    root->width = platform.width;
-    root->height = platform.height;
+    root->split_ratio = 1.0f;
     root->type = PANEL_EDITOR;
     
     split_panel(root, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
@@ -169,7 +169,8 @@ main(int argc, char** args){
         platform.mouse_y = platform.height - y;
         f32 offset = 5;
         //code panel
-        draw_panels(root, 0, 45, platform.width, platform.height-90, theme.panel.packed);
+        
+        draw_panels(root, 0, 45, platform.width, platform.height-90);
         draw_view_buttons();
         friday.cursor_x += lerp(friday.cursor_x, friday.cursor_target_x, 0.1f);
         friday.cursor_y += lerp(friday.cursor_y, friday.cursor_target_y, 0.1f);
@@ -222,9 +223,7 @@ main(int argc, char** args){
                 }
                 
                 if(event.button.button == SDL_BUTTON_RIGHT){
-                    if(event.button.clicks == 1){
-                        platform.mouse_right_clicked = 1;
-                    }
+                    platform.mouse_right_down = 1;
                 }
                 
                 if(event.button.button == SDL_BUTTON_MIDDLE){
@@ -250,6 +249,11 @@ main(int argc, char** args){
                     platform.mouse_left_double_clicked = 0;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
+                    if(platform.mouse_right_down){
+                        platform.mouse_right_clicked = 1;
+                    }
+                    platform.mouse_right_up = 1;
+                    platform.mouse_right_down = 0;
                 }
                 if(event.button.button == SDL_BUTTON_MIDDLE){
                     if(platform.mouse_middle_down){

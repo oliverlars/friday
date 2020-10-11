@@ -393,6 +393,7 @@ global struct {
     GLuint view_uniform;
     
     GLuint resolution_uniforms[COMMAND_COUNT];
+    GLuint clip_range_uniforms[COMMAND_COUNT];
     
     GLuint texture;
     
@@ -1014,6 +1015,7 @@ init_shaders(){
             "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
+            "uniform vec4 clip_range;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r){\n"
             "return length(max(abs(p)-b+r,0.0))-r;\n"
@@ -1021,14 +1023,21 @@ init_shaders(){
             
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius);\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
-            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
+            "float alpha = mix(1, 0,  dist);\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), dist);\n"
+            "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
+            "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
+            "}else {\n"
+            "return;\n"
+            "}\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         
         renderer.resolution_uniforms[COMMAND_RECTANGLE] = glGetUniformLocation(program, "resolution");
+        renderer.clip_range_uniforms[COMMAND_GLYPH] = glGetUniformLocation(program, "clip_range");
+        
         renderer.ortho_uniform = glGetUniformLocation(program, "ortho");
         renderer.view_uniform = glGetUniformLocation(program, "view");
         
@@ -1208,6 +1217,7 @@ init_shaders(){
             "in vec4 frag_colour; \n"
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
+            "uniform vec4 clip_range;\n"
             
             "float width = 0.5;\n"
             "const float edge = 0.1;\n"
@@ -1215,12 +1225,18 @@ init_shaders(){
             "void main(){\n"
             "float distance = 1.0 - texture(atlas, frag_uv).a;\n"
             "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
+            "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
+            "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
+            "}else {\n"
+            "return;\n"
+            "}\n"
             "}\n";
         
         GLuint program = make_program(glyph_vs, glyph_fs);
         
         renderer.resolution_uniforms[COMMAND_GLYPH] = glGetUniformLocation(program, "resolution");
+        renderer.clip_range_uniforms[COMMAND_GLYPH] = glGetUniformLocation(program, "clip_range");
         
         renderer.programs[COMMAND_GLYPH] = program;
         
@@ -1322,18 +1338,20 @@ process_and_draw_commands(){
     // TODO(Oliver): batch these in chunks to preserve draw order!
     
     v4f clip_range = v4f(0, 0, platform.width, platform.height);
-    bool should_clip = false;
     for(Command* command = renderer.head; command; command = command->next){
         Command* previous_command = command;
         
         switch(command->type){
             case COMMAND_CLIP_RANGE_BEGIN: {
-                should_clip = true;
                 auto clip = command->clip_range;
-                clip_range = v4f(clip.x, clip.y, clip.width, clip.height);
+                clip_range = v4f(clip.x, 
+                                 clip.y, 
+                                 clip.width, 
+                                 clip.height);
+                
             }break;
             case COMMAND_CLIP_RANGE_END:{
-                should_clip = false;
+                clip_range = v4f(0,0, platform.width, platform.height);
             }break;
             case COMMAND_RECTANGLE:{
                 
@@ -1348,36 +1366,18 @@ process_and_draw_commands(){
                                     rectangle->rectangle.y,
                                     rectangle->rectangle.width,
                                     rectangle->rectangle.height);
-                        if(!should_clip || (should_clip && is_rect_inside_rect(r, clip_range))){
-                            *attribs++ = rectangle->rectangle.x;
-                            *attribs++ = rectangle->rectangle.y;
-                            *attribs++ = rectangle->rectangle.width;
-                            *attribs++ = rectangle->rectangle.height;
-                            *attribs++ = rectangle->rectangle.corner_radius;
-                            *attribs++ = (rectangle->colour.a/255.0f);
-                            *attribs++ = (rectangle->colour.b/255.0f);
-                            *attribs++ = (rectangle->colour.g/255.0f);
-                            *attribs++ = (rectangle->colour.r/255.0f);
-                            num_verts++;
-                            
-                        }else {
-                            *attribs++ = rectangle->rectangle.x;
-                            *attribs++ = rectangle->rectangle.y;
-                            if(rectangle->rectangle.x + rectangle->rectangle.width < clip_range.x + clip_range.width){
-                                *attribs++ = rectangle->rectangle.width;
-                            }else {
-                                *attribs++ = clip_range.width - rectangle->rectangle.x;
-                            }
-                            
-                            *attribs++ = rectangle->rectangle.height;
-                            *attribs++ = rectangle->rectangle.corner_radius;
-                            *attribs++ = (rectangle->colour.a/255.0f);
-                            *attribs++ = (rectangle->colour.b/255.0f);
-                            *attribs++ = (rectangle->colour.g/255.0f);
-                            *attribs++ = (rectangle->colour.r/255.0f);
-                            num_verts++;
-                            
-                        }
+                        
+                        *attribs++ = rectangle->rectangle.x;
+                        *attribs++ = rectangle->rectangle.y;
+                        *attribs++ = rectangle->rectangle.width;
+                        *attribs++ = rectangle->rectangle.height;
+                        *attribs++ = rectangle->rectangle.corner_radius;
+                        *attribs++ = (rectangle->colour.a/255.0f);
+                        *attribs++ = (rectangle->colour.b/255.0f);
+                        *attribs++ = (rectangle->colour.g/255.0f);
+                        *attribs++ = (rectangle->colour.r/255.0f);
+                        num_verts++;
+                        
                     }
                 }
                 // NOTE(Oliver): draw filled rects data
@@ -1392,6 +1392,8 @@ process_and_draw_commands(){
                     
                     f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
+                    
+                    glUniform4fv(renderer.clip_range_uniforms[COMMAND_RECTANGLE], 1, (f32*)&clip_range);
                     
                     glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
                     glDrawArrays(GL_TRIANGLES, 0, num_verts);
@@ -1494,22 +1496,21 @@ process_and_draw_commands(){
                                     glyph->glyph.y,
                                     glyph->glyph.width,
                                     glyph->glyph.height);
-                        if(!should_clip || (should_clip && is_rect_inside_rect(r, clip_range))){
-                            *attribs++ = glyph->glyph.x;
-                            *attribs++ = glyph->glyph.y;
-                            *attribs++ = glyph->glyph.width;
-                            *attribs++ = glyph->glyph.height;
-                            *attribs++ = glyph->glyph.u;
-                            *attribs++ = glyph->glyph.v;
-                            *attribs++ = glyph->glyph.u_width;
-                            *attribs++ = glyph->glyph.v_height;
-                            *attribs++ = glyph->colour.a/255.0f;
-                            *attribs++ = glyph->colour.b/255.0f;
-                            *attribs++ = glyph->colour.g/255.0f;
-                            *attribs++ = glyph->colour.r/255.0f;
-                            num_verts++;
-                            
-                        }
+                        //if(!should_clip || (should_clip && is_rect_inside_rect(r, clip_range))){
+                        *attribs++ = glyph->glyph.x;
+                        *attribs++ = glyph->glyph.y;
+                        *attribs++ = glyph->glyph.width;
+                        *attribs++ = glyph->glyph.height;
+                        *attribs++ = glyph->glyph.u;
+                        *attribs++ = glyph->glyph.v;
+                        *attribs++ = glyph->glyph.u_width;
+                        *attribs++ = glyph->glyph.v_height;
+                        *attribs++ = glyph->colour.a/255.0f;
+                        *attribs++ = glyph->colour.b/255.0f;
+                        *attribs++ = glyph->colour.g/255.0f;
+                        *attribs++ = glyph->colour.r/255.0f;
+                        num_verts++;
+                        //}
                     }
                 }
                 {
@@ -1523,6 +1524,8 @@ process_and_draw_commands(){
                     
                     f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
+                    
+                    glUniform4fv(renderer.clip_range_uniforms[COMMAND_GLYPH], 1, (f32*)&clip_range);
                     
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, renderer.texture);
@@ -1865,10 +1868,10 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
     find_node_types_helper(friday.program_root, &node_list, node_list_length, type);
 }
 
-global bool menu_open = 0;
 
 internal void
-draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure closure){
+draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
+    
     auto menu_id = gen_id(label);
     //debug_print("%d", menu_id);
     auto anim_state = get_animation_state(menu_id);
@@ -1880,8 +1883,7 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
                            0,
                            lerp(anim_state->x_scale, 1.2, 0.2f),
                            lerp(anim_state->y_scale, 1.2, 0.2f));
-    //anim_state->y_scale += lerp(anim_state->y_scale, 1.2, 0.2f);
-    //anim_state->x_scale += lerp(anim_state->x_scale, 1.2, 0.2f);
+    
     f32 line_height = get_font_line_height();
     f32 height = 40*anim_state->y_scale;
     f32 size_x = 200*anim_state->x_scale;
@@ -1897,27 +1899,24 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
         size_x = text_width >= size_x ? text_width : size_x;
         
     }
-    auto menu_widget = _push_widget(x, y, size_x, size_y, menu_id, closure);
     
     
     push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
     
+    va_list closures;
+    va_start (closures, num_rows);
     for(int i = 0; i < num_rows; i++){
-        
+        auto closure = va_arg(closures, Closure);
         String8 string = strings[i];
         f32 offset = i*height;
+        auto item_id = gen_unique_id(string);
+        auto menu_widget = _push_widget(x, y+ offset, size_x, height, item_id, closure);
         push_rectangle(x,y + offset, size_x, height, 10, theme.menu.packed);
         u32 text_colour = theme.text.packed;
         
         
         if(is_mouse_in_rect(x, y + offset, size_x, height)){
-            if(platform.mouse_left_clicked){
-                
-                friday.selected = i;
-                
-                ui_state.menu_id = -1;
-                //friday.is_menu_open = false;
-            }
+            
             push_rectangle(x, y+ offset, 
                            size_x, height, 10.0,
                            theme.menu.packed);
@@ -1934,8 +1933,8 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, Closure clo
 internal void
 draw_menu_bar(){
     int size = 40;
-    int x = 5;
-    push_rectangle(x, platform.height-size, platform.width-10, size+10, 5, theme.panel.packed);
+    int x = 0;
+    push_rectangle(x, platform.height-size, platform.width, size+10, 0, theme.panel.packed);
     x += 10;
     push_rectangle_textured(x,platform.height-size/2-30/2, 30, 30, 1, bitmap);
     
@@ -1948,7 +1947,6 @@ draw_menu_bar(){
     f32 help_x = 0;
     
     auto menu_callback = [](u8* parameters){
-        menu_open = 1;
     };
     
     f32 gap = 30.0f;
@@ -1985,20 +1983,24 @@ draw_menu_bar(){
         int x = 5;
     }
     
-    if(menu_open && file_id == ui_state.clicked_id){
+    if(file_id == ui_state.clicked_id){
         String8 items[4] = {};
         Arena* arena = &renderer.temp_string_arena;
         items[3] = make_string(arena, "New");
         items[2] = make_string(arena, "Open");
         items[1] = make_string(arena, "Open Recent");
         items[0] = make_string(arena, "Save");
-        Closure empty = {};
+        Closure empty_closures[5] = {};
         draw_menu(file_x, platform.height-size-40, "file_menu",
-                  items, 4, empty);
+                  items, 4, empty_closures[0],
+                  empty_closures[1],
+                  empty_closures[2],
+                  empty_closures[3],
+                  empty_closures[4]);
         
     }
     
-    if(menu_open && edit_id == ui_state.clicked_id){
+    if(edit_id == ui_state.clicked_id){
         String8 items[5] = {};
         Arena* arena = &renderer.temp_string_arena;
         items[4] = make_string(arena, "Undo");
@@ -2006,20 +2008,29 @@ draw_menu_bar(){
         items[2] = make_string(arena, "Undo History");
         items[1] = make_string(arena, "Repeat");
         items[0] = make_string(arena, "Preferences");
-        Closure empty = {};
+        Closure empty_closures[5] = {};
         draw_menu(edit_x, platform.height-size-40, "edit_menu",
-                  items, 5, empty);
+                  items, 5, 
+                  empty_closures[0],
+                  empty_closures[1],
+                  empty_closures[2],
+                  empty_closures[3],
+                  empty_closures[4]);
         
     }
     
-    if(menu_open && help_id == ui_state.clicked_id){
+    if(help_id == ui_state.clicked_id){
         String8 items[2] = {};
         Arena* arena = &renderer.temp_string_arena;
         items[1] = make_string(arena, "About");
         items[0] = make_string(arena, "Splash Screen");
-        Closure empty = {};
+        Closure empty_closures[5] = {};
         draw_menu(help_x, platform.height-size-40, "help_menu",
-                  items, 2, empty);
+                  items, 2, empty_closures[0],
+                  empty_closures[1],
+                  empty_closures[2],
+                  empty_closures[3],
+                  empty_closures[4]);
         
     }
     
@@ -2129,11 +2140,123 @@ Bitmap layers_icon;
 Bitmap document_icon;
 
 
-global bool cursor_size = 0;
-global f32 start_width = 0;
+internal void
+right_click_menu(Panel* panel, char* label){
+    String8 items[3];
+    
+    Arena* arena = &renderer.temp_string_arena;
+    items[0] = make_string(arena, "split vertically");
+    items[1] = make_string(arena, "split horizontally");
+    items[2] = make_string(arena, "delete split");
+    auto sv = [](u8* parameters){
+        Panel* panel = get_arg(parameters, Panel*);
+        ui_state.menu_open = 0;
+        split_panel(panel, 0.5, PANEL_SPLIT_VERTICAL, PANEL_EDITOR);
+    };
+    auto sh = [](u8* parameters){
+        ui_state.menu_open = 0;
+    };
+    auto ds = [](u8* parameters){
+        ui_state.menu_open = 0;
+    };
+    Closure split_vertically = make_closure(sv, 1, arg(panel));
+    Closure split_horizontally = make_closure(sh, 0);
+    Closure delete_split = make_closure(ds, 0);
+    draw_menu(ui_state.menu_x, ui_state.menu_y, label, 
+              items, 3, split_vertically, split_horizontally,
+              delete_split);
+    
+}
 
+global bool cursor_size = 0;
+global f32 child_width = 0;
+global f32 parent_width = 0;
+
+internal void
+draw_editor_panel(Panel* panel, v4f rect){
+    ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
+    u32 colour = theme.panel.packed;
+    
+    push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
+    
+    present(panel->presenter);
+    
+    if(ui_state.menu_open){
+        right_click_menu(panel, "rcm");
+    }
+    ui_end_panel();
+    reset_presenter(panel->presenter);
+}
+
+internal void
+draw_property_panel(Panel* panel, v4f rect){
+    ui_begin_panel(rect.x+35, rect.y, rect.width-35, rect.height);
+    
+    u32 colour = theme.panel.packed;
+    
+    Bitmap icons[] = {
+        search_icon,
+        run_icon,
+        layers_icon,
+        document_icon,
+    };
+    char* icon_labels[] = {
+        "search",
+        "run",
+        "layers",
+        "document"
+    };
+    f32 x = rect.x+35;
+    f32 y = rect.y+rect.height;
+    f32 spacing = 15;
+    f32 size = 40;
+    local_persist b32 previous_states[4] = {true, false, false, false};
+    local_persist b32 property_states[4] = {true, false, false, false};
+    bool dummy = false;
+    int index = -1;
+    for(int i = 0; i < 4; i++){
+        y -= size + spacing;
+        
+        auto callback = [](u8* parameters){};
+        Closure closure = make_closure(callback, 0);
+        
+        small_icon_button(icon_labels[i], x-30, y, size, icons[i], &property_states[i], closure);
+        
+    }
+    for(int i = 0; i < 4; i++){
+        if(property_states[i] && !previous_states[i]){
+            
+            property_states[0] = false;
+            property_states[1] = false;
+            property_states[2] = false;
+            property_states[3] = false;
+            property_states[i] = true;
+            
+            previous_states[0] = property_states[0];
+            previous_states[1] = property_states[1];
+            previous_states[2] = property_states[2];
+            previous_states[3] = property_states[3];
+        }
+    }
+    push_rectangle(rect.x+35, rect.y, rect.width-35, rect.height, 5, colour);
+    
+    local_persist b32 button_states[6] = {0};
+    local_persist b32 state = false;
+    if(property_states[0]){
+        radio_button("test", &state, {});
+    }else if(property_states[1]){
+        text_button("compile", &button_states[0], {});
+        text_button("edit", &button_states[1], {});
+        ui_new_line();
+        
+        radio_button("flip", &button_states[2], {});
+        text_button("interpret", &button_states[3], {});
+    }
+    
+    ui_end_panel();
+}
 internal void 
-draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour = 0xFFFFFFFF){
+draw_panels(Panel* root, int posx, int posy, int width, int height){
     if(!root) return;
     auto id = gen_unique_id("panel");
     f32 new_width = width;
@@ -2146,128 +2269,62 @@ draw_panels(Panel* root, int posx, int posy, int width, int height, u32 colour =
         if(root->children[i]){
             switch(root->children[i]->split_type){
                 case PANEL_SPLIT_HORIZONTAL:{
-                    new_height = root->children[i]->height;
+                    new_height *= root->children[i]->split_ratio;
                     new_posy += new_height;
-                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height, colour);
+                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height);
                 }break;
                 case PANEL_SPLIT_VERTICAL:{
-                    new_width = root->children[i]->width;
+                    new_width *= root->children[i]->split_ratio;
                     new_posx += new_width;
-                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height, colour);
+                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height);
                 }break;
             }
         }
         new_posx = 0;
         new_posy = 0;
     }
+    
     //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
-    v4f panel_border = v4f(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER);
-    if(is_mouse_in_rect(panel_border)){
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-        SDL_SetCursor(cursor);
-        cursor_size = true;
-    }else if(!cursor_size){
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-        SDL_SetCursor(cursor);
-    }else {
-        cursor_size = 0;
-    }
-    if(!panel_resize && is_mouse_dragged(panel_border)){
+    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
         panel_resize = 1;
         old_width = width;
         active_panel = root;
-        start_width = root->width;
+        split_ratio = root->split_ratio;
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+        SDL_SetCursor(cursor);
+        
     }
     
-    if(panel_resize){
-        
-        f32 delta =  (platform.mouse_x-platform.mouse_drag_x);
+    
+    if(!panel_resize){
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+        SDL_SetCursor(cursor);
+    }else if(panel_resize){
+        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
         if(root == active_panel){
-            root->width = start_width + delta;
+            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
+        }else {
+            root->split_ratio = clampf(split_ratio - delta, 0, 1);
         }
     }
     auto callback = [](u8* parameters){
         return;
     };
     
+    
     Closure closure = make_closure(callback, 0);
     auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
                                new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, id,
                                closure);
     if(root->type == PANEL_PROPERTIES){
-        ui_begin_panel(posx+PANEL_BORDER+50, posy+PANEL_BORDER, new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2);
-        
-        Bitmap icons[] = {
-            search_icon,
-            run_icon,
-            layers_icon,
-            document_icon,
-        };
-        char* icon_labels[] = {
-            "search",
-            "run",
-            "layers",
-            "document"
-        };
-        f32 x = posx + PANEL_BORDER;
-        f32 y = new_height-PANEL_BORDER;
-        f32 spacing = 15;
-        f32 size = 40;
-        local_persist b32 previous_states[4] = {true, false, false, false};
-        local_persist b32 property_states[4] = {true, false, false, false};
-        bool dummy = false;
-        int index = -1;
-        for(int i = 0; i < 4; i++){
-            auto callback = [](u8* parameters){};
-            Closure closure = make_closure(callback, 0);
-            
-            small_icon_button(icon_labels[i], x, y, size, icons[i], &property_states[i], closure);
-            
-            y -= size + spacing;
-            
-        }
-        for(int i = 0; i < 4; i++){
-            if(property_states[i] && !previous_states[i]){
-                
-                property_states[0] = false;
-                property_states[1] = false;
-                property_states[2] = false;
-                property_states[3] = false;
-                property_states[i] = true;
-                
-                previous_states[0] = property_states[0];
-                previous_states[1] = property_states[1];
-                previous_states[2] = property_states[2];
-                previous_states[3] = property_states[3];
-            }
-        }
-        push_rectangle(posx+PANEL_BORDER+35,posy+PANEL_BORDER, 
-                       new_width-PANEL_BORDER*2-35, new_height-PANEL_BORDER*2, 5, colour);
-        
-        local_persist b32 button_states[6] = {0};
-        local_persist b32 state = false;
-        if(property_states[0]){
-            radio_button("test", &state, {});
-        }else if(property_states[1]){
-            text_button("compile", &button_states[0], {});
-            text_button("edit", &button_states[1], {});
-            ui_new_line();
-            
-            radio_button("flip", &button_states[2], {});
-            text_button("interpret", &button_states[3], {});
-        }
-        
+        draw_property_panel(root, v4f(posx, posy,  new_width, new_height));
     }else {
-        ui_begin_panel(posx+PANEL_BORDER, posy+PANEL_BORDER, new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2);
-        
-        push_rectangle(posx+PANEL_BORDER,posy+PANEL_BORDER, 
-                       new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, 5, colour);
-        present(root->presenter);
+        draw_editor_panel(root, v4f(posx, posy,  new_width, new_height));
         
     }
-    ui_end_panel();
-    
-    reset_presenter(root->presenter);
 }
+
+// NOTE(Oliver): send clip ranges as uniforms to frag shaders
+// then just clip them by discarding fragments

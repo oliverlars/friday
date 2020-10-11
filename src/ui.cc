@@ -80,6 +80,7 @@ global struct {
     Widget* widgets_tail = nullptr;
     UI_ID hover_id;
     UI_ID clicked_id;
+    UI_ID right_clicked_id;
     UI_ID menu_id;
     
     
@@ -90,6 +91,10 @@ global struct {
     f32 y_start;
     f32 x_offset;
     f32 y_offset;
+    
+    bool menu_open;
+    f32 menu_x;
+    f32 menu_y;
 } ui_state;
 
 struct Arg_Type {
@@ -266,13 +271,6 @@ process_widgets_and_handle_events(){
     
     bool hovered = false;
     
-    enum Click_Type {
-        CLICK_LEFT,
-        CLICK_LEFT_DOUBLE,
-        CLICK_RIGHT,
-        CLICK_MIDDLE,
-    };
-    Click_Type click_type;
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
@@ -288,7 +286,13 @@ process_widgets_and_handle_events(){
                 }else{
                     active = widget;
                     ui_state.clicked_id = widget->id;
-                    click_type = CLICK_LEFT;
+                }
+            }else if(platform.mouse_right_down){
+                if(ui_state.right_clicked_id == widget->id){
+                    ui_state.clicked_id = HASH_INITIAL;
+                }else {
+                    active = widget;
+                    ui_state.right_clicked_id = widget->id;
                 }
             }
             
@@ -299,7 +303,7 @@ process_widgets_and_handle_events(){
     }
     if(active_hover){
         if(active_hover->hover.callback){
-            active_hover->hover.callback(active_hover->hover.parameters);
+            //active_hover->hover.callback(active_hover->hover.parameters);
         }
     }
     if(active){
@@ -308,7 +312,13 @@ process_widgets_and_handle_events(){
         }
         
     }
+    if(platform.mouse_right_down){
+        ui_state.menu_open = 1;
+        ui_state.menu_x = platform.mouse_x;
+        ui_state.menu_y = platform.mouse_y;
+    }
 }
+
 
 enum Panel_Split_Type {
     PANEL_SPLIT_VERTICAL,
@@ -327,7 +337,7 @@ internal void reset_presenter(Presenter* presenter);
 struct Panel {
     Panel_Split_Type split_type;
     Panel_Type type;
-    f32 width, height;
+    f32 split_ratio;
     Panel* children[2];
     Presenter* presenter;
 };
@@ -353,25 +363,25 @@ internal bool
 is_mouse_dragged(v4f rect){
     return is_mouse_dragged(rect.x, rect.y, rect.width, rect.height);
 }
-
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
     if(!panel) return;
     
     if(panel->children[0] && panel->children[1]){
-        return;
+        Panel* insert_panel = (Panel*)calloc(1, sizeof(Panel));
+        panel->children[1]->split_ratio = split_ratio;
+        panel->children[1]->split_type = split_type;
+        panel->children[1]->type = type;
     }else if(panel->children[0]){
         //panel->children[1] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
         panel->children[1] = (Panel*)calloc(1, sizeof(Panel));
-        panel->children[1]->width = split_ratio*panel->width;
-        panel->children[1]->height = split_ratio*panel->height;
+        panel->children[1]->split_ratio = split_ratio;
         panel->children[1]->split_type = split_type;
         panel->children[1]->type = type;
     }else {
         //panel->children[0] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
         panel->children[0] = (Panel*)calloc(1, sizeof(Panel));
-        panel->children[0]->width = split_ratio*panel->width;
-        panel->children[0]->height = split_ratio*panel->height;
+        panel->children[0]->split_ratio = split_ratio;
         panel->children[0]->split_type = split_type;
         panel->children[0]->type = type;
     }
@@ -440,26 +450,18 @@ update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, 
     anim_state->last_updated = platform.tick;
 }
 
-internal bool
+internal void
 unanimate(Animation_State* anim_state){
-    if(!anim_state) return false;
-    anim_state->rect.x += (anim_state->source_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
-    anim_state->rect.y += (anim_state->source_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
-    anim_state->rect.z += (anim_state->source_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
-    anim_state->rect.w += (anim_state->source_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
-    anim_state->last_updated = platform.tick;
-    return rects_similar(anim_state->rect, anim_state->source_rect, 1.0f);
-}
-
-internal bool
-animate(Animation_State* anim_state){
-    if(!anim_state) return false; 
-    anim_state->rect.x += (anim_state->target_rect.x - anim_state->rect.x)*platform.delta_time*8.f;
-    anim_state->rect.y += (anim_state->target_rect.y - anim_state->rect.y)*platform.delta_time*8.f;
-    anim_state->rect.z += (anim_state->target_rect.z - anim_state->rect.z)*platform.delta_time*8.f;
-    anim_state->rect.w += (anim_state->target_rect.w - anim_state->rect.w)*platform.delta_time*8.f;
+    if(!anim_state) return;
+    lerp_rects(&anim_state->rect, anim_state->source_rect, 0.2f);
     
     anim_state->last_updated = platform.tick;
-    return rects_similar(anim_state->rect, anim_state->target_rect, 1.0f);
 }
 
+internal void
+animate(Animation_State* anim_state){
+    if(!anim_state) return; 
+    lerp_rects(&anim_state->rect, anim_state->target_rect, 0.2f);
+    
+    anim_state->last_updated = platform.tick;
+}

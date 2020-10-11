@@ -1335,8 +1335,6 @@ process_and_draw_commands(){
     f32* rectangles_textured = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
     
     
-    // TODO(Oliver): batch these in chunks to preserve draw order!
-    
     v4f clip_range = v4f(0, 0, platform.width, platform.height);
     for(Command* command = renderer.head; command; command = command->next){
         Command* previous_command = command;
@@ -2190,7 +2188,7 @@ draw_editor_panel(Panel* panel, v4f rect){
 
 internal void
 draw_property_panel(Panel* panel, v4f rect){
-    ui_begin_panel(rect.x+35, rect.y, rect.width-35, rect.height);
+    ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
     
     u32 colour = theme.panel.packed;
     

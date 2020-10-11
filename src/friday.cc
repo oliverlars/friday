@@ -80,6 +80,7 @@ main(int argc, char** args){
     init_shaders();
     
     int start = 0;
+    
     int end = 0;
     SDL_Event event;
     
@@ -187,13 +188,8 @@ main(int argc, char** args){
         navigate_graph(&presenter);
         
         
-        if(platform.mouse_middle_down && platform.mouse_drag){
-            
-        }
-        
         process_widgets_and_handle_events();
         opengl_end_frame();
-        // TODO(Oliver): FIX THE MOUSE TO USE NEW INPUT HANDLE  was_pressed(input.mouse_left) !!!!!!!!!!!!!!!!!!!!!!!
         
         platform.mouse_drag = 0;
         platform.has_text_input = 0;

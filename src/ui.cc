@@ -223,15 +223,16 @@ is_mouse_in_rect(v4f rect){
     return is_mouse_in_rect(rect.x, rect.y, rect.width, rect.height);
 }
 
-#define PANEL_MARGIN 5
+#define PANEL_MARGIN_X 60
+#define PANEL_MARGIN_Y 5
 
 internal inline void push_clip_range_begin(f32 x, f32 y, f32 width, f32 height);
 internal inline void push_clip_range_end();
 
 internal void
 ui_begin_panel(f32 x, f32 y, f32 width, f32 height){
-    ui_state.x_start = x + PANEL_MARGIN;
-    ui_state.y_start = height - (y - PANEL_MARGIN);
+    ui_state.x_start = x + PANEL_MARGIN_X;
+    ui_state.y_start = height - (y + PANEL_MARGIN_Y);
     ui_state.x_offset = 0;
     ui_state.y_offset = 0;
     push_clip_range_begin(x,y, width, height);

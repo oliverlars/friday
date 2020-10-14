@@ -1,13 +1,16 @@
 
+enum Present_Node_Type {
+    PRESENT_INVALID = -1,
+    PRESENT_NODE,
+    PRESENT_NEWLINE,
+};
+
 struct Present_Node {
+    Present_Node_Type type;
     Node* node;
+    String8 text;
     Present_Node* next = nullptr;
     Present_Node* prev = nullptr;
-    
-    Present_Node* left = nullptr;
-    Present_Node* right = nullptr;
-    Present_Node* up = nullptr;
-    Present_Node* down = nullptr;
 };
 
 struct Presenter {
@@ -36,8 +39,6 @@ struct Presenter {
     Node* current_node;
     
     Present_Node* node_list = nullptr;
-    Present_Node** node_list_down_tail = nullptr;
-    Present_Node** node_list_right_tail = nullptr;
     Present_Node** node_list_tail = nullptr;
     Present_Node* active_present_node;
     b32 should_edit;
@@ -61,10 +62,6 @@ allocate_present_node(Presenter* presenter){
     auto node = (Present_Node*)arena_allocate(&presenter->present_arena, sizeof(Present_Node));
     node->next = nullptr;
     node->prev = nullptr;
-    node->left = nullptr;
-    node->right = nullptr;
-    node->up = nullptr;
-    node->down = nullptr;
     return node;
 }
 
@@ -93,46 +90,6 @@ set_current_node(Presenter* presenter, Node* node){
     }
     presenter->current_node = node;
 }
-
-internal inline void
-set_current_right_node(Presenter* presenter, Node* node){
-    if(!presenter->node_list){
-        presenter->node_list = allocate_present_node(presenter);
-        presenter->node_list->node = node;
-        presenter->node_list_tail = &presenter->node_list;
-        if(!presenter->active_present_node){
-            presenter->active_present_node = presenter->node_list;
-        }
-    }else{
-        Present_Node* node_tail = *presenter->node_list_tail;
-        
-        node_tail->right = allocate_present_node(presenter);
-        node_tail->right->node = node;
-        node_tail->right->left = node_tail;
-        presenter->node_list_tail = &node_tail->right;
-    }
-}
-
-internal inline void
-set_current_down_node(Presenter* presenter, Node* node){
-    if(!presenter->node_list){
-        presenter->node_list = allocate_present_node(presenter);
-        presenter->node_list->node = node;
-        presenter->node_list_tail = &presenter->node_list;
-        if(!presenter->active_present_node){
-            presenter->active_present_node = presenter->node_list;
-        }
-    }else{
-        Present_Node* node_tail = *presenter->node_list_tail;
-        
-        node_tail->down = allocate_present_node(presenter);
-        node_tail->down->node = node;
-        node_tail->down->up = node_tail;
-        presenter->node_list_tail = &node_tail->down;
-    }
-    
-}
-
 
 internal b32
 is_active_present_node(Presenter* presenter){
@@ -261,8 +218,7 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
                                  id, {});
     
     
-    if(id == ui_state.clicked_id || 
-       (is_active_present_node(presenter) && presenter->should_edit)){
+    {
         presenter->active_string = string;
         presenter->cursor_index = string->length;
         f32 text_width = get_text_width(*string, presenter->font_scale);
@@ -279,7 +235,6 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
             present_cursor(presenter, *string, presenter->cursor_index);
             edit_string(presenter, string);
         }
-    }else if(id == ui_state.hover_id){
     }
     
     if(is_active_present_node(presenter) && !presenter->should_edit){
@@ -300,8 +255,7 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
                                  id, {});
     
     
-    if(id == ui_state.clicked_id || 
-       (is_active_present_node(presenter) && presenter->should_edit)){
+    {
         presenter->active_string = &node->name;
         presenter->cursor_index = node->name.length;
         f32 text_width = get_text_width(node->name, presenter->font_scale);
@@ -316,7 +270,6 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
             present_cursor(presenter, node->name, presenter->cursor_index);
             edit_string(presenter, &node->name);
         }
-    }else if(id == ui_state.hover_id){
     }
     
     if(is_active_present_node(presenter) && !presenter->should_edit){
@@ -376,7 +329,7 @@ present_x_insertable(Presenter* presenter,  Closure closure, char* label, ...){
         anim_state = init_animation_state(id);
         anim_state->target_rect.x = 40.0f;
     }
-    if(ui_state.hover_id == id){
+    if(!(platform.mouse_drag && platform.mouse_middle_down ) && ui_state.hover_id == id){
         animate(anim_state);
     }else{
         unanimate(anim_state);
@@ -400,7 +353,7 @@ present_x_insertable(Presenter* presenter, Closure closure, String8 label){
         anim_state = init_animation_state(id);
         anim_state->target_rect.x = 40.0f;
     }
-    if(ui_state.hover_id == id){
+    if(!(platform.mouse_drag && platform.mouse_middle_down ) && ui_state.hover_id == id){
         animate(anim_state);
     }else{
         unanimate(anim_state);
@@ -436,9 +389,9 @@ present_y_insertable(Presenter* presenter,  Closure closure, char* label, ...){
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
-        anim_state->target_rect.y = renderer.font.size;
+        anim_state->target_rect.y = get_font_line_height(presenter->font_scale);
     }
-    if(ui_state.hover_id == id){
+    if(!(platform.mouse_drag && platform.mouse_middle_down ) && ui_state.hover_id == id){
         animate(anim_state);
     }else{
         unanimate(anim_state);
@@ -460,9 +413,9 @@ present_y_insertable(Presenter* presenter, Closure closure, String8 label){
     auto anim_state = get_animation_state(id);
     if(!anim_state){
         anim_state = init_animation_state(id);
-        anim_state->target_rect.y = renderer.font.size;
+        anim_state->target_rect.y = get_font_line_height(presenter->font_scale);
     }
-    if(ui_state.hover_id == id){
+    if(!(platform.mouse_drag && platform.mouse_middle_down ) && ui_state.hover_id == id){
         animate(anim_state);
     }else{
         unanimate(anim_state);
@@ -497,7 +450,6 @@ internal void present_graph(Presenter* presenter, Node* root);
 
 internal void
 present_binary_literal(Presenter* presenter, Node* node){
-    //set_current_node(presenter, node);
     auto literal = &node->literal;
     Arena* arena = &renderer.temp_string_arena;
     char* string = (char*)arena_allocate(arena, 256);
@@ -509,7 +461,7 @@ present_binary_literal(Presenter* presenter, Node* node){
 internal void
 present_literal_node(Presenter* presenter, Node* node){
     auto literal = &node->literal;
-    set_current_right_node(presenter, node);
+    set_current_node(presenter, node);
     char buffer[256];
     int length = snprintf(buffer, 256, "%d", literal->_int);
     buffer[length+1] = 0;
@@ -566,7 +518,7 @@ present_function_node(Presenter* presenter, Node* node){
     Closure closure = make_closure(insert_parameters_for_function, 1, arg(function->parameters));
     for(Node* param = function->parameters; param; param = param->next){
         if(param->type != NODE_DUMMY){
-            set_current_right_node(presenter, param);
+            set_current_node(presenter, param);
             present_editable_string(presenter, &param->name);
             present_misc(presenter, ":");
             present_space(presenter);
@@ -611,7 +563,7 @@ present_function_node(Presenter* presenter, Node* node){
 
 internal void
 present_type_usage_node(Presenter* presenter, Node* node){
-    set_current_right_node(presenter, node);
+    set_current_node(presenter, node);
     present_space(presenter);
     for(int i = 0; i < node->type_usage.number_of_pointers; i++){
         present_misc(presenter, "*", theme.text.packed);
@@ -699,7 +651,7 @@ present_token_node(Presenter* presenter, Node* node){
                 colour = theme.text;
             }break;
         }
-        set_current_right_node(presenter, token);
+        set_current_node(presenter, token);
         present_editable_token_list(presenter, token->name, colour.packed);
         present_space(presenter);
     }
@@ -770,7 +722,7 @@ present_scope_node(Presenter* presenter, Node* node){
     Node* prev = stmt;
     for(; stmt; stmt = stmt->next){
         if(stmt->type != NODE_DUMMY){
-            set_current_down_node(presenter, stmt);
+            set_current_node(presenter, stmt);
         }
         if(prev->type != stmt->type){
             present_new_line(presenter);
@@ -826,8 +778,6 @@ reset_presenter(Presenter* presenter){
     presenter->x_offset = 0;
     presenter->y_offset = 0;
     presenter->indent = 0;
-    arena_reset(&presenter->present_arena);
-    
 }
 
 internal void
@@ -880,10 +830,26 @@ present_graph(Presenter* presenter, Node* root){
 }
 
 internal void
+move_cursor_forward(Presenter* presenter){
+    
+}
+
+internal void
+show_presenter(Presenter* presenter){
+    if(!presenter->node_list) return;
+    switch(presenter->node_list->type){
+        case PRESENT_NODE:{
+            present_editable_string(presenter, &presenter->node_list->text, theme.text_function.packed);
+        }break;
+        case PRESENT_NEWLINE:{
+        }break;
+    }
+}
+internal void
 present(Presenter* presenter){
     if(!presenter) return;
     if(is_pressed(input.editor_zoom)){
-        presenter->target_font_scale += platform.mouse_scroll_delta/250.0f;
+        presenter->target_font_scale += platform.mouse_scroll_delta*0.004f;
     }else {
         presenter->y_scroll_target += platform.mouse_scroll_delta;
     }
@@ -902,9 +868,10 @@ present(Presenter* presenter){
     }else {
         presenter->LOD = 1;
     }
-    present_graph(presenter, presenter->root);
+    
+    show_presenter(presenter);
+    //present_graph(presenter, presenter->root);
 }
-
 
 enum Navigation_Mode {
     NV_COMMAND,

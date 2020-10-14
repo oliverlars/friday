@@ -1869,7 +1869,7 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
 
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
-    
+    if(!ui_state.menu_open) return;
     auto menu_id = gen_id(label);
     //debug_print("%d", menu_id);
     auto anim_state = get_animation_state(menu_id);
@@ -1914,11 +1914,6 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
         
         
         if(is_mouse_in_rect(x, y + offset, size_x, height)){
-            
-            push_rectangle(x, y+ offset, 
-                           size_x, height, 10.0,
-                           theme.menu.packed);
-            
             text_colour = theme.cursor.packed;
         }
         
@@ -2152,13 +2147,15 @@ right_click_menu(Panel* panel, char* label){
         split_panel(panel, 0.5, PANEL_SPLIT_VERTICAL, PANEL_EDITOR);
     };
     auto sh = [](u8* parameters){
+        Panel* panel = get_arg(parameters, Panel*);
         ui_state.menu_open = 0;
+        split_panel(panel, 0.5, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
     };
     auto ds = [](u8* parameters){
         ui_state.menu_open = 0;
     };
     Closure split_vertically = make_closure(sv, 1, arg(panel));
-    Closure split_horizontally = make_closure(sh, 0);
+    Closure split_horizontally = make_closure(sh, 1, arg(panel));
     Closure delete_split = make_closure(ds, 0);
     draw_menu(ui_state.menu_x, ui_state.menu_y, label, 
               items, 3, split_vertically, split_horizontally,
@@ -2179,10 +2176,16 @@ draw_editor_panel(Panel* panel, v4f rect){
     
     present(panel->presenter);
     
+    ui_end_panel();
+    
     if(ui_state.menu_open){
         right_click_menu(panel, "rcm");
     }
-    ui_end_panel();
+    if(platform.mouse_right_down){
+        ui_state.menu_open = 1;
+        ui_state.menu_x = platform.mouse_x;
+        ui_state.menu_y = platform.mouse_y;
+    }
     reset_presenter(panel->presenter);
 }
 
@@ -2253,74 +2256,40 @@ draw_property_panel(Panel* panel, v4f rect){
     
     ui_end_panel();
 }
+
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height){
     if(!root) return;
     auto id = gen_unique_id("panel");
-    f32 new_width = width;
-    f32 new_height = height;
-    f32 new_posx = posx;
-    f32 new_posy = posy;
     
-    for(int i = 0; i < 2; i++){
-        
-        if(root->children[i]){
-            switch(root->children[i]->split_type){
-                case PANEL_SPLIT_HORIZONTAL:{
-                    new_height *= root->children[i]->split_ratio;
-                    new_posy += new_height;
-                    draw_panels(root->children[i], posx, new_posy, new_width, height-new_height);
-                }break;
-                case PANEL_SPLIT_VERTICAL:{
-                    new_width *= root->children[i]->split_ratio;
-                    new_posx += new_width;
-                    draw_panels(root->children[i], new_posx, posy, width-new_width, new_height);
-                }break;
-            }
+    if(root->first && root->second){
+        switch(root->first->split_type){
+            case PANEL_SPLIT_VERTICAL:{
+                draw_panels(root->first, posx, posy, width*root->first->split_ratio, height);
+                draw_panels(root->second, posx+width*root->first->split_ratio, posy, width*root->second->split_ratio, height);
+            }break;
+            case PANEL_SPLIT_HORIZONTAL:{
+                draw_panels(root->first, posx, posy, width, height*root->first->split_ratio);
+                draw_panels(root->second, posx, posy + height*root->first->split_ratio, width, height*root->second->split_ratio);
+            }break;
         }
-        new_posx = 0;
-        new_posy = 0;
-    }
-    
-    //push_rectangle(posx,posy+PANEL_BORDER, PANEL_BORDER, new_height-PANEL_BORDER, 0, 0xFF0000FF);
-    if(!panel_resize && is_mouse_dragged(posx-PANEL_BORDER,posy+PANEL_BORDER, PANEL_BORDER*2, new_height-PANEL_BORDER)){
-        panel_resize = 1;
-        old_width = width;
-        active_panel = root;
-        split_ratio = root->split_ratio;
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-        SDL_SetCursor(cursor);
-        
-    }
-    
-    
-    if(!panel_resize){
-        SDL_Cursor* cursor;
-        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-        SDL_SetCursor(cursor);
-    }else if(panel_resize){
-        f32 delta =  (platform.mouse_x-platform.mouse_drag_x)/old_width;
-        if(root == active_panel){
-            root->split_ratio = clampf(split_ratio + split_ratio*delta, 0, 1);
-        }else {
-            root->split_ratio = clampf(split_ratio - delta, 0, 1);
-        }
-    }
-    auto callback = [](u8* parameters){
-        return;
-    };
-    
-    
-    Closure closure = make_closure(callback, 0);
-    auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
-                               new_width-PANEL_BORDER*2, new_height-PANEL_BORDER*2, id,
-                               closure);
-    if(root->type == PANEL_PROPERTIES){
-        draw_property_panel(root, v4f(posx, posy,  new_width, new_height));
     }else {
-        draw_editor_panel(root, v4f(posx, posy,  new_width, new_height));
+        assert(!root->first && !root->second);
         
+        auto callback = [](u8* parameters){
+            return;
+        };
+        
+        Closure closure = make_closure(callback, 0);
+        auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
+                                   width-PANEL_BORDER*2, height-PANEL_BORDER*2, id,
+                                   closure);
+        if(root->type == PANEL_PROPERTIES){
+            draw_property_panel(root, v4f(posx, posy, width-PANEL_BORDER, height));
+        }else {
+            draw_editor_panel(root, v4f(posx, posy,  width-PANEL_BORDER, height-PANEL_BORDER));
+            
+        }
     }
 }
 

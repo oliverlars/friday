@@ -292,7 +292,7 @@ process_widgets_and_handle_events(){
                 if(ui_state.right_clicked_id == widget->id){
                     ui_state.clicked_id = HASH_INITIAL;
                 }else {
-                    active = widget;
+                    //active = widget;
                     ui_state.right_clicked_id = widget->id;
                 }
             }
@@ -313,11 +313,7 @@ process_widgets_and_handle_events(){
         }
         
     }
-    if(platform.mouse_right_down){
-        ui_state.menu_open = 1;
-        ui_state.menu_x = platform.mouse_x;
-        ui_state.menu_y = platform.mouse_y;
-    }
+    
 }
 
 
@@ -339,7 +335,14 @@ struct Panel {
     Panel_Split_Type split_type;
     Panel_Type type;
     f32 split_ratio;
-    Panel* children[2];
+    union {
+        Panel* children[2];
+        struct{
+            Panel* first; 
+            Panel* second;
+        };
+    };
+    Panel* parent;
     Presenter* presenter;
 };
 
@@ -364,28 +367,27 @@ internal bool
 is_mouse_dragged(v4f rect){
     return is_mouse_dragged(rect.x, rect.y, rect.width, rect.height);
 }
+
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
     if(!panel) return;
     
-    if(panel->children[0] && panel->children[1]){
-        Panel* insert_panel = (Panel*)calloc(1, sizeof(Panel));
-        panel->children[1]->split_ratio = split_ratio;
-        panel->children[1]->split_type = split_type;
-        panel->children[1]->type = type;
-    }else if(panel->children[0]){
-        //panel->children[1] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
-        panel->children[1] = (Panel*)calloc(1, sizeof(Panel));
-        panel->children[1]->split_ratio = split_ratio;
-        panel->children[1]->split_type = split_type;
-        panel->children[1]->type = type;
-    }else {
-        //panel->children[0] = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
-        panel->children[0] = (Panel*)calloc(1, sizeof(Panel));
-        panel->children[0]->split_ratio = split_ratio;
-        panel->children[0]->split_type = split_type;
-        panel->children[0]->type = type;
-    }
+    assert(!panel->first && !panel->second);
+    
+    panel->first = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+    panel->second = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+    
+    panel->first->split_ratio = split_ratio;
+    panel->second->split_ratio = 1.0f- split_ratio;
+    
+    panel->first->parent = panel;
+    panel->second->parent = panel;
+    
+    panel->first->type = panel->type;
+    panel->second->type = type;
+    
+    panel->first->split_type = split_type;
+    panel->second->split_type = split_type;
     
 }
 

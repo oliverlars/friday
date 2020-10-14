@@ -2152,11 +2152,14 @@ right_click_menu(Panel* panel, char* label){
         split_panel(panel, 0.5, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
     };
     auto ds = [](u8* parameters){
+        Panel* panel = get_arg(parameters, Panel*);
         ui_state.menu_open = 0;
+        delete_split(panel);
+        
     };
     Closure split_vertically = make_closure(sv, 1, arg(panel));
     Closure split_horizontally = make_closure(sh, 1, arg(panel));
-    Closure delete_split = make_closure(ds, 0);
+    Closure delete_split = make_closure(ds, 1, arg(panel));
     draw_menu(ui_state.menu_x, ui_state.menu_y, label, 
               items, 3, split_vertically, split_horizontally,
               delete_split);
@@ -2173,20 +2176,22 @@ draw_editor_panel(Panel* panel, v4f rect){
     u32 colour = theme.panel.packed;
     
     push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
-    
     present(panel->presenter);
     
     ui_end_panel();
     
+    reset_presenter(panel->presenter);
+    
     if(ui_state.menu_open){
-        right_click_menu(panel, "rcm");
+        right_click_menu(ui_state.active_panel, "rcm");
     }
-    if(platform.mouse_right_down){
+    auto id = gen_unique_id(panel);
+    if(ui_state.right_clicked_id == id){
         ui_state.menu_open = 1;
         ui_state.menu_x = platform.mouse_x;
         ui_state.menu_y = platform.mouse_y;
+        ui_state.active_panel = panel;
     }
-    reset_presenter(panel->presenter);
 }
 
 internal void
@@ -2260,7 +2265,7 @@ draw_property_panel(Panel* panel, v4f rect){
 internal void 
 draw_panels(Panel* root, int posx, int posy, int width, int height){
     if(!root) return;
-    auto id = gen_unique_id("panel");
+    auto id = gen_unique_id(root);
     
     if(root->first && root->second){
         switch(root->first->split_type){
@@ -2269,8 +2274,8 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
                 draw_panels(root->second, posx+width*root->first->split_ratio, posy, width*root->second->split_ratio, height);
             }break;
             case PANEL_SPLIT_HORIZONTAL:{
-                draw_panels(root->first, posx, posy, width, height*root->first->split_ratio);
-                draw_panels(root->second, posx, posy + height*root->first->split_ratio, width, height*root->second->split_ratio);
+                draw_panels(root->second, posx, posy, width, height*root->first->split_ratio);
+                draw_panels(root->first, posx, posy + height*root->first->split_ratio, width, height*root->second->split_ratio);
             }break;
         }
     }else {

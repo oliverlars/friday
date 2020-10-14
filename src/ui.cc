@@ -75,6 +75,8 @@ struct Widget {
     b32* clicked;
 };
 
+struct Panel;
+
 global struct {
     Widget* widgets = nullptr;
     Widget* widgets_tail = nullptr;
@@ -95,6 +97,8 @@ global struct {
     bool menu_open;
     f32 menu_x;
     f32 menu_y;
+    
+    Panel* active_panel;
 } ui_state;
 
 struct Arg_Type {
@@ -176,6 +180,12 @@ internal UI_ID
 gen_id(String8 label){
     
     u64 id = (u64)(void*)label.text;
+    return (UI_ID)id;
+}
+
+internal UI_ID
+gen_unique_id(void* data){
+    u64 id = (u64)data;
     return (UI_ID)id;
 }
 
@@ -388,7 +398,14 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     
     panel->first->split_type = split_type;
     panel->second->split_type = split_type;
-    
+    panel->first->presenter = panel->presenter;
+}
+
+internal void 
+delete_split(Panel* panel){
+    if(!panel) return;
+    panel->parent->first = nullptr;
+    panel->parent->second = nullptr;
 }
 
 struct Animation_State {

@@ -356,3 +356,10 @@ between(f32 value, f32 min, f32 max){
     return (value < max) && value > min;
     
 }
+
+internal inline v4f
+rect_border(v4f rect, f32 border){
+    return v4f(rect.x + border, rect.y + border,
+               rect.width - border*2,
+               rect.height - border*2);
+}

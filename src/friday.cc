@@ -157,7 +157,6 @@ main(int argc, char** args){
     
     split_panel(root, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     
-    
     bool previous_mouse_left_clicked = 0;
     
     u32 start_time = 0;
@@ -178,7 +177,7 @@ main(int argc, char** args){
         f32 offset = 5;
         //code panel
         
-        draw_panels(root, 0, 45, platform.width, platform.height-90);
+        draw_panels(root, 0, 40, platform.width, platform.height-80);
         draw_view_buttons();
         friday.cursor_x += lerp(friday.cursor_x, friday.cursor_target_x, 0.1f);
         friday.cursor_y += lerp(friday.cursor_y, friday.cursor_target_y, 0.1f);
@@ -189,11 +188,15 @@ main(int argc, char** args){
         //present_graph(global_scope->scope.statements->next);
         
         draw_status_bar(&presenter);
-        draw_menu_bar();
         
         display_modes();
         navigate_graph(&presenter);
         
+        
+        if(ui_state.menu_open){
+            right_click_menu(ui_state.active_panel, "rcm");
+        }
+        draw_menu_bar();
         
         process_widgets_and_handle_events();
         opengl_end_frame();

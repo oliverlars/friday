@@ -1869,8 +1869,8 @@ find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
 
 internal void
 draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
-    if(!ui_state.menu_open) return;
     auto menu_id = gen_id(label);
+    f32 font_scale = 1.0f;
     //debug_print("%d", menu_id);
     auto anim_state = get_animation_state(menu_id);
     if(!anim_state){
@@ -1882,22 +1882,20 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
                            lerp(anim_state->x_scale, 1.2, 0.2f),
                            lerp(anim_state->y_scale, 1.2, 0.2f));
     
-    f32 line_height = get_font_line_height();
+    f32 line_height = get_font_line_height(font_scale);
     f32 height = 40*anim_state->y_scale;
-    f32 size_x = 200*anim_state->x_scale;
+    f32 size_x = 0;
     f32 size_y = num_rows*height;
     y = y-size_y+line_height;
-    friday.y -= size_y;
     
     anim_state->last_updated = platform.tick;
     
     for(int i = 0; i < num_rows; i++){
-        f32 text_width = get_text_width(strings[i]);
+        f32 text_width = get_text_width(strings[i], font_scale);
         text_width *= 1.2;
         size_x = text_width >= size_x ? text_width : size_x;
         
     }
-    
     
     push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
     
@@ -1918,7 +1916,7 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
         }
         
         push_string8(x+10, y + i*height+line_height/2, string,
-                     text_colour);
+                     text_colour, font_scale);
     }
     
 }
@@ -2182,9 +2180,6 @@ draw_editor_panel(Panel* panel, v4f rect){
     
     reset_presenter(panel->presenter);
     
-    if(ui_state.menu_open){
-        right_click_menu(ui_state.active_panel, "rcm");
-    }
     auto id = gen_unique_id(panel);
     if(ui_state.right_clicked_id == id){
         ui_state.menu_open = 1;
@@ -2290,10 +2285,9 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
                                    width-PANEL_BORDER*2, height-PANEL_BORDER*2, id,
                                    closure);
         if(root->type == PANEL_PROPERTIES){
-            draw_property_panel(root, v4f(posx, posy, width-PANEL_BORDER, height));
+            draw_property_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
         }else {
-            draw_editor_panel(root, v4f(posx, posy,  width-PANEL_BORDER, height-PANEL_BORDER));
-            
+            draw_editor_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
         }
     }
 }

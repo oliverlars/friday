@@ -170,7 +170,10 @@ main(int argc, char** args){
         
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         
-        
+        int x, y;
+        u32 mouse_state = SDL_GetMouseState(&x, &y);
+        platform.mouse_x = x;
+        platform.mouse_y = platform.height - y;
         f32 offset = 5;
         //code panel
         
@@ -210,6 +213,7 @@ main(int argc, char** args){
             input.actions[i].half_transition_count = 0;
         }
         platform.mouse_scroll_delta = 0;
+        
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = false;
@@ -247,6 +251,7 @@ main(int argc, char** args){
                     }
                     platform.mouse_left_up = 1;
                     platform.mouse_left_down = 0;
+                    panel_resize = 0;
                     platform.mouse_left_double_clicked = 0;
                 }
                 if(event.button.button == SDL_BUTTON_RIGHT){
@@ -398,14 +403,14 @@ main(int argc, char** args){
                 
             }
             if(event.type == SDL_MOUSEMOTION){
-                
                 if(platform.mouse_left_down){
                     platform.mouse_drag = true;
                 }
                 if(platform.mouse_middle_down){
                     platform.mouse_drag = true;
                 }
-                
+                platform.mouse_delta_x = event.motion.xrel;
+                platform.mouse_delta_y = -event.motion.yrel;
             }
             if(event.type == SDL_MOUSEWHEEL){
                 f32 temp_scroll = platform.mouse_scroll_target;
@@ -414,13 +419,6 @@ main(int argc, char** args){
             }
         }
         platform.mouse_scroll_source += lerp(platform.mouse_scroll_source, platform.mouse_scroll_target, 0.1f);
-        
-        int x, y;
-        u32 mouse_state = SDL_GetMouseState(&x, &y);
-        platform.mouse_delta_x = x - platform.mouse_x;
-        platform.mouse_delta_y = (platform.height - y) - platform.mouse_y;
-        platform.mouse_x = x;
-        platform.mouse_y = platform.height - y;
         
         SDL_GL_SwapWindow(global_window);
         platform.tick++;

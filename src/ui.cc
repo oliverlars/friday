@@ -58,13 +58,6 @@ struct Closure {
     void(*callback)(u8* parameters);
 };
 
-enum Click_Type {
-    CLICK_LEFT,
-    CLICK_RIGHT,
-    CLICK_DRAG,
-    CLICK_COUNT, 
-};
-
 struct Widget {
     f32 x, y;
     f32 width, height;
@@ -72,9 +65,12 @@ struct Widget {
     Widget* next;
     Widget* last;
     
-    Click_Type click_type;
     
-    Closure closures[CLICK_COUNT];
+    
+    Closure closure;
+    Closure hover;
+    Closure right_click;
+    Closure middle_click;
     
     b32* clicked;
 };
@@ -87,7 +83,6 @@ global struct {
     UI_ID hover_id;
     UI_ID clicked_id;
     UI_ID right_clicked_id;
-    UI_ID drag_id;
     UI_ID menu_id;
     
     
@@ -104,7 +99,6 @@ global struct {
     f32 menu_y;
     
     Panel* active_panel;
-    bool panel_is_resizing;
 } ui_state;
 
 struct Arg_Type {
@@ -197,7 +191,7 @@ gen_unique_id(void* data){
 
 internal Widget* 
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
-             Closure closure, Click_Type click_type = CLICK_LEFT){
+             Closure closure, bool has_parameters = false){
     
     auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
     widget->x = x;
@@ -206,9 +200,8 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
     widget->height = height;
     widget->id = id;
     widget->next = nullptr;
-    widget->closures[click_type] = closure;
+    widget->closure = closure;
     widget->clicked = nullptr;
-    widget->click_type = click_type;
     
     if(!ui_state.widgets){
         ui_state.widgets = widget;
@@ -223,9 +216,9 @@ _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
 
 internal Widget* 
 ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
-               Closure closure, Click_Type click_type = CLICK_LEFT){
+               Closure closure, bool has_parameters = false){
     
-    return _push_widget(x, y, width, height, id, closure, click_type);
+    return _push_widget(x, y, width, height, id, closure, has_parameters);
 }
 
 internal bool
@@ -290,7 +283,6 @@ process_widgets_and_handle_events(){
     bool hovered = false;
     
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
-        
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
             ui_state.hover_id = widget->id;
@@ -308,19 +300,10 @@ process_widgets_and_handle_events(){
                 }
             }else if(platform.mouse_right_down){
                 if(ui_state.right_clicked_id == widget->id){
-                    ui_state.right_clicked_id = HASH_INITIAL;
+                    ui_state.clicked_id = HASH_INITIAL;
                 }else {
                     //active = widget;
                     ui_state.right_clicked_id = widget->id;
-                }
-            }
-            
-            if(platform.mouse_drag){
-                if(ui_state.drag_id == widget->id){
-                    ui_state.drag_id = HASH_INITIAL;
-                }else {
-                    active = widget;
-                    ui_state.drag_id = widget->id;
                 }
             }
             
@@ -329,12 +312,16 @@ process_widgets_and_handle_events(){
     if(!hovered){
         ui_state.hover_id = HASH_INITIAL;
     }
-    if(active){
-        auto click_type = active->click_type;
-        if(active->closures[click_type].callback){
-            active->closures[click_type]
-                .callback(active->closures[click_type].parameters);
+    if(active_hover){
+        if(active_hover->hover.callback){
+            //active_hover->hover.callback(active_hover->hover.parameters);
         }
+    }
+    if(active){
+        if(active->closure.callback){
+            active->closure.callback(active->closure.parameters);
+        }
+        
     }
     
 }

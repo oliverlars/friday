@@ -650,12 +650,6 @@ clampf(f32 value, f32 min, f32 max){
 }
 
 internal void
-clampf(f32* value, f32 min, f32 max){
-    if(*value < min) *value = min;
-    if(*value > max) *value = max;;
-}
-
-internal void
 debug_print(char* fmt, ...){
     va_list args;
     va_start(args, fmt);

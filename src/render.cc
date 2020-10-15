@@ -2173,6 +2173,9 @@ draw_editor_panel(Panel* panel, v4f rect){
     ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
     u32 colour = theme.panel.packed;
     
+    if(ui_state.active_panel == panel){
+        colour += 0x08080800;
+    }
     push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
     present(panel->presenter);
     
@@ -2277,13 +2280,36 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
         assert(!root->first && !root->second);
         
         auto callback = [](u8* parameters){
-            return;
+            ui_state.active_panel = get_arg(parameters, Panel*);
         };
         
-        Closure closure = make_closure(callback, 0);
+        Closure closure = make_closure(callback, 1, arg(root));
         auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
                                    width-PANEL_BORDER*2, height-PANEL_BORDER*2, id,
                                    closure);
+        
+        auto resize_callback = [](u8* parameters){
+            auto panel = get_arg(parameters, Panel*);
+            ui_state.panel_is_resizing = 1;
+            ui_state.active_panel = panel;
+        };
+        v4f resize_rect = v4f(posx+width, posy,
+                              PANEL_BORDER, height);
+        
+        if(platform.mouse_left_down && platform.mouse_drag && root == ui_state.active_panel){
+            Panel* parent = root->parent;
+            f32 delta = platform.mouse_delta_x;
+            if(root->split_type == PANEL_SPLIT_HORIZONTAL) delta = platform.mouse_delta_y;
+            parent->first->split_ratio += delta/platform.width;
+            parent->second->split_ratio -= delta/platform.width;
+            clampf(&parent->first->split_ratio, 0.0f, 1.0f);
+            clampf(&parent->second->split_ratio, 0.0f, 1.0f);
+        }
+        
+        Closure resize_closure = make_closure(resize_callback, 1, arg(root));
+        auto resize_widget = _push_widget(posx+width-PANEL_BORDER, posy,
+                                          PANEL_BORDER*2, height, gen_unique_id(root), resize_closure,
+                                          CLICK_DRAG);
         if(root->type == PANEL_PROPERTIES){
             draw_property_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
         }else {

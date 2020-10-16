@@ -359,7 +359,6 @@ present_x_insertable(Presenter* presenter, Closure closure, String8 label){
         unanimate(anim_state);
     }
     
-    draw_view_buttons();
     
     presenter->x_offset += anim_state->rect.x;
 }

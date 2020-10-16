@@ -1936,6 +1936,43 @@ icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure)
     return id;
 }
 
+internal UI_ID
+icon_button(String8 label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
+    auto id = gen_unique_id(label);
+    auto widget = _push_widget(x, y, size, size, id, closure);
+    
+    f32 line_height = get_font_line_height();
+    auto anim_state = get_animation_state(id);
+    if(!anim_state){
+        anim_state = init_animation_state(id);
+        anim_state->target_rect.x = 0.5f;
+    }
+    if(id == ui_state.clicked_id){
+        unanimate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else if(id == ui_state.hover_id){
+        animate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }else{
+        unanimate(anim_state);
+        
+        f32 sx = (1.0 + anim_state->rect.x);
+        size *= sx;
+        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
+        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
+    }
+    
+    return id;
+}
+
 
 internal UI_ID
 small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, b32* state, Closure closure){
@@ -2192,20 +2229,22 @@ draw_menu_bar(){
 }
 
 internal void
-draw_view_buttons(){
+draw_view_buttons(v2f pos){
     f32 size = 60;
-    f32 x = 30;
+    f32 x = 30+pos.x;
     f32 spacing = 15;
-    f32 y = platform.height - 150;
+    f32 y = platform.height - 150 - pos.y;
     
     Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
-    char* icon_labels[4] = {"move_icon", "add_icon", "options_icon", "bin_icon"};
+    Arena* arena = &renderer.temp_string_arena;
+    String8 icon_labels[4] = {
+        make_stringf(arena, "move_icon###%d%d",  (int)pos.x, (int)pos.y), 
+        make_stringf(arena,"add_icon###%d%d",  (int)pos.x, (int)pos.y), 
+        make_stringf(arena,"options_icon###%d%d",  (int)pos.x, (int)pos.y), 
+        make_stringf(arena,"bin_icon###%d%d", (int)pos.x, (int)pos.y)
+    };
     for(int i = 0; i < 4; i++){
         
-#if 0
-        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 5, icons[i]);
-#endif
         auto callback = [](u8* parameters){};
         Closure closure = make_closure(callback, 0);
         icon_button(icon_labels[i], x, y, size, icons[i], closure);
@@ -2382,7 +2421,7 @@ draw_editor_panel(Panel* panel, v4f rect){
     push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
     present(panel->presenter);
     draw_panel_header(panel, rect);
-    draw_view_buttons();
+    draw_view_buttons(v2f(rect.x, rect.y));
     
     ui_end_panel();
     

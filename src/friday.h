@@ -272,6 +272,28 @@ struct String8 {
 };
 
 internal String8
+append_to_string(Arena* arena, String8 string, char* appendee);
+
+internal String8
+make_stringf(Arena* arena, char* string, ...){
+    va_list args;
+    va_start(args, string);
+    
+    char* pointer = string;
+    while(pointer && *pointer){
+        pointer++;
+    }
+    
+    char* text = (char*)arena_allocate(arena, 256);
+    int length = vsnprintf(text, 256, string, args);
+    String8 result;
+    result.text = text;
+    result.length = length;
+    result.capacity = 256;
+    return result;
+}
+
+internal String8
 make_string(Arena* arena, char* string, u64 capacity = 256){
     
     char* pointer = string;

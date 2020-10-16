@@ -175,7 +175,6 @@ main(int argc, char** args){
         //code panel
         
         draw_panels(root, 0, 40, platform.width, platform.height-80);
-        draw_view_buttons();
         friday.cursor_x += lerp(friday.cursor_x, friday.cursor_target_x, 0.1f);
         friday.cursor_y += lerp(friday.cursor_y, friday.cursor_target_y, 0.1f);
         
@@ -421,7 +420,6 @@ main(int argc, char** args){
         platform.mouse_delta_y = (platform.height - y) - platform.mouse_y;
         platform.mouse_x = x;
         platform.mouse_y = platform.height - y;
-        
         SDL_GL_SwapWindow(global_window);
         platform.tick++;
         end_time = SDL_GetTicks();

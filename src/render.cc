@@ -308,6 +308,7 @@ struct {
 
 enum Command_Type {
     COMMAND_RECTANGLE,
+    COMMAND_TRIANGLE,
     COMMAND_CIRCLE,
     COMMAND_RECTANGLE_OUTLINE,
     COMMAND_GLYPH,
@@ -339,6 +340,12 @@ struct Command {
             f32 width, height;
             f32 corner_radius;
         }rectangle;
+        
+        struct {
+#define BYTES_PER_TRIANGLE (8*sizeof(f32)) // NOTE(Oliver): we secretly add two size fields
+            f32 x, y;
+            f32 size;
+        }triangle;
         
         struct {
 #define BYTES_PER_CIRCLE (7*sizeof(f32))
@@ -550,6 +557,17 @@ push_rectangle(v4f rect, f32 radius, u32 colour){
     rectangle->rectangle.corner_radius = radius;
     rectangle->colour.packed = colour;
     insert_command(rectangle);
+}
+
+internal inline void
+push_triangle(v2f pos, f32 size, u32 colour){
+    
+    auto triangle = make_command(COMMAND_TRIANGLE);
+    triangle->triangle.x = pos.x;
+    triangle->triangle.y = pos.y;
+    triangle->triangle.size = size;
+    triangle->colour.packed = colour;
+    insert_command(triangle);
 }
 
 internal inline void
@@ -776,6 +794,34 @@ init_opengl_renderer(){
         glEnableVertexAttribArray(colour);
         glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
                               BYTES_PER_RECTANGLE, reinterpret_cast<void*>(sizeof(f32)*5));
+        
+    }
+    
+    {
+        glGenVertexArrays(1, &renderer.vaos[COMMAND_TRIANGLE]);
+        glBindVertexArray(renderer.vaos[COMMAND_TRIANGLE]);
+        
+        glGenBuffers(1, &renderer.buffers[COMMAND_TRIANGLE]);
+        glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_TRIANGLE]);
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_TRIANGLE, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint pos = 0;
+        GLuint dim = 2;
+        GLuint colour = 4;
+        
+        glEnableVertexAttribArray(pos);
+        glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
+                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(0));
+        
+        glEnableVertexAttribArray(dim);
+        glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
+                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*2));
+        
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
         
     }
     
@@ -1024,7 +1070,7 @@ init_shaders(){
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius);\n"
             "float alpha = mix(1, 0,  dist);\n"
-            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), dist);\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), alpha);\n"
             "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
@@ -1036,7 +1082,7 @@ init_shaders(){
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         
         renderer.resolution_uniforms[COMMAND_RECTANGLE] = glGetUniformLocation(program, "resolution");
-        renderer.clip_range_uniforms[COMMAND_GLYPH] = glGetUniformLocation(program, "clip_range");
+        renderer.clip_range_uniforms[COMMAND_RECTANGLE] = glGetUniformLocation(program, "clip_range");
         
         renderer.ortho_uniform = glGetUniformLocation(program, "ortho");
         renderer.view_uniform = glGetUniformLocation(program, "view");
@@ -1045,9 +1091,90 @@ init_shaders(){
         
     }
     
+    // NOTE(Oliver): init triangle shader
+    {
+        GLchar* triangle_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in vec2 pos; \n"
+            "layout(location = 2) in vec2 dim; \n"
+            "layout(location = 4) in vec4 colour; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            "out vec2 out_pos;\n"
+            "out vec2 out_dim;\n"
+            "out vec4 frag_colour;\n"
+            
+            "void main(){\n"
+            "vec2 scaled_dim = dim*2.0;\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4(1.2*scaled_dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos+scaled_dim/2)/resolution,0,1)).xy -1;\n"
+            "gl_Position = screen_position;\n"
+            "out_pos = pos;\n"
+            "out_dim = dim;\n"
+            "frag_colour = colour;\n"
+            "}\n";
+        
+        GLchar* triangle_fs =  
+            "#version 330 core\n"
+            "in vec2 out_pos; \n"
+            "in vec2 out_dim; \n"
+            "in vec4 frag_colour;\n"
+            "out vec4 colour;\n"
+            "uniform vec2 in_position;\n"
+            "uniform vec4 clip_range;\n"
+            
+            "vec2 rotate(vec2 pos, float r){\n"
+            "const float PI = 3.14159;\n"
+            "float angle = r * PI * 2 * -1;\n"
+            "float sine = sin(angle);\n"
+            "float cosine = cos(angle);\n"
+            "return vec2(cosine * pos.x + sine * pos.y, cosine * pos.y - sine * pos.x);\n"
+            "}\n"
+            
+            "float triangle(vec2 p, float r)\n"
+            "{\n"
+            "const float k = sqrt(3.0);\n"
+            "p.x = abs(p.x) - r;\n"
+            "p.y = p.y + r/k;\n"
+            "if( p.x+k*p.y>0.0 ) p=vec2(p.x-k*p.y,-k*p.x-p.y)/2.0;\n"
+            "p.x -= clamp( p.x, -2.0*r, 0.0 );\n"
+            "return -length(p)*sign(p.y);\n"
+            "}\n"
+            
+            "void main(){\n"
+            "vec2 coord = gl_FragCoord.xy;\n"
+            "vec2 pos = rotate(coord.xy - (out_pos + out_dim), 1.5);\n"
+            "float dist = triangle(pos, out_dim.x);\n"
+            "float alpha = mix(1, 0,  dist);\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), alpha);\n"
+            "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
+            "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
+            "colour = vec4(frag_colour.rgb, alpha);\n"
+            "}else {\n"
+            "return;\n"
+            "}\n"
+            "}\n";
+        
+        GLuint program = make_program(triangle_vs, triangle_fs);
+        
+        renderer.resolution_uniforms[COMMAND_TRIANGLE] = glGetUniformLocation(program, "resolution");
+        renderer.clip_range_uniforms[COMMAND_TRIANGLE] = glGetUniformLocation(program, "clip_range");
+        
+        renderer.ortho_uniform = glGetUniformLocation(program, "ortho");
+        renderer.view_uniform = glGetUniformLocation(program, "view");
+        
+        renderer.programs[COMMAND_TRIANGLE] = program;
+        
+    }
+    
     
     // NOTE(Oliver): init rectangle outline shader
     {
+        
         GLchar* rectangle_vs =  
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
@@ -1062,7 +1189,6 @@ init_shaders(){
             "out vec2 out_dim;\n"
             "out float out_radius;\n"
             "out float out_border;\n"
-            "out vec2 out_res;\n"
             "out vec4 frag_colour;\n"
             
             "void main(){\n"
@@ -1075,40 +1201,28 @@ init_shaders(){
             "out_pos = pos;\n"
             "out_radius = radius;\n"
             "out_dim = dim;\n"
-            "out_border = border_size;\n"
-            "out_res = resolution;\n"
             "frag_colour = colour;\n"
             "}\n";
         
-        GLchar* rectangle_fs =  
-            "#version 330 core\n"
+        GLchar* rectangle_fs =   "#version 330 core\n"
             "in vec2 out_pos; \n"
             "in vec2 out_dim; \n"
             "in float out_radius; \n"
             "in float out_border; \n"
-            "in vec2 out_res; \n"
             "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
-            
-            "float box_no_pointy(vec2 p, vec2 b, float r, float border){\n"
-            "float border_ = min(b.y,b.x)*border;\n"
-            "float border_percent = border*min(b.y,b.x)/max(b.y,b.x);\n"
-            "float inner = length(max(abs(p)-(b-border_)+r,0.0))-r*(1.0-border);\n"
-            "float outer = length(max(abs(p)-b+r,0.0))-r;\n"
-            "return max(-inner, outer);\n"
-            "}\n"
             
             "float box_dist(vec2 p, vec2 size, float radius, float border){\n"
             "size -= vec2(radius);\n"
             "vec2 d = abs(p) - size;\n"
             "return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;\n"
             "}\n"
+            
             "void main(){\n"
-            "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius*min(out_dim.x, out_dim.y)/2, out_border);\n"
-            "if(dist <= 0.0001) { dist = 0.0001; }\n"
-            "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
-            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), smoothstep(0, 1, dist));\n"
+            "float dist = box_dist(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius, out_border);\n"
+            "float alpha = mix(1, 0,  dist);\n"
+            "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), dist);\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}\n";
         
@@ -1330,6 +1444,7 @@ process_and_draw_commands(){
     
     f32* rectangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE);
     f32* rectangle_outlines = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
+    f32* triangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_TRIANGLE);
     f32* circles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_CIRCLE);
     f32* glyphs = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_GLYPH);
     f32* rectangles_textured = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
@@ -1351,6 +1466,7 @@ process_and_draw_commands(){
             case COMMAND_CLIP_RANGE_END:{
                 clip_range = v4f(0,0, platform.width, platform.height);
             }break;
+            
             case COMMAND_RECTANGLE:{
                 
                 int num_verts = 0;
@@ -1394,6 +1510,54 @@ process_and_draw_commands(){
                     glUniform4fv(renderer.clip_range_uniforms[COMMAND_RECTANGLE], 1, (f32*)&clip_range);
                     
                     glBindVertexArray(renderer.vaos[COMMAND_RECTANGLE]);
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
+                }
+                
+            }break;
+            
+            case COMMAND_TRIANGLE:{
+                
+                int num_verts = 0;
+                f32* attribs = triangles;
+                for(Command* _command = command; _command && _command->type == previous_command->type; 
+                    _command = _command->next){
+                    
+                    auto triangle = _command;
+                    for(int i = 0; i < 6; i++){
+                        v4f r = v4f(triangle->triangle.x,
+                                    triangle->triangle.y,
+                                    triangle->triangle.size,
+                                    triangle->triangle.size);
+                        
+                        *attribs++ = triangle->triangle.x;
+                        *attribs++ = triangle->triangle.y;
+                        *attribs++ = triangle->triangle.size;
+                        *attribs++ = triangle->triangle.size;
+                        *attribs++ = (triangle->colour.a/255.0f);
+                        *attribs++ = (triangle->colour.b/255.0f);
+                        *attribs++ = (triangle->colour.g/255.0f);
+                        *attribs++ = (triangle->colour.r/255.0f);
+                        num_verts++;
+                        
+                    }
+                }
+                // NOTE(Oliver): draw filled rects data
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer.buffers[COMMAND_TRIANGLE]);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_TRIANGLE,
+                                    triangles);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(renderer.programs[COMMAND_TRIANGLE]);
+                    
+                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    glUniform2fv(renderer.resolution_uniforms[COMMAND_TRIANGLE], 1, resolution);
+                    
+                    glUniform4fv(renderer.clip_range_uniforms[COMMAND_TRIANGLE], 1, (f32*)&clip_range);
+                    
+                    glBindVertexArray(renderer.vaos[COMMAND_TRIANGLE]);
                     glDrawArrays(GL_TRIANGLES, 0, num_verts);
                     glUseProgram(0);
                 }
@@ -2169,15 +2333,56 @@ global f32 child_width = 0;
 global f32 parent_width = 0;
 
 internal void
+draw_panel_header(Panel* panel, v4f panel_rect){
+    f32 size = 40;
+    v4f rect = v4f(panel_rect.x+panel_rect.width-size,
+                   panel_rect.y + panel_rect.height-size, 
+                   panel_rect.width, panel_rect.height);
+    rect = rect_border(rect, -10);
+    
+    auto id = gen_unique_id(panel, sizeof(Panel));
+    _push_widget(rect.x, rect.y, size, size, id, {});
+    if(id == ui_state.clicked_id){
+        push_rectangle(rect.x, rect.y, size, size, 10, theme.button_highlight.packed);
+        push_triangle(v2f(rect.x +10 , rect.y + 10), 10, theme.text.packed);
+        
+        String8 items[2] = {};
+        Arena* arena = &renderer.temp_string_arena;
+        items[0] = make_string(arena, "properties");
+        items[1] = make_string(arena, "editor");
+        
+        auto make_editor = [](u8* parameters){
+            auto panel = get_arg(parameters, Panel*);
+            panel->type = PANEL_EDITOR;
+        };
+        auto make_properties = [](u8* parameters){
+            auto panel = get_arg(parameters, Panel*);
+            panel->type = PANEL_PROPERTIES;
+        };
+        
+        Closure make_editor_closure = make_closure(make_editor, 1, arg(panel));
+        Closure make_properties_closure = make_closure(make_properties, 1, arg(panel));
+        draw_menu(rect.x - get_text_width("properties"), rect.y - size, "panel selector", items, 2, 
+                  make_properties_closure,
+                  make_editor_closure);
+    }else {
+        push_rectangle(rect.x, rect.y, size, size, 10, theme.view_button.packed);
+        push_triangle(v2f(rect.x +10 , rect.y + 10), 10, theme.text.packed);
+    }
+    
+}
+
+internal void
 draw_editor_panel(Panel* panel, v4f rect){
     ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
     u32 colour = theme.panel.packed;
-    
-    if(ui_state.active_panel == panel){
+    if(ui_state.resize_panel == panel){
         colour += 0x08080800;
     }
     push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
     present(panel->presenter);
+    draw_panel_header(panel, rect);
+    draw_view_buttons();
     
     ui_end_panel();
     
@@ -2256,6 +2461,7 @@ draw_property_panel(Panel* panel, v4f rect){
         radio_button("flip", &button_states[2], {});
         text_button("interpret", &button_states[3], {});
     }
+    draw_panel_header(panel, rect);
     
     ui_end_panel();
 }
@@ -2288,28 +2494,38 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
                                    width-PANEL_BORDER*2, height-PANEL_BORDER*2, id,
                                    closure);
         
-        auto resize_callback = [](u8* parameters){
-            auto panel = get_arg(parameters, Panel*);
-            ui_state.panel_is_resizing = 1;
-            ui_state.active_panel = panel;
-        };
-        v4f resize_rect = v4f(posx+width, posy,
-                              PANEL_BORDER, height);
+        bool is_in_border = is_mouse_in_left_or_right_border(v4f(posx, posy, width, height),
+                                                             PANEL_BORDER);
+        if(root->split_type == PANEL_SPLIT_HORIZONTAL){
+            is_in_border =is_mouse_in_bottom_or_top_border(v4f(posx, posy, width, height),
+                                                           PANEL_BORDER);
+        }
+        // NOTE(Oliver): Credits to Max Jordan for using the depth first
+        // search to correctly resize the right panel
         
-        if(platform.mouse_left_down && platform.mouse_drag && root == ui_state.active_panel){
+        if(platform.mouse_left_down && !ui_state.panel_is_resizing &&
+           is_in_border){
+            ui_state.panel_is_resizing = true;
+            ui_state.resize_panel = root;
+        }else if(!platform.mouse_left_down){
+            ui_state.panel_is_resizing = false;
+        }
+        if(ui_state.panel_is_resizing && root == ui_state.resize_panel){
             Panel* parent = root->parent;
             f32 delta = platform.mouse_delta_x;
-            if(root->split_type == PANEL_SPLIT_HORIZONTAL) delta = platform.mouse_delta_y;
-            parent->first->split_ratio += delta/platform.width;
-            parent->second->split_ratio -= delta/platform.width;
+            f32 divisor = width/root->split_ratio;
+            if(root->split_type == PANEL_SPLIT_HORIZONTAL){
+                delta = platform.mouse_delta_y;
+                divisor = height/root->split_ratio;
+            }
+            parent->first->split_ratio += delta/divisor;
             clampf(&parent->first->split_ratio, 0.0f, 1.0f);
+            
+            parent->second->split_ratio = 1.0f - parent->first->split_ratio;
             clampf(&parent->second->split_ratio, 0.0f, 1.0f);
         }
         
-        Closure resize_closure = make_closure(resize_callback, 1, arg(root));
-        auto resize_widget = _push_widget(posx+width-PANEL_BORDER, posy,
-                                          PANEL_BORDER*2, height, gen_unique_id(root), resize_closure,
-                                          CLICK_DRAG);
+        
         if(root->type == PANEL_PROPERTIES){
             draw_property_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
         }else {

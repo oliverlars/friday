@@ -104,6 +104,8 @@ global struct {
     f32 menu_y;
     
     Panel* active_panel;
+    
+    Panel* resize_panel;
     bool panel_is_resizing;
 } ui_state;
 
@@ -195,6 +197,13 @@ gen_unique_id(void* data){
     return (UI_ID)id;
 }
 
+internal UI_ID
+gen_unique_id(void* data, int num_bytes){
+    UI_ID result = 0;
+    hash32(&result, (char*)data, num_bytes);
+    return (UI_ID)result;
+}
+
 internal Widget* 
 _push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
              Closure closure, Click_Type click_type = CLICK_LEFT){
@@ -226,18 +235,6 @@ ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
                Closure closure, Click_Type click_type = CLICK_LEFT){
     
     return _push_widget(x, y, width, height, id, closure, click_type);
-}
-
-internal bool
-is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
-    return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
-        platform.mouse_y <= (y + height) && platform.mouse_y >= y;
-}
-
-
-internal bool
-is_mouse_in_rect(v4f rect){
-    return is_mouse_in_rect(rect.x, rect.y, rect.width, rect.height);
 }
 
 #define PANEL_MARGIN_X 60
@@ -358,18 +355,14 @@ struct Panel {
     Panel_Split_Type split_type;
     Panel_Type type;
     f32 split_ratio;
-    union {
-        Panel* children[2];
-        struct{
-            Panel* first; 
-            Panel* second;
-        };
-    };
+    Panel* first; 
+    Panel* second;
     Panel* parent;
     Presenter* presenter;
 };
 
 internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
+internal void push_rectangle(v4f rect, f32 radius, u32 colour);
 
 #define PANEL_BORDER 5
 

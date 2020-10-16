@@ -1,5 +1,5 @@
 
- union mat4x4 {
+union mat4x4 {
     float e[16];
     struct {
         f32 m00, m01, m02, m03;
@@ -362,4 +362,40 @@ rect_border(v4f rect, f32 border){
     return v4f(rect.x + border, rect.y + border,
                rect.width - border*2,
                rect.height - border*2);
+}
+
+internal bool
+is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
+    return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
+        platform.mouse_y <= (y + height) && platform.mouse_y >= y;
+}
+
+
+internal bool
+is_mouse_in_rect(v4f rect){
+    return is_mouse_in_rect(rect.x, rect.y, rect.width, rect.height);
+}
+
+internal inline bool
+is_mouse_in_rect_border(v4f rect, f32 thickness){
+    bool left = is_mouse_in_rect(rect.x, rect.y, thickness, rect.height);
+    bool right = is_mouse_in_rect(rect.x+rect.width-thickness, rect.y, thickness, rect.height);
+    bool top = is_mouse_in_rect(rect.x, rect.y, rect.width, thickness);
+    bool bottom = is_mouse_in_rect(rect.x, rect.y+rect.height-thickness, rect.width, thickness);
+    return left || right || top || bottom;
+}
+
+internal inline bool
+is_mouse_in_bottom_or_top_border(v4f rect, f32 thickness){
+    bool top = is_mouse_in_rect(rect.x, rect.y, rect.width, thickness);
+    bool bottom = is_mouse_in_rect(rect.x, rect.y+rect.height-thickness, rect.width, thickness);
+    return top || bottom;
+    
+}
+
+internal inline bool
+is_mouse_in_left_or_right_border(v4f rect, f32 thickness){
+    bool left = is_mouse_in_rect(rect.x, rect.y, thickness, rect.height);
+    bool right = is_mouse_in_rect(rect.x+rect.width-thickness, rect.y, thickness, rect.height);
+    return left || right;
 }

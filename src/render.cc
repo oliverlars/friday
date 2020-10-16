@@ -2233,7 +2233,7 @@ draw_view_buttons(v2f pos){
     f32 size = 60;
     f32 x = 30+pos.x;
     f32 spacing = 15;
-    f32 y = platform.height - 150 - pos.y;
+    f32 y = pos.y-150;
     
     Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
     Arena* arena = &renderer.temp_string_arena;
@@ -2421,7 +2421,7 @@ draw_editor_panel(Panel* panel, v4f rect){
     push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
     present(panel->presenter);
     draw_panel_header(panel, rect);
-    draw_view_buttons(v2f(rect.x, rect.y));
+    draw_view_buttons(v2f(rect.x, rect.y+rect.height));
     
     ui_end_panel();
     

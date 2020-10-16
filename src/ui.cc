@@ -280,14 +280,15 @@ ui_new_line(){
 
 internal void
 process_widgets_and_handle_events(){
-    
+    // TODO(Oliver): this should handle more than just events
+    // make it also handle the drawing and clipping
+    // would solve a few issues i have
     Widget* active = nullptr;
     Widget* active_hover = nullptr;
     
     bool hovered = false;
     
     for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
-        
         if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
             hovered = true;
             ui_state.hover_id = widget->id;

@@ -674,7 +674,7 @@ clampf(f32 value, f32 min, f32 max){
 internal void
 clampf(f32* value, f32 min, f32 max){
     if(*value < min) *value = min;
-    if(*value > max) *value = max;;
+    if(*value > max) *value = max;
 }
 
 internal void

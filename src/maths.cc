@@ -384,6 +384,7 @@ is_mouse_in_rect_border(v4f rect, f32 thickness){
     bool bottom = is_mouse_in_rect(rect.x, rect.y+rect.height-thickness, rect.width, thickness);
     return left || right || top || bottom;
 }
+internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
 
 internal inline bool
 is_mouse_in_bottom_or_top_border(v4f rect, f32 thickness){

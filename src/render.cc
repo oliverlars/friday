@@ -2080,8 +2080,8 @@ draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
     update_animation_state(anim_state,
                            0,
                            0,
-                           lerp(anim_state->x_scale, 1.2, 0.2f),
-                           lerp(anim_state->y_scale, 1.2, 0.2f));
+                           lerp(anim_state->x_scale, 1.2, 0.8f),
+                           lerp(anim_state->y_scale, 1.2, 0.8f));
     
     f32 line_height = get_font_line_height(font_scale);
     f32 height = 40*anim_state->y_scale;
@@ -2535,13 +2535,22 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
         
         bool is_in_border = is_mouse_in_left_or_right_border(v4f(posx, posy, width, height),
                                                              PANEL_BORDER);
+        if(is_in_border){
+            SDL_Cursor* cursor;
+            cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+            SDL_SetCursor(cursor);
+        }
         if(root->split_type == PANEL_SPLIT_HORIZONTAL){
             is_in_border =is_mouse_in_bottom_or_top_border(v4f(posx, posy, width, height),
                                                            PANEL_BORDER);
+            if(is_in_border){
+                SDL_Cursor* cursor;
+                cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+                SDL_SetCursor(cursor);
+            }
         }
         // NOTE(Oliver): Credits to Max Jordan for using the depth first
         // search to correctly resize the right panel
-        
         if(platform.mouse_left_down && !ui_state.panel_is_resizing &&
            is_in_border){
             ui_state.panel_is_resizing = true;
@@ -2550,6 +2559,7 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
             ui_state.panel_is_resizing = false;
         }
         if(ui_state.panel_is_resizing && root == ui_state.resize_panel){
+            
             Panel* parent = root->parent;
             f32 delta = platform.mouse_delta_x;
             f32 divisor = width/root->split_ratio;

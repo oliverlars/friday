@@ -856,6 +856,10 @@ present(Presenter* presenter){
     lerp(&presenter->y_scroll, presenter->y_scroll_target, 0.1f);
     
     if(platform.mouse_middle_down && platform.mouse_drag){
+        
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+        SDL_SetCursor(cursor);
         presenter->x_start += platform.mouse_delta_x;
         presenter->y_start += platform.mouse_delta_y;
     }

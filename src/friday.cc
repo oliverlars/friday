@@ -170,7 +170,11 @@ main(int argc, char** args){
         
         SDL_GetWindowSize(global_window, (int*)&platform.width, (int*)&platform.height);
         
-        
+        {
+            SDL_Cursor* cursor;
+            cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+            SDL_SetCursor(cursor);
+        }
         f32 offset = 5;
         //code panel
         

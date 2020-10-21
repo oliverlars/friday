@@ -5,6 +5,13 @@ enum Present_Node_Type {
     PRESENT_NEWLINE,
 };
 
+enum Present_Mode {
+    
+    PRESENT_CREATE,
+    PRESENT_EDIT,
+};
+global Present_Mode present_mode = PRESENT_EDIT;
+
 struct Present_Node {
     Present_Node_Type type;
     Node* node;
@@ -15,7 +22,7 @@ struct Present_Node {
 
 struct Presenter {
     
-    Arena present_arena;
+    Pool node_pool;
     Node* root;
     
     int x_start = 300;
@@ -56,12 +63,33 @@ struct Presenter {
     int LOD = 3;
 };
 
+internal void
+insert_present_node_at(Present_Node* node, Present_Node* at){
+    if(!at) return;
+    if(at->next){
+        node->next = at->next;
+        at->next = node;
+        node->prev = at;
+        
+        if(node->next){
+            node->next->prev = node;
+        }
+    }else {
+        at->next = node;
+        node->prev = at;
+        node->next = nullptr;
+    }
+    
+}
+
 
 internal inline Present_Node*
 allocate_present_node(Presenter* presenter){
-    auto node = (Present_Node*)arena_allocate(&presenter->present_arena, sizeof(Present_Node));
+    auto node = (Present_Node*)pool_allocate(&presenter->node_pool);
     node->next = nullptr;
     node->prev = nullptr;
+    node->text = make_string(&platform.permanent_arena, " ");
+    node->node = nullptr;
     return node;
 }
 
@@ -142,6 +170,9 @@ present_string(Presenter* presenter, f32 x, f32 y, char* string, u32 colour = 0x
 
 internal void
 edit_string(Presenter* presenter, String8* string){
+    if(was_pressed(input.enter_colon)){
+        present_mode = PRESENT_CREATE;
+    }
     if(platform.has_text_input){
         insert_in_string(string, platform.text_input, presenter->cursor_index);
         presenter->cursor_index += strlen(platform.text_input);
@@ -208,6 +239,28 @@ present_cursor(Presenter* presenter, String8 string, int index) {
 }
 
 internal void
+present_cursor(Presenter* presenter){
+    int cursor_width = 3;
+    int line_height = get_font_line_height(presenter->font_scale);
+    f32 x = get_presenter_x(presenter);
+    f32 y = get_presenter_y(presenter);
+    presenter->edit_cursor_target = v4f(x, y , cursor_width, line_height);
+    lerp_rects(&presenter->edit_cursor_source, presenter->edit_cursor_target, 0.3f);
+    push_rectangle(presenter->edit_cursor_source, 1.5, theme.cursor.packed);
+}
+
+
+internal void
+present_misc(Presenter* presenter, char* string, u32 colour = theme.text_misc.packed){
+    present_string(presenter, string, colour);
+}
+
+internal void
+present_misc(Presenter* presenter, String8 string, u32 colour = theme.text_misc.packed){
+    present_string(presenter, string, colour);
+}
+
+internal void
 present_editable_string(Presenter* presenter, String8* string, u32 colour = theme.text.packed){
     
     auto id = gen_id(*string);
@@ -216,7 +269,6 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
                                  get_text_width(*string, presenter->font_scale),
                                  renderer.font.size, 
                                  id, {});
-    
     
     {
         presenter->active_string = string;
@@ -229,19 +281,22 @@ present_editable_string(Presenter* presenter, String8* string, u32 colour = them
         f32 x = get_presenter_x(presenter);
         f32 y = get_presenter_y(presenter);
         
-        if(presenter->active_string == string){
+        if(presenter->active_string == string && present_mode == PRESENT_EDIT){
             f32 cursor_pos = get_text_width(*string, presenter->font_scale);
             v4f bbox = get_text_bbox(x, y, *string, presenter->font_scale);
             present_cursor(presenter, *string, presenter->cursor_index);
             edit_string(presenter, string);
+            present_string(presenter, *string, colour);
+            
+        }else if( presenter->active_string == string && present_mode == PRESENT_CREATE){
+            
+            present_string(presenter, *string, colour);
+            present_misc(presenter, " : ");
+            present_cursor(presenter);
+            
         }
     }
     
-    if(is_active_present_node(presenter) && !presenter->should_edit){
-        present_highlighted_string(presenter, *string, colour);
-    }else{
-        present_string(presenter, *string, colour);
-    }
 }
 
 internal void
@@ -266,14 +321,15 @@ present_editable_string(Presenter* presenter, Node* node, u32 colour = theme.tex
         f32 x = get_presenter_x(presenter) - offset/2;
         f32 y = get_presenter_y(presenter) - line_height*0.25;
         
-        if(presenter->active_string == &node->name){
+        if(presenter->active_string == &node->name && present_mode == PRESENT_EDIT){
             present_cursor(presenter, node->name, presenter->cursor_index);
             edit_string(presenter, &node->name);
         }
     }
     
     if(is_active_present_node(presenter) && !presenter->should_edit){
-        present_highlighted_string(presenter, node->name, colour);
+        //present_highlighted_string(presenter, node->name, colour);
+        present_string(presenter, node->name, colour);
     }else{
         present_string(presenter, node->name, colour);
     }
@@ -434,16 +490,6 @@ present_push_indent(Presenter* presenter){
 }
 
 #define present_indent(presenter) defer_loop(present_push_indent(presenter), present_pop_indent(presenter))
-
-internal void
-present_misc(Presenter* presenter, char* string, u32 colour = theme.text_misc.packed){
-    present_string(presenter, string, colour);
-}
-
-internal void
-present_misc(Presenter* presenter, String8 string, u32 colour = theme.text_misc.packed){
-    present_string(presenter, string, colour);
-}
 
 internal void present_graph(Presenter* presenter, Node* root);
 
@@ -829,20 +875,42 @@ present_graph(Presenter* presenter, Node* root){
 }
 
 internal void
-move_cursor_forward(Presenter* presenter){
-    
+present_struct(Presenter* presenter, Present_Node* present_node){
+    present_string(presenter, present_node->text, theme.text_type.packed);
+    present_misc(presenter, " :: ");
+    present_misc(presenter, " struct ", theme.text.packed);
+    present_new_line(presenter);
+    present_push_indent(presenter);
 }
 
 internal void
 show_presenter(Presenter* presenter){
     if(!presenter->node_list) return;
-    switch(presenter->node_list->type){
-        case PRESENT_NODE:{
-            present_editable_string(presenter, &presenter->node_list->text, theme.text_function.packed);
-        }break;
-        case PRESENT_NEWLINE:{
-        }break;
+    for(auto node = presenter->node_list; node; node = node->next){
+        switch(presenter->node_list->type){
+            case PRESENT_NODE:{
+                if(node->node){
+                    present_struct(presenter, node);
+                }else {
+                    present_editable_string(presenter, &node->text, theme.text_function.packed);
+                }
+                if(present_mode == PRESENT_CREATE && was_pressed(input.enter_struct)){
+                    present_mode = PRESENT_EDIT;
+                    node->node = make_struct_node(&friday.node_pool, "test");
+                    presenter->active_node = node->node;
+                    auto new_node = allocate_present_node(presenter);
+                    insert_present_node_at(new_node, node);
+                    node = node->next;
+                }else if(present_mode == PRESENT_CREATE && was_pressed(input.backspace)){
+                    present_mode = PRESENT_EDIT;
+                }
+            }break;
+            case PRESENT_NEWLINE:{
+                present_new_line(presenter);
+            }break;
+        }
     }
+    
 }
 internal void
 present(Presenter* presenter){
@@ -899,6 +967,7 @@ draw_status_bar(Presenter* active_presenter){
                 file, theme.text_misc.packed);
     x += get_text_width(file);
     if(!active_presenter->active_present_node) return;
+    return;
     switch(active_presenter->active_present_node->node->type){
         case NODE_DECLARATION:{
             char* str = "declaration";

@@ -140,7 +140,8 @@ main(int argc, char** args){
     Presenter presenter = {};
     presenter.root = global_scope;
     presenter.active_node = global_scope->scope.statements->next->next;
-    presenter.present_arena = subdivide_arena(&platform.permanent_arena, 8192*4);
+    presenter.node_pool = make_pool(sizeof(Present_Node));
+    
     
     Present_Node start_node = {};
     start_node.type = PRESENT_NODE;
@@ -149,6 +150,7 @@ main(int argc, char** args){
     presenter.node_list = &start_node;
     presenter.node_list_tail = &presenter.node_list;
     presenter.active_string = &start_node.text;
+    presenter.active_present_node = &start_node;
     
     Panel* root = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
     root->presenter = &presenter;
@@ -353,6 +355,9 @@ main(int argc, char** args){
                         else if(sdl_key = SDLK_LEFTBRACKET){
                             key = KEY_LBRACKET;
                         }
+                        else if(sdl_key == SDLK_SEMICOLON){
+                            key = KEY_SEMICOLON;
+                        }
                     }
                     if(key == KEY_ENTER){
                         process_keyboard_event(&input.enter_make_mode, is_down);
@@ -396,6 +401,12 @@ main(int argc, char** args){
                     }
                     if(key == KEY_CTRL){
                         process_keyboard_event(&input.editor_zoom, is_down);
+                    }
+                    if(key == KEY_ENTER){
+                        process_keyboard_event(&input.enter_colon, is_down);
+                    }
+                    if(key == KEY_S){
+                        process_keyboard_event(&input.enter_struct, is_down);
                     }
                 }
                 

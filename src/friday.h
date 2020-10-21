@@ -708,6 +708,8 @@ union Input {
         
         Key_State editor_zoom;
         
+        Key_State enter_colon;
+        
         Key_State backspace;
         Key_State add_pointers;
         Key_State make_arg;
@@ -716,6 +718,7 @@ union Input {
         Key_State make_scope;
         Key_State make_loop;
         Key_State make_cond;
+        Key_State enter_struct;
     };
 } input;
 

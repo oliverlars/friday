@@ -231,7 +231,7 @@ make_struct_node(Pool* pool, char* name){
 internal Node*
 make_declaration_node(Pool* pool, char* name){
     Node* result = make_node(pool, NODE_DECLARATION, name);
-    result->declaration.type_usage = make_type_usage_node(pool, name);
+    //result->declaration.type_usage = make_type_usage_node(pool, name);
     return result;
 }
 

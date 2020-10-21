@@ -718,7 +718,10 @@ union Input {
         Key_State make_scope;
         Key_State make_loop;
         Key_State make_cond;
+        
         Key_State enter_struct;
+        Key_State enter_decl;
+        Key_State enter_type_usage;
     };
 } input;
 

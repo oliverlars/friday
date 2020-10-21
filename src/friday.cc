@@ -145,7 +145,7 @@ main(int argc, char** args){
     
     Present_Node start_node = {};
     start_node.type = PRESENT_NODE;
-    start_node.text = make_string(&platform.permanent_arena, " ");
+    start_node.text = make_string(&platform.permanent_arena, "");
     
     presenter.node_list = &start_node;
     presenter.node_list_tail = &presenter.node_list;
@@ -408,6 +408,13 @@ main(int argc, char** args){
                     if(key == KEY_S){
                         process_keyboard_event(&input.enter_struct, is_down);
                     }
+                    if(key == KEY_D){
+                        process_keyboard_event(&input.enter_decl, is_down);
+                    }
+                    if(key == KEY_T){
+                        process_keyboard_event(&input.enter_type_usage, is_down);
+                    }
+                    
                 }
                 
             }

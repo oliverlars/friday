@@ -107,6 +107,8 @@ global struct {
     
     Panel* resize_panel;
     bool panel_is_resizing;
+    
+    bool show_splash_screen;
 } ui_state;
 
 struct Arg_Type {

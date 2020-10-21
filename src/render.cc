@@ -1415,16 +1415,7 @@ init_shaders(){
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (frag_pos + frag_dim/2), frag_dim/2, frag_radius);\n"
             "float alpha = mix(1, 0,  smoothstep(0, 1, dist));\n"
-            "vec4 value = vec4(0);\n"
-            "int count = 0;\n"
-            "for(float i = -0.015; i < 0.015; i +=0.0025){\n"
-            "for(float j = -0.015; j < 0.015; j += 0.0025){\n"
-            "count += 1;\n"
-            "value += texture(atlas, frag_uv + vec2(i,j));\n"
-            "}\n"
-            "}\n"
-            "value /= count;\n"
-            "colour = vec4(value.rgb, min(alpha, value.a));\n"
+            "colour = texture(atlas, frag_uv);\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
@@ -2216,13 +2207,13 @@ draw_menu_bar(){
         Arena* arena = &renderer.temp_string_arena;
         items[1] = make_string(arena, "About");
         items[0] = make_string(arena, "Splash Screen");
-        Closure empty_closures[5] = {};
+        Closure empty_closure = {};
+        auto show_splash_screen = [](u8* parameters){
+            ui_state.show_splash_screen = 1;
+        };
+        Closure splash_screen = make_closure(show_splash_screen, 0);
         draw_menu(help_x, platform.height-size-40, "help_menu",
-                  items, 2, empty_closures[0],
-                  empty_closures[1],
-                  empty_closures[2],
-                  empty_closures[3],
-                  empty_closures[4]);
+                  items, 2, splash_screen, empty_closure);
         
     }
     
@@ -2581,6 +2572,23 @@ draw_panels(Panel* root, int posx, int posy, int width, int height){
             draw_editor_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
         }
     }
+}
+
+
+internal void
+draw_splash_screen(Bitmap splash){
+    if(!ui_state.show_splash_screen) return;
+    auto id = gen_unique_id("splash screen");
+    f32 ar = 3.79f;
+    f32 size = 150;
+    f32 x = platform.width/2.0f - size*ar/2.0f;
+    f32 y  =  platform.height/2.0f - size/2.0f;
+    f32 width =  size*2;
+    f32 height = size;
+    v4f bbox = rect_border(v4f(x, y, width, height), 0.0f);
+    push_rectangle(bbox, 10,  theme.background.packed);
+    push_rectangle_textured(platform.width/2.0f, 
+                            platform.height/2.0f, 50*ar, 50, 10, splash);
 }
 
 // NOTE(Oliver): send clip ranges as uniforms to frag shaders

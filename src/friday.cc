@@ -24,6 +24,7 @@
 
 global SDL_Window* global_window;
 
+
 int
 main(int argc, char** args){
 #define TITLE "Friday"
@@ -129,11 +130,11 @@ main(int argc, char** args){
     run_icon = make_bitmap("running_icon.png");
     layers_icon = make_bitmap("layers_icon.png");
     document_icon = make_bitmap("document_icon.png");
+    Bitmap splash_icon = make_bitmap("splash.png");
     
     cursor_bitmap = make_bitmap("arrow.png");
     
     load_theme_ayu();
-    SDL_StartTextInput();
     
     ui_state.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
     
@@ -190,7 +191,7 @@ main(int argc, char** args){
         //present_graph(global_scope->scope.statements->next);
         
         draw_status_bar(&presenter);
-        
+        draw_splash_screen(splash_icon);
         display_modes();
         navigate_graph(&presenter);
         
@@ -208,12 +209,14 @@ main(int argc, char** args){
         platform.mouse_left_clicked = 0;
         
         free(platform.text_input);
+        //SDL_StartTextInput();
         
         platform.text_input = (char*)calloc(1, 256);
         char* text_input = platform.text_input;
         for(int i = 0; i < INPUT_COUNT; i++){
             input.actions[i].half_transition_count = 0;
         }
+        
         platform.mouse_scroll_delta = 0;
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -284,13 +287,17 @@ main(int argc, char** args){
                 platform.has_text_input = 1;
                 *text_input++ = *event.text.text;
             }
-            
             if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP){
                 SDL_Keycode sdl_key = event.key.keysym.sym;
                 u16 mod = event.key.keysym.mod;
+                
+                bool alt_was_down = (event.key.keysym.mod & KMOD_ALT);
+                bool shift_was_down = (event.key.keysym.mod & KMOD_SHIFT);
                 u64 key = 0;
                 bool is_down = (event.key.state == SDL_PRESSED);
-                
+                if(sdl_key == SDLK_COLON){
+                    debug_print("sfgsdfgde");
+                }
                 if(event.key.repeat == 0){
                     if((sdl_key >= 'a' && sdl_key <= 'z') || (sdl_key >= '0' && sdl_key <= '9')){
                         key = (sdl_key >= 'a' && sdl_key <= 'z') ? KEY_A + (sdl_key-'a') : KEY_0 + (sdl_key-'0');
@@ -357,6 +364,11 @@ main(int argc, char** args){
                         }
                         else if(sdl_key == SDLK_SEMICOLON){
                             key = KEY_SEMICOLON;
+                        }
+                        else if(sdl_key == SDLK_COLON){
+                            key = KEY_COLON;
+                        }else {
+                            debug_print("%d", sdl_key);
                         }
                     }
                     if(key == KEY_ENTER){

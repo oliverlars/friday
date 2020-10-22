@@ -722,6 +722,7 @@ union Input {
         Key_State enter_struct;
         Key_State enter_decl;
         Key_State enter_type_usage;
+        Key_State enter_func;
     };
 } input;
 

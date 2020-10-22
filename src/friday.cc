@@ -145,7 +145,6 @@ main(int argc, char** args){
     
     
     Present_Node start_node = {};
-    start_node.type = PRESENT_NODE;
     start_node.text = make_string(&platform.permanent_arena, "");
     
     presenter.node_list = &start_node;
@@ -425,6 +424,9 @@ main(int argc, char** args){
                     }
                     if(key == KEY_T){
                         process_keyboard_event(&input.enter_type_usage, is_down);
+                    }
+                    if(key == KEY_F){
+                        process_keyboard_event(&input.enter_func, is_down);
                     }
                     
                 }

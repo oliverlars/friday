@@ -1069,6 +1069,15 @@ present(Presenter* presenter){
         presenter->LOD = 1;
     }
     
+    // NOTE(Oliver): do it before text gets checked to avoid inserting a random character
+    if(presenter->present_mode == PRESENT_EDIT && was_pressed(input.enter_colon)){
+        presenter->present_mode = PRESENT_CREATE;
+        SDL_StopTextInput();
+    }else if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.backspace)){
+        presenter->present_mode = PRESENT_EDIT;
+        SDL_StartTextInput();
+    }
+    
     show_presenter(presenter, presenter->node_list);
     //present_graph(presenter, presenter->root);
     
@@ -1082,6 +1091,7 @@ present(Presenter* presenter){
         insert_present_node_at(new_node, node);
         insert_new_line_node(presenter);
         presenter->active_present_node = new_node;
+        SDL_StartTextInput();
         
     }else if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.enter_decl)){
         auto node = presenter->active_present_node;
@@ -1095,6 +1105,7 @@ present(Presenter* presenter){
         auto new_node = allocate_present_node(presenter);
         insert_present_node_at(new_node, node);
         presenter->active_present_node = new_node;
+        SDL_StartTextInput();
         
     }else if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.enter_func)){
         presenter->node_state = PRESENT_FUNCTION;
@@ -1105,8 +1116,10 @@ present(Presenter* presenter){
         auto new_node = allocate_present_node(presenter);
         insert_present_node_at(new_node, node);
         presenter->active_present_node = new_node;
+        SDL_StartTextInput();
+        
     }
-    else if(presenter->present_mode == PRESENT_CREATE && 
+    else if(was_pressed(input.newline) && 
             presenter->active_present_node->prev &&
             (
              presenter->active_present_node->prev->type == PRESENT_DECL ||
@@ -1124,12 +1137,7 @@ present(Presenter* presenter){
         node->type = PRESENT_TYPE_USAGE;
         presenter->active_present_node = new_node;
         
-    }else if(presenter->present_mode == PRESENT_EDIT && was_pressed(input.enter_colon)){
-        presenter->present_mode = PRESENT_CREATE;
-    }else if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.backspace)){
-        presenter->present_mode = PRESENT_EDIT;
     }
-    
 }
 
 enum Navigation_Mode {

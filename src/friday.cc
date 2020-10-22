@@ -215,7 +215,7 @@ main(int argc, char** args){
         for(int i = 0; i < INPUT_COUNT; i++){
             input.actions[i].half_transition_count = 0;
         }
-        
+        SDL_StartTextInput();
         platform.mouse_scroll_delta = 0;
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
@@ -288,15 +288,13 @@ main(int argc, char** args){
             }
             if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP){
                 SDL_Keycode sdl_key = event.key.keysym.sym;
+                SDL_Keycode sdl_scancode = event.key.keysym.scancode;
                 u16 mod = event.key.keysym.mod;
                 
                 bool alt_was_down = (event.key.keysym.mod & KMOD_ALT);
                 bool shift_was_down = (event.key.keysym.mod & KMOD_SHIFT);
                 u64 key = 0;
                 bool is_down = (event.key.state == SDL_PRESSED);
-                if(sdl_key == SDLK_COLON){
-                    debug_print("sfgsdfgde");
-                }
                 if(event.key.repeat == 0){
                     if((sdl_key >= 'a' && sdl_key <= 'z') || (sdl_key >= '0' && sdl_key <= '9')){
                         key = (sdl_key >= 'a' && sdl_key <= 'z') ? KEY_A + (sdl_key-'a') : KEY_0 + (sdl_key-'0');
@@ -306,6 +304,7 @@ main(int argc, char** args){
                         }
                         else if(sdl_key >= VK_F1 && sdl_key <= VK_F12) {
                             key = KEY_F1 + sdl_key - VK_F1;
+                            
                         }
                         else if(sdl_key == SDLK_BACKQUOTE) {
                             key = KEY_GRAVE_ACCENT;
@@ -361,17 +360,16 @@ main(int argc, char** args){
                         else if(sdl_key = SDLK_LEFTBRACKET){
                             key = KEY_LBRACKET;
                         }
-                        else if(sdl_key == SDLK_SEMICOLON){
+                        if(sdl_scancode == SDL_SCANCODE_SEMICOLON){
                             key = KEY_SEMICOLON;
                         }
-                        else if(sdl_key == SDLK_COLON){
+                        else if(sdl_key == SDLK_SEMICOLON){
                             key = KEY_COLON;
-                        }else {
-                            debug_print("%d", sdl_key);
                         }
                     }
                     if(key == KEY_ENTER){
                         process_keyboard_event(&input.enter_make_mode, is_down);
+                        process_keyboard_event(&input.newline, is_down);
                     }
                     if(key == KEY_J){
                         process_keyboard_event(&input.navigate_down, is_down);
@@ -413,7 +411,7 @@ main(int argc, char** args){
                     if(key == KEY_CTRL){
                         process_keyboard_event(&input.editor_zoom, is_down);
                     }
-                    if(key == KEY_ENTER){
+                    if(shift_was_down && key == KEY_SEMICOLON){
                         process_keyboard_event(&input.enter_colon, is_down);
                     }
                     if(key == KEY_S){

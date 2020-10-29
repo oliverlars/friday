@@ -1,23 +1,4 @@
 
-union mat4x4 {
-    float e[16];
-    struct {
-        f32 m00, m01, m02, m03;
-        f32 m10, m11, m12, m13;
-        f32 m20, m21, m22, m23;
-        f32 m30, m31, m32, m33;
-    };
-};
-
-union mat3x3 {
-    f32 e[9];
-    struct {
-        f32 m00, m01, m02;
-        f32 m10, m11, m12;
-        f32 m20, m21, m22;
-    };
-};
-
 internal mat4x4
 ortho(f32 left, f32 right, f32 bottom, f32 top){
     
@@ -86,107 +67,6 @@ translate(f32 x, f32 y){
     return result;
 }
 
-union v2i {
-    struct{
-        int x;
-        int y;
-    };
-    struct {
-        int u;
-        int v;
-    };
-};
-
-union v2f {
-    struct{
-        f32 x;
-        f32 y;
-    };
-    struct {
-        f32 u;
-        f32 v;
-    };
-};
-
-union v3i {
-    struct {
-        int x;
-        int y;
-        int z;
-    };
-    struct {
-        int u;
-        int v;
-        int w;
-    };
-    struct {
-        int r;
-        int g;
-        int b;
-    };
-};
-
-
-union v3f {
-    struct {
-        f32 x;
-        f32 y;
-        f32 z;
-    };
-    struct {
-        f32 u;
-        f32 v;
-        f32 w;
-    };
-    struct {
-        f32 r;
-        f32 g;
-        f32 b;
-    };
-};
-
-union v4i {
-    struct {
-        int x;
-        int y;
-        int z;
-        int w;
-    };
-    struct {
-        int r;
-        int g;
-        int b;
-        int a;
-    };
-};
-
-union v4f {
-    struct {
-        f32 x;
-        f32 y;
-        f32 z;
-        f32 w;
-    };
-    struct {
-        f32 x0;
-        f32 y0;
-        f32 x1;
-        f32 y1;
-    };
-    struct {
-        f32 r;
-        f32 g;
-        f32 b;
-        f32 a;
-    };
-    struct {
-        f32 x;
-        f32 y;
-        f32 width;
-        f32 height;
-    };
-};
-
 internal v2i
 make_v2i(int x, int y){
     v2i result;
@@ -234,6 +114,7 @@ make_v4i(int x, int y, int z, int w){
     result.w = w;
     return result;
 }
+
 #define v4i(x, y, z, w) make_v4i(x, y, z, w)
 
 internal v4f
@@ -248,6 +129,19 @@ make_v4f(f32 x, f32 y, f32 z, f32 w){
 
 #define v4f(x, y, z, w) make_v4f(x, y, z, w)
 
+
+internal f32
+clampf(f32 value, f32 min, f32 max){
+    if(value < min) return min;
+    if(value > max) return max;
+    return value;
+}
+
+internal void
+clampf(f32* value, f32 min, f32 max){
+    if(*value < min) *value = min;
+    if(*value > max) *value = max;
+}
 
 internal f32
 lerp(f32 source, f32 target, f32 value){
@@ -365,38 +259,32 @@ rect_border(v4f rect, f32 border){
 }
 
 internal bool
-is_mouse_in_rect(f32 x, f32 y, f32 width, f32 height){
-    return platform.mouse_x <= (x + width) && platform.mouse_x >= x &&
-        platform.mouse_y <= (y + height) && platform.mouse_y >= y;
-}
-
-
-internal bool
-is_mouse_in_rect(v4f rect){
-    return is_mouse_in_rect(rect.x, rect.y, rect.width, rect.height);
+is_in_rect(v2f pos, v4f rect){
+    return pos.x <= (rect.x + rect.width) && pos.x >= rect.x &&
+        pos.y <= (rect.y + rect.height) && pos.y >= rect.y;
 }
 
 internal inline bool
-is_mouse_in_rect_border(v4f rect, f32 thickness){
-    bool left = is_mouse_in_rect(rect.x, rect.y, thickness, rect.height);
-    bool right = is_mouse_in_rect(rect.x+rect.width-thickness, rect.y, thickness, rect.height);
-    bool top = is_mouse_in_rect(rect.x, rect.y, rect.width, thickness);
-    bool bottom = is_mouse_in_rect(rect.x, rect.y+rect.height-thickness, rect.width, thickness);
-    return left || right || top || bottom;
+is_in_rect_border(v4f rect, f32 thickness){
 }
-internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
 
 internal inline bool
-is_mouse_in_bottom_or_top_border(v4f rect, f32 thickness){
-    bool top = is_mouse_in_rect(rect.x, rect.y, rect.width, thickness);
-    bool bottom = is_mouse_in_rect(rect.x, rect.y+rect.height-thickness, rect.width, thickness);
+is_in_bottom_or_top_border(v2f pos, v4f rect, f32 thickness){
+    bool top = is_in_rect(pos, v4f(rect.x, rect.y, rect.width, thickness));
+    bool bottom = is_in_rect(pos, v4f(rect.x, rect.y+rect.height-thickness, rect.width, thickness));
     return top || bottom;
     
 }
 
 internal inline bool
-is_mouse_in_left_or_right_border(v4f rect, f32 thickness){
-    bool left = is_mouse_in_rect(rect.x, rect.y, thickness, rect.height);
-    bool right = is_mouse_in_rect(rect.x+rect.width-thickness, rect.y, thickness, rect.height);
+is_in_left_or_right_border(v2f pos, v4f rect, f32 thickness){
+    bool left = is_in_rect(pos, v4f(rect.x, rect.y, thickness, rect.height));
+    bool right = is_in_rect(pos, v4f(rect.x+rect.width-thickness, rect.y, thickness, rect.height));
     return left || right;
+}
+
+internal inline bool
+is_in_rect_border(v2f pos, v4f rect, f32 thickness){
+    return is_in_left_or_right_border(pos, rect, thickness) ||
+        is_in_bottom_or_top_border(pos, rect, thickness);
 }

@@ -293,6 +293,7 @@ main(int argc, char** args){
                 
                 bool alt_was_down = (event.key.keysym.mod & KMOD_ALT);
                 bool shift_was_down = (event.key.keysym.mod & KMOD_SHIFT);
+                bool lctrl_was_down = (event.key.keysym.mod & KMOD_LCTRL);
                 u64 key = 0;
                 bool is_down = (event.key.state == SDL_PRESSED);
                 if(event.key.repeat == 0){
@@ -312,9 +313,6 @@ main(int argc, char** args){
                         else if(sdl_key == SDLK_MINUS) {
                             key = KEY_MINUS;
                         }
-                        else if(sdl_key == SDLK_PLUS) {
-                            key = KEY_EQUAL;
-                        }
                         else if(sdl_key == SDLK_BACKSPACE) {
                             key = KEY_BACKSPACE;
                         }
@@ -326,12 +324,6 @@ main(int argc, char** args){
                         }
                         else if(sdl_key == SDLK_RETURN) {
                             key = KEY_ENTER;
-                        }
-                        else if(sdl_key == SDLK_LCTRL) {
-                            key = KEY_CTRL;
-                        }
-                        else if(sdl_key == SDLK_LSHIFT) {
-                            key = KEY_SHIFT;
                         }
                         else if(sdl_key == SDLK_MENU) {
                             key = KEY_ALT;
@@ -363,8 +355,11 @@ main(int argc, char** args){
                         if(sdl_scancode == SDL_SCANCODE_SEMICOLON){
                             key = KEY_SEMICOLON;
                         }
-                        else if(sdl_key == SDLK_SEMICOLON){
-                            key = KEY_COLON;
+                        else if(sdl_scancode == SDL_SCANCODE_EQUALS){
+                            key = KEY_EQUAL;
+                        }
+                        else if(sdl_scancode == SDL_SCANCODE_LEFTBRACKET){
+                            key = KEY_LBRACKET;
                         }
                     }
                     if(key == KEY_ENTER){
@@ -425,6 +420,12 @@ main(int argc, char** args){
                     }
                     if(key == KEY_F){
                         process_keyboard_event(&input.enter_func, is_down);
+                    }
+                    if(key == KEY_EQUAL){
+                        process_keyboard_event(&input.enter_expression, is_down);
+                    }
+                    if(lctrl_was_down && key == KEY_LBRACKET){
+                        process_keyboard_event(&input.enter_present_command, is_down);
                     }
                     
                 }

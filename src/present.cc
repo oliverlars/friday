@@ -14,6 +14,7 @@ enum Present_Mode {
     
     PRESENT_CREATE,
     PRESENT_EDIT,
+    PRESENT_COMMAND,
 };
 
 struct Present_Node {
@@ -105,6 +106,7 @@ remove_present_node_at(Presenter* presenter, Present_Node* at){
     }else {
         
     }
+    
     presenter->node_pool.clear(at);
 }
 
@@ -195,6 +197,11 @@ present_string(Presenter* presenter, f32 x, f32 y, char* string, u32 colour = 0x
 
 internal void
 edit_string(Presenter* presenter, String8* string){
+    if(was_pressed(input.enter_colon)){
+        presenter->present_mode = PRESENT_CREATE;
+        SDL_StopTextInput();
+        return;
+    }
     if(platform.has_text_input){
         insert_in_string(string, platform.text_input, presenter->cursor_index);
         presenter->cursor_index += strlen(platform.text_input);
@@ -227,12 +234,14 @@ edit_string(Presenter* presenter, String8* string){
                 node = node->prev;
                 remove_present_node_at(presenter, temp);
             }else{
+                node->type = PRESENT_INVALID;
                 node->node = 0;
             }
             presenter->active_present_node = node;
             
         }
     }
+    
 }
 
 internal void
@@ -275,7 +284,11 @@ present_cursor(Presenter* presenter, String8 string, int index) {
     f32 y = get_presenter_y(presenter);
     presenter->edit_cursor_target = v4f(x, y, cursor_width, line_height);
     lerp_rects(&presenter->edit_cursor_source, presenter->edit_cursor_target, 0.3f);
-    push_rectangle(presenter->edit_cursor_source, 1.5, theme.cursor.packed);
+    auto colour = theme.cursor.packed;
+    if(presenter->present_mode == PRESENT_COMMAND){
+        colour = 0xFF0000FF;
+    }
+    push_rectangle(presenter->edit_cursor_source, 1.5, colour);
 }
 
 internal void
@@ -286,7 +299,11 @@ present_cursor(Presenter* presenter){
     f32 y = get_presenter_y(presenter);
     presenter->edit_cursor_target = v4f(x, y , cursor_width, line_height);
     lerp_rects(&presenter->edit_cursor_source, presenter->edit_cursor_target, 0.3f);
-    push_rectangle(presenter->edit_cursor_source, 1.5, theme.cursor.packed);
+    auto colour = theme.cursor.packed;
+    if(presenter->present_mode == PRESENT_COMMAND){
+        colour = 0xFF0000FF;
+    }
+    push_rectangle(presenter->edit_cursor_source, 1.5, colour);
 }
 
 
@@ -974,7 +991,7 @@ present_function(Presenter* presenter, Present_Node* present_node){
     
     auto node = present_node->next;
     while(node && node->type == PRESENT_FUNCTION_PARAM){
-        present_editable_string(presenter, present_node, theme.text.packed);
+        present_editable_string(presenter, node, theme.text.packed);
         present_misc(presenter, " : ");
         node = node->next;
         present_editable_string(presenter, node, theme.text_type.packed);
@@ -982,6 +999,8 @@ present_function(Presenter* presenter, Present_Node* present_node){
         node = node->next;
     }
     show_presenter(presenter, node);
+    present_misc(presenter, " )");
+    
 }
 
 internal void
@@ -998,6 +1017,10 @@ present_decl(Presenter* presenter, Present_Node* present_node){
     present_editable_string(presenter, present_node, theme.text.packed);
     present_misc(presenter, " : ");
     show_presenter(presenter, present_node->next);
+    if(present_node->node->declaration.is_initialised){
+        present_misc(presenter, " = ");
+    }
+    
 }
 
 internal void
@@ -1041,6 +1064,7 @@ insert_new_line_node(Presenter* presenter){
     presenter->active_present_node = newline;
 }
 
+
 internal void
 present(Presenter* presenter){
     if(!presenter) return;
@@ -1070,12 +1094,41 @@ present(Presenter* presenter){
     }
     
     // NOTE(Oliver): do it before text gets checked to avoid inserting a random character
-    if(presenter->present_mode == PRESENT_EDIT && was_pressed(input.enter_colon)){
-        presenter->present_mode = PRESENT_CREATE;
-        SDL_StopTextInput();
-    }else if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.backspace)){
+    
+    if(presenter->present_mode == PRESENT_CREATE && was_pressed(input.backspace)){
         presenter->present_mode = PRESENT_EDIT;
         SDL_StartTextInput();
+    }else if(was_pressed(input.enter_expression) &&
+             presenter->active_present_node &&
+             presenter->active_present_node->prev->type == PRESENT_DECL){
+        auto node = presenter->active_present_node;
+        
+        presenter->present_mode = PRESENT_EDIT;
+        
+        node->node = make_type_usage_node(&friday.node_pool, "type");
+        auto new_node = allocate_present_node(presenter);
+        insert_present_node_at(new_node, node);
+        
+        node->type = PRESENT_TYPE_USAGE;
+        presenter->active_present_node = new_node;
+        
+        node = presenter->active_present_node;
+        
+        presenter->present_mode = PRESENT_EDIT;
+        
+        node->node = make_token_node(&friday.node_pool, "expr");
+        new_node = allocate_present_node(presenter);
+        insert_present_node_at(new_node, node);
+        node->type = PRESENT_TYPE_USAGE;
+        presenter->active_present_node = new_node;
+        
+        auto decl = presenter->active_present_node->prev->node;
+        decl->declaration.is_initialised = true;
+        
+    }
+    if(was_pressed(input.enter_present_command)){
+        presenter->present_mode = PRESENT_COMMAND;
+    }else if(was_pressed(input.enter_present_edit)){
     }
     
     show_presenter(presenter, presenter->node_list);

@@ -1,17 +1,19 @@
 
-enum Key {
+enum Key_Enum {
 #define Key(name, str) KEY_##name,
 #include "key_list.h"
 #undef Key
     KEY_MAX
 };
+typedef u64 Key;
 
 
-enum Key_Modifiers {
-    KEY_MOD_CTRL,
-    KEY_MOD_SHIFT,
-    KEY_MOD_ALT,
+enum Key_Modifiers_Enum {
+    KEY_MOD_CTRL = (1 << 0),
+    KEY_MOD_SHIFT = (1 << 1),
+    KEY_MOD_ALT = (1 << 2),
 };
+typedef u64 Key_Modifiers;
 
 internal char *
 get_key_name(s32 key) {
@@ -29,7 +31,6 @@ get_key_name(s32 key) {
 }
 
 enum Mouse_Button {
-    
     MOUSE_BUTTON_LEFT,
     MOUSE_BUTTON_MIDDLE,
     MOUSE_BUTTON_RIGHT,

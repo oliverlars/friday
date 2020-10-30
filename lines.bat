@@ -1,0 +1,1 @@
+scc src --exclude-dir ext

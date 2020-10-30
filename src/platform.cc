@@ -113,6 +113,7 @@ platform_end_frame(){
 
 internal void
 platform_push_event(Platform_Event event){
+    assert(platform);
     if(platform->event_count < ArrayCount(platform->events)){
         platform->events[platform->event_count++] = event;
     }

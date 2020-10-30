@@ -75,6 +75,9 @@ struct Platform {
     Arena permanent_arena;
     Arena temporary_arena;
     
+    String8 executable_folder_absolute_path;
+    String8 executable_absolute_path;
+    String8 working_directory_path;
     
     volatile b32 quit;
     b32 vsync;
@@ -104,7 +107,7 @@ struct Platform {
     void (*save_to_file)(String8 path, void* data, u64 length);
     void (*append_to_file)(String8 path, void* data, u64 length);
     void (*load_file)(Arena* arena, String8 path, void** data, u64* length);
-    char* (load_file_and_null_terminate)(Arena* aerna, String8 path);
+    char* (*load_file_and_null_terminate)(Arena* aerna, String8 path);
     void (*delete_file)(String8 path);
     b32 (*make_directory)(String8 path);
     b32 (*does_file_exist)(String8 path);
@@ -114,7 +117,7 @@ struct Platform {
     u64 (*get_cycles)(void);
     void (*reset_cursor)(void);
     void (*set_cursor_to_horizontal_resize)(void);
-    void (*setcursortoverticalresize)(void);
+    void (*set_cursor_to_vertical_resize)(void);
     void (*set_cursor_to_ibar)(void);
     void (*refresh_screen)(void);
     void *(*load_opengl_procedure)(char *name);

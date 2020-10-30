@@ -277,7 +277,227 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     return result;
 }
 
+internal f32
+win32_get_time(void) {
+    Win32_Timer *timer = &global_win32_timer;
+    LARGE_INTEGER current_time;
+    QueryPerformanceCounter(&current_time);
+    return global_platform.current_time + 
+        (f32)(current_time.QuadPart - timer->begin_frame.QuadPart) / (f32)timer->counts_per_second.QuadPart;
+}
+
+internal u64
+win32_get_cycles(void) {
+    u64 result = __rdtsc();
+    return result;
+}
+
+internal void
+win32_reset_cursor(void) {
+    global_cursor_style = CURSOR_DEFAULT;
+}
+
+internal void
+win32_set_cursor_to_horizontal_reisze(void) {
+    global_cursor_style = CURSOR_HRESIZE;
+}
+
+internal void
+win32_set_cursor_to_vertical_resize(void) {
+    global_cursor_style = CURSOR_VRESIZE;
+}
+
 int
 WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_show_cmd){
+    global_instance = instance;
     
+    win32_timer_init(&global_win32_timer);
+    
+    Win32_Reload win32_reload = {};
+    
+    
+    {
+        DWORD size_of_executable_path =
+            GetModuleFileNameA(0, global_executable_path, sizeof(global_executable_path));
+        
+        {
+            memcpy(global_executable_directory, global_executable_path, size_of_executable_path);
+            
+            char* one_past_last_slash = global_executable_directory;
+            for(int i = 0; global_executable_directory[i]; i++){
+                if(global_executable_directory[i] = '\\'){
+                    one_past_last_slash = global_executable_directory + i + 1;
+                }
+            }
+            *one_past_last_slash = 0;
+        }
+        
+        {
+            wsprintf(global_app_dll_path, "%s%s.dll", global_executable_directory, PROGRAM_FILENAME);
+            wsprintf(global_temp_app_dll_path, "%stemp_%s.dll", global_executable_directory, PROGRAM_FILENAME);
+        }
+        
+        GetCurrentDirectory(sizeof(global_working_directory), global_working_directory);
+    }
+    
+    WNDCLASS window_class = {};
+    window_class.style = CS_HREDRAW | CS_VREDRAW;
+    window_class.lpfnWndProc = win32_window_proc;
+    window_class.hInstance = instance;
+    window_class.lpszClassName = "Window Class";
+    window_class.hCursor = LoadCursor(0, IDC_ARROW);
+    
+    
+    if(!RegisterClass(&window_class)){
+        win32_output_error("Fatal Error", "Window class registration failure");
+        goto quit;
+    }
+    
+    HWND hwnd = CreateWindow("Window Class", WINDOW_TITLE,
+                             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                             DEFAULT_WINDOW_WIDTH,
+                             DEFAULT_WINDOW_HEIGHT,
+                             0, 0, instance, 0);
+    if(!hwnd)
+    {
+        // NOTE(rjf): ERROR: Window creation failure
+        win32_output_error("Fatal Error", "Window creation failure.");
+        goto quit;
+    }
+    
+    Win32_Reload win32_app_code = {0};
+    {
+        if(!win32_code_load(&win32_app_code))
+        {
+            // NOTE(rjf): ERROR: Application code load failure
+            win32_output_error("Fatal Error", "Application code load failure.");
+            goto quit;
+        }
+    }
+    
+    f32 refresh_rate = 60.f;
+    {
+        DEVMODEA device_mode = {0};
+        if(EnumDisplaySettingsA(0, ENUM_CURRENT_SETTINGS, &device_mode))
+        {
+            refresh_rate = (float)device_mode.dmDisplayFrequency;
+        }
+    }
+    {
+        platform = &global_platform;
+        
+        global_platform.executable_folder_absolute_path = string_from_cstr(global_executable_directory);
+        global_platform.executable_absolute_path = string_from_cstr(global_executable_path);
+        global_platform.working_directory_path = string_from_cstr(global_working_directory);
+        
+        global_platform.quit                      = 0;
+        global_platform.vsync                     = 1;
+        global_platform.fullscreen                = 0;
+        global_platform.window_size.x             = DEFAULT_WINDOW_WIDTH;
+        global_platform.window_size.y             = DEFAULT_WINDOW_HEIGHT;
+        global_platform.current_time              = 0.f;
+        global_platform.target_fps  = refresh_rate;
+        
+        
+        global_platform.reserve                         = win32_reserve;
+        global_platform.release                         = win32_release;
+        global_platform.commit                          = win32_commit;
+        global_platform.uncommit                        = win32_uncommit;
+        global_platform.output_error                    = win32_output_error;
+        global_platform.save_to_file                    = win32_save_to_file;
+        global_platform.append_to_file                  = win32_append_to_file;
+        global_platform.load_file                       = win32_load_entire_file;
+        global_platform.load_file_and_null_terminate    = win32_load_file_and_null_terminate;
+        global_platform.delete_file                     = win32_delete_file;
+        global_platform.make_directory                  = win32_make_directory;
+        global_platform.does_file_exist                 = win32_does_file_exist;
+        global_platform.copy_file                       = win32_copy_file;
+        global_platform.get_time                        = win32_get_time;
+        global_platform.get_cycles                      = win32_get_cycles;
+        global_platform.reset_cursor                    = win32_reset_cursor;
+        global_platform.set_cursor_to_horizontal_resize = win32_set_cursor_to_horizontal_reisze;
+        global_platform.set_cursor_to_vertical_resize   = win32_set_cursor_to_vertical_resize;
+        global_platform.load_opengl_procedure           = win32_load_opengl_proc;
+        global_platform.refresh_screen                  = win32_opengl_refresh_screen;
+        
+        void* permanent_backing = global_platform.reserve(Gigabytes(16));
+        void* frame_backing = global_platform.reserve(Megabytes(64));
+        global_platform.permanent_arena = make_arena(Gigabytes(16),permanent_backing);
+        global_platform.temporary_arena = make_arena(Megabytes(64), frame_backing);
+    }
+    
+    {
+        global_device_context = GetDC(hwnd);
+        if(!win32_init_opengl(&global_device_context, instance)){
+            win32_output_error("Fatal Error", "OpenGL init failed");
+            goto quit;
+        }
+    }
+    
+    win32_app_code.permanent_load(&global_platform);
+    win32_app_code.hot_load(&global_platform);
+    
+    ShowWindow(hwnd, n_show_cmd);
+    UpdateWindow(hwnd);
+    
+    
+    while(!global_platform.quit){
+        
+        win32_timer_begin_frame(&global_win32_timer);
+        arena_reset(&platform->temporary_arena);
+        
+        
+        {
+            MSG message;
+            
+            if(global_platform.wait_for_events_to_update && !global_platform.pump_events){
+                WaitMessage();
+            }
+            
+            while(PeekMessage(&message, 0, 0, 0, PM_REMOVE)){
+                TranslateMessage(&message);
+                DispatchMessage(&message);
+            }
+        }
+        
+        {
+            RECT client_rect;
+            global_platform.window_size.x = client_rect.right - client_rect.left;
+            global_platform.window_size.y = client_rect.bottom - client_rect.top;
+        }
+        
+        
+        platform_begin_frame();
+        {
+            POINT mouse;
+            GetCursorPos(&mouse);
+            ScreenToClient(hwnd, &mouse);
+            global_platform.pump_events = 0;
+        }
+        
+        
+        {
+            b32 last_fullscreen = global_platform.fullscreen;
+            
+            win32_app_code.update();
+            
+            // NOTE(rjf): Update fullscreen if necessary
+            if(last_fullscreen != global_platform.fullscreen)
+            {
+                win32_toggle_fullscreen(hwnd);
+            }
+            
+        }
+        
+        {
+            platform_end_frame();
+        }
+        
+        win32_code_update(&win32_reload);
+        win32_cleanup_opengl(&global_device_context);
+    }
+    
+    quit:;
+    
+    return 0;
 }

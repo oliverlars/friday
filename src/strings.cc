@@ -72,3 +72,10 @@ string_to_int(String8 string){
     return result;
 }
 
+internal String8
+string_from_cstr(char* string){
+    String8 result = {};
+    result.text = string;
+    result.length = strlen(string);
+    return result;
+}

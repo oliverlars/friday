@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include <math.h>
 #include <time.h>
 
@@ -80,15 +82,16 @@ randomf(f32 low, f32 high){
     return low + (high - low) * ((rand() % 10000) / 10000.0f);
 }
 
-#undef Assert
-#define AssertStatement HardAssert
-#define Assert HardAssert
-#define HardAssert(b) do { if(!(b)) { _AssertFailure(#b, __LINE__, __FILE__, 1); } } while(0)
-#define SoftAssert(b) do { if(!(b)) { _AssertFailure(#b, __LINE__, __FILE__, 0); } } while(0)
-#define BreakDebugger() _DebugBreak_Internal_()
-#define Log(...)         _DebugLog(0,           __FILE__, __LINE__, __VA_ARGS__)
-#define LogWarning(...)  _DebugLog(Log_Warning, __FILE__, __LINE__, __VA_ARGS__)
-#define LogError(...)    _DebugLog(Log_Error,   __FILE__, __LINE__, __VA_ARGS__)
+#define defer_loop(begin, end) for(int _i_ = (begin, 0); !_i_; ++_i_, end)
+#undef assert
+#define assert_statement hard_assert
+#define assert hard_assert
+#define hard_assert(b) do { if(!(b)) { _AssertFailure(#b, __LINE__, __FILE__, 1); } } while(0)
+#define soft_assrt(b) do { if(!(b)) { _AssertFailure(#b, __LINE__, __FILE__, 0); } } while(0)
+#define break_debugger() _DebugBreak_Internal_()
+#define log(...)         _DebugLog(0,           __FILE__, __LINE__, __VA_ARGS__)
+#define log_warning(...)  _DebugLog(Log_Warning, __FILE__, __LINE__, __VA_ARGS__)
+#define log_error(...)    _DebugLog(Log_Error,   __FILE__, __LINE__, __VA_ARGS__)
 
 #define Log_Warning (1<<0)
 #define Log_Error   (1<<1)

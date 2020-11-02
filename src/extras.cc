@@ -1,12 +1,12 @@
 void
 _AssertFailure(char *expression, int line, char *file, int crash)
 {
-    LogError("[Assertion Failure] Assertion of %s at %s:%i failed.", expression, file, line);
+    log_error("[Assertion Failure] Assertion of %s at %s:%i failed.", expression, file, line);
     if(crash)
     {
         platform->output_error("Assertion Failure", "Assertion of %s at %s:%i failed. Trying to crash...",
                                expression, file, line);
-        BreakDebugger();
+        break_debugger();
         *(volatile int *)0 = 0;
     }
 }
@@ -57,5 +57,3 @@ _DebugBreak_Internal_(void)
     *(volatile int *)0 = 0;
 #endif
 }
-
-#define defer_loop(begin, end) for(int _i_ = (begin, 0); !_i_; ++_i_, end)

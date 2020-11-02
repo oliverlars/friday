@@ -126,11 +126,11 @@ struct Platform {
 
 global Platform* platform = 0;
 
-#define PERMANENT_LOAD __declspec(dllexport) void permanent_load(Platform* platform)
+#define PERMANENT_LOAD __declspec(dllexport) void permanent_load(Platform* platform_)
 typedef void Permanent_Load_Callback(Platform*);
 internal void permanent_load_stub(Platform* _) {}
 
-#define HOT_LOAD __declspec(dllexport) void hot_load(Platform* platform)
+#define HOT_LOAD __declspec(dllexport) void hot_load(Platform* platform_)
 typedef void Hot_Load_Callback(Platform*);
 internal void hot_load_stub(Platform* _) {}
 

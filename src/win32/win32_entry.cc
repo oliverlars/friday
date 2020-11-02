@@ -65,14 +65,14 @@ win32_get_mouse_position(HWND window)
     return result;
 }
 
-internal LRESULT
+internal LRESULT 
 win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     
     LRESULT result = 0;
     
     local_persist b32 mouse_hover_active = 0;
     
-    Key_Modifiers modifiers;
+    Key_Modifiers modifiers = {};
     if(GetKeyState(VK_CONTROL) & 0x8000){
         modifiers |= KEY_MOD_CTRL;
     }
@@ -88,7 +88,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         global_platform.quit = 1;
         result = 0;
     }
-    else if(message = WM_LBUTTONDOWN){
+    else if(message == WM_LBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
     }
     else if(message == WM_LBUTTONUP){
@@ -133,7 +133,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         s16 wheel_delta = HIWORD(wparam);
         platform_push_event(platform_mouse_scroll(v2f((f32)wheel_delta, 0), modifiers));
     }
-    else if(message = WM_SETCURSOR){
+    else if(message == WM_SETCURSOR){
         if(is_in_rect(global_platform.mouse_position,
                       v4f(1, 1, 
                           global_platform.window_size.x,
@@ -264,7 +264,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         
         result = DefWindowProc(hwnd, message, wparam, lparam);
     }
-    else if(message = WM_CHAR){
+    else if(message == WM_CHAR){
         u64 char_input = wparam;
         if(char_input >= 32 && char_input != VK_RETURN && char_input != VK_ESCAPE &&
            char_input != 127){
@@ -313,7 +313,6 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     
     win32_timer_init(&global_win32_timer);
     
-    Win32_Reload win32_reload = {};
     
     
     {
@@ -325,7 +324,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             
             char* one_past_last_slash = global_executable_directory;
             for(int i = 0; global_executable_directory[i]; i++){
-                if(global_executable_directory[i] = '\\'){
+                if(global_executable_directory[i] == '\\'){
                     one_past_last_slash = global_executable_directory + i + 1;
                 }
             }
@@ -344,7 +343,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     window_class.style = CS_HREDRAW | CS_VREDRAW;
     window_class.lpfnWndProc = win32_window_proc;
     window_class.hInstance = instance;
-    window_class.lpszClassName = "Window Class";
+    window_class.lpszClassName = "WindowClass";
     window_class.hCursor = LoadCursor(0, IDC_ARROW);
     
     
@@ -353,11 +352,13 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         goto quit;
     }
     
-    HWND hwnd = CreateWindow("Window Class", WINDOW_TITLE,
+    HWND hwnd = CreateWindow("WindowClass", WINDOW_TITLE,
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                              DEFAULT_WINDOW_WIDTH,
                              DEFAULT_WINDOW_HEIGHT,
                              0, 0, instance, 0);
+    
+    
     if(!hwnd)
     {
         // NOTE(rjf): ERROR: Window creation failure
@@ -398,7 +399,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.current_time              = 0.f;
         global_platform.target_fps  = refresh_rate;
         
-        
+        global_platform.heap_alloc                      = win32_heap_alloc;
         global_platform.reserve                         = win32_reserve;
         global_platform.release                         = win32_release;
         global_platform.commit                          = win32_commit;
@@ -420,10 +421,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.load_opengl_procedure           = win32_load_opengl_proc;
         global_platform.refresh_screen                  = win32_opengl_refresh_screen;
         
-        void* permanent_backing = global_platform.reserve(Gigabytes(16));
-        void* frame_backing = global_platform.reserve(Megabytes(64));
-        global_platform.permanent_arena = make_arena(Gigabytes(16),permanent_backing);
-        global_platform.temporary_arena = make_arena(Megabytes(64), frame_backing);
+        global_platform.permanent_arena = make_arena();
+        global_platform.temporary_arena = make_arena();
     }
     
     {
@@ -444,7 +443,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     while(!global_platform.quit){
         
         win32_timer_begin_frame(&global_win32_timer);
-        arena_reset(&platform->temporary_arena);
+        arena_clear(&platform->temporary_arena);
         
         
         {
@@ -493,7 +492,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             platform_end_frame();
         }
         
-        win32_code_update(&win32_reload);
+        win32_code_update(&win32_app_code);
         win32_cleanup_opengl(&global_device_context);
     }
     

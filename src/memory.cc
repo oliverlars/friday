@@ -1,77 +1,69 @@
+#define ARENA_MAX          Gigabytes(4)
+#define ARENA_COMMIT_SIZE  Kilobytes(4)
 
-internal void* 
-arena_allocate(Arena* arena, u64 size){
-    if(!arena->active  || 
-       arena->active->used + size > arena->active->size){
-        if(arena->active && arena->active->next){
-            assert(true);
-            // NOTE(Oliver): we must have already allocated some
-            // blocks, lets reuse those!!!
-            arena->active = arena->active->next;
-            goto end; // NOTE(Oliver): lazy...
-        }
-        
-        u64 bytes_required = default_memory_block_size;
-        
-        if(size > bytes_required){
-            bytes_required = size;
-        }
-        
-        Arena_Block* new_block = 0;
-        
-        new_block = (Arena_Block*)calloc(1, sizeof(Arena_Block) + bytes_required);
-        assert(new_block);
-        new_block->memory = (u8*)new_block + sizeof(Arena_Block);
-        new_block->size = bytes_required;
-        new_block->next = nullptr;
-        new_block->used = 0;
-        
-        if(arena->active){
-            arena->active->next = new_block;
-            arena->active = new_block;
-        }else{
-            arena->first = new_block;
-            arena->active = new_block;
-        }
+internal Arena
+make_arena() {
+    Arena arena = {0};
+    arena.size = ARENA_MAX;
+    arena.base = platform->reserve(arena.size);
+    arena.alloc_position = 0;
+    arena.commit_position = 0;
+    return arena;
+}
+
+internal void *
+arena_allocate(Arena *arena, u64 size)
+{
+    void *memory = 0;
+    if(arena->alloc_position + size > arena->commit_position)
+    {
+        u64 commit_size = size;
+        commit_size += ARENA_COMMIT_SIZE-1;
+        commit_size -= commit_size % ARENA_COMMIT_SIZE;
+        platform->commit((u8 *)arena->base + arena->commit_position, commit_size);
+        arena->commit_position += commit_size;
     }
-    end: 
-    void* memory = arena->active->memory + arena->active->used;
-    arena->active->used += size;
-    
+    memory = (u8 *)arena->base + arena->alloc_position;
+    arena->alloc_position += size;
     return memory;
 }
 
-internal Arena
-make_arena(u64 size, void* backing){
-    Arena result;
-    result.first = (Arena_Block*)backing;
-    result.first->memory = (u8*)backing + sizeof(Arena_Block);
-    result.first->size = size - sizeof(Arena_Block);
-    result.first->next = nullptr;
-    result.first->used = 0;
-    result.active = result.first;
-    return result;
+internal void *
+arena_allocate_zero(Arena *arena, u64 size)
+{
+    void *memory = arena_allocate(arena, size);
+    memset(memory, 0, size);
+    return memory;
 }
 
 internal void
-arena_reset(Arena* arena){
-    
-    for(auto block = arena->first; block; block = block->next){
-        block->used = 0;
+arena_pop(Arena *arena, u64 size)
+{
+    if(size > arena->alloc_position)
+    {
+        size = arena->alloc_position;
     }
-    arena->active = arena->first;
-    
+    arena->alloc_position -= size;
+}
+
+internal void
+arena_clear(Arena *arena)
+{
+    arena_pop(arena, arena->alloc_position);
+}
+
+internal void
+arena_free(Arena* arena) {
+    platform->release(arena->base);
 }
 
 internal Arena
 subdivide_arena(Arena* arena, u64 size){
-    Arena result = {};
-    result.first = (Arena_Block*)arena_allocate(arena, size + sizeof(Arena_Block));
-    result.first->size = size + sizeof(Arena_Block);
-    result.first->memory = (u8*)result.first + sizeof(Arena_Block);
-    result.first->next = nullptr;
-    result.first->used = 0;
-    result.active = result.first;
+    Arena result = {0};
+    result.size = size;
+    result.base = (u8*)arena_allocate(arena, sizeof(Arena) + size) + sizeof(Arena);
+    result.alloc_position = 0;
+    result.commit_position = 0;
     return result;
 }
 

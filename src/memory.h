@@ -1,16 +1,9 @@
-const u64 default_memory_block_size = 4096; 
-
-struct Arena_Block {
-    u8* memory;
-    u64 size;
-    u64 used;
-    Arena_Block* next;
-};
 
 struct Arena {
-    
-    Arena_Block* first = nullptr;
-    Arena_Block* active = nullptr;
+    void* base;
+    u64 size;
+    u64 alloc_position;
+    u64 commit_position;
 };
 
 

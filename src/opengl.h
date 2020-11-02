@@ -1,4 +1,7 @@
-
+#include <windows.h>
+#include <gl/gl.h>
+#include "ext/wglext.h"
+#include "ext/glext.h"
 typedef void APIENTRY type_glTexImage2DMultisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
 typedef void APIENTRY type_glBindFramebuffer(GLenum target, GLuint framebuffer);
 typedef void APIENTRY type_glGenFramebuffers(GLsizei n, GLuint *framebuffers);
@@ -42,9 +45,7 @@ typedef void APIENTRY type_glDeleteShader (GLuint shader);
 typedef void APIENTRY type_glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers);
 typedef void APIENTRY type_glDrawBuffers (GLsizei n, const GLenum *bufs);
 typedef void APIENTRY type_glDrawBuffers (GLsizei n, const GLenum *bufs);
-typedef void APIENTRY type_friday_glActiveTexture(GLenum texture);
-
-type_friday_glActiveTexture* friday_glActiveTexture;
+typedef void APIENTRY type_glActiveTexture(GLenum texture);
 
 #define make_gl_func(name) type_##name* name
 
@@ -89,11 +90,11 @@ make_gl_func(glDeleteProgram);
 make_gl_func(glDeleteShader);
 make_gl_func(glDeleteFramebuffers);
 make_gl_func(glDrawBuffers);
+make_gl_func(glActiveTexture);
 
 internal void
-load_opengl(){
-    
-#define get_gl_func(name) name = (type_##name *)SDL_GL_GetProcAddress(#name)
+load_all_opengl_procs(void) {
+#define get_gl_func(name) name = (type_##name *)platform->load_opengl_procedure(#name);
     get_gl_func(glTexImage2DMultisample);
     get_gl_func(glBlitFramebuffer);
     get_gl_func(glAttachShader);
@@ -131,7 +132,6 @@ load_opengl(){
     get_gl_func(glUniform1f);
     get_gl_func(glUniform2fv);
     get_gl_func(glUniform3fv);
-    friday_glActiveTexture = (type_friday_glActiveTexture*)SDL_GL_GetProcAddress("glActiveTexture");
+    get_gl_func(glActiveTexture);
     
 }
-#define glActiveTexture friday_glActiveTexture

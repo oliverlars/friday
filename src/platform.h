@@ -120,7 +120,7 @@ struct Platform {
     void (*set_cursor_to_vertical_resize)(void);
     void (*set_cursor_to_ibar)(void);
     void (*refresh_screen)(void);
-    void *(*load_opengl_procedure)(char *name);
+    void* (*load_opengl_procedure)(char *name);
 };
 
 

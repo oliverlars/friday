@@ -4,6 +4,7 @@
 #include "strings.h"
 #include "platform.h"
 #include "opengl.h"
+#include "render.h"
 
 #include "extras.cc"
 #include "maths.cc"
@@ -22,23 +23,29 @@ BEGIN_C_EXPORT
 
 PERMANENT_LOAD {
     platform = platform_;
+    renderer = (Renderer*)arena_allocate_zero(&platform->permanent_arena, sizeof(Renderer));
     load_all_opengl_procs();
+    renderer->font = load_sdf_font("../fonts/friday_default.fnt");
     init_opengl_renderer();
     init_shaders();
 }
 
 HOT_LOAD {
     platform = platform_;
+    renderer = (Renderer*)platform->permanent_arena.base;
+    load_all_opengl_procs();
+    init_opengl_renderer();
+    init_shaders();
 }
 
 HOT_UNLOAD {
-    
 }
 
 UPDATE {
     opengl_start_frame();
     {
-        push_rectangle(30, 50, 400, 400, 1, 0xFF0000FF);
+        push_rectangle(40 + sinf(platform->get_time())*20, 100, 100, 100, 10, 
+                       0xFF0000FF);
     }
     opengl_end_frame();
     platform->refresh_screen();

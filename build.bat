@@ -1,4 +1,13 @@
 @echo off
+
+set application_name=friday
+set build_options= -DBUILD_WIN32=1
+set compile_flags= -nologo /W0 /Zi /FC /I ../src/
+set common_link_flags= opengl32.lib -opt:ref -incremental:no /Debug:FULL
+set platform_link_flags= gdi32.lib user32.lib winmm.lib %common_link_flags%
+
+if not exist build mkdir build
 pushd build
-cl /Zi /FC -nologo ..\src\friday.cc /link /DEBUG:FULL /INCREMENTAL:NO /SUBSYSTEM:WINDOWS /out:friday.exe user32.lib gdi32.lib ../lib/SDL2main.lib ../lib/SDL2.lib shell32.lib opengl32.lib  ../lib/OptickCore.lib
+start /b /wait "" "cl.exe"  %build_options% %compile_flags% ../src/win32/win32_entry.cc /link %platform_link_flags% /out:%application_name%.exe
+start /b /wait "" "cl.exe"  %build_options% %compile_flags% ../src/friday.cc /LD /link %common_link_flags% /out:%application_name%.dll
 popd

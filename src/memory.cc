@@ -1,4 +1,4 @@
-#define ARENA_MAX          Gigabytes(4)
+#define ARENA_MAX          Gigabytes(1)
 #define ARENA_COMMIT_SIZE  Kilobytes(4)
 
 internal Arena
@@ -6,6 +6,7 @@ make_arena() {
     Arena arena = {0};
     arena.size = ARENA_MAX;
     arena.base = platform->reserve(arena.size);
+    assert(arena.base);
     arena.alloc_position = 0;
     arena.commit_position = 0;
     return arena;
@@ -25,6 +26,7 @@ arena_allocate(Arena *arena, u64 size)
     }
     memory = (u8 *)arena->base + arena->alloc_position;
     arena->alloc_position += size;
+    
     return memory;
 }
 
@@ -59,11 +61,9 @@ arena_free(Arena* arena) {
 
 internal Arena
 subdivide_arena(Arena* arena, u64 size){
-    Arena result = {0};
+    Arena result = {};
+    result.base = arena_allocate_zero(arena, size);
     result.size = size;
-    result.base = (u8*)arena_allocate(arena, sizeof(Arena) + size) + sizeof(Arena);
-    result.alloc_position = 0;
-    result.commit_position = 0;
     return result;
 }
 

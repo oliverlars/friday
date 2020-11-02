@@ -7,25 +7,39 @@ make_string(char* string){
     return result;
 }
 
-
-internal String8
-make_stringf(Arena* arena, char* string, ...){
-    va_list args;
-    va_start(args, string);
-    
-    char* pointer = string;
-    while(pointer && *pointer){
-        pointer++;
+internal char*
+cstr_to_string(Arena* arena, String8 string){
+    char* result = (char*)arena_allocate(arena, string.length+1);
+    result[string.length] = 0;
+    for(int i = 0; i < string.length; i++){
+        result[i] = string.text[i];
     }
     
-    char* text = (char*)arena_allocate(arena, pointer-string);
-    int length = vsnprintf(text, 256, string, args);
-    String8 result;
-    result.text = text;
-    result.length = length;
     return result;
 }
 
+internal String8
+make_stringfv(Arena *arena, char *format, va_list args)
+{
+    va_list args2;
+    va_copy(args2, args);
+    u32 needed_bytes = vsnprintf(0, 0, format, args) + 1;
+    String8 result = {0};
+    result.text = (char*)arena_allocate(arena, needed_bytes);
+    result.length = vsnprintf((char*)result.text, needed_bytes, format, args2);
+    result.text[result.length] = 0;
+    return(result);
+}
+
+internal String8
+make_stringf(Arena *arena, char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    String8 result = make_stringfv(arena, fmt, args);
+    va_end(args);
+    return(result);
+}
 
 internal bool
 string_eq(String8 a, char* b){

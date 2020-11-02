@@ -27,6 +27,10 @@ union v2i {
         int u;
         int v;
     };
+    struct {
+        int width;
+        int height;
+    };
 };
 
 union v2f {

@@ -424,6 +424,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.permanent_arena = make_arena();
         global_platform.temporary_arena = make_arena();
     }
+    Arena arena = subdivide_arena(&global_platform.temporary_arena, 8192);
     
     {
         global_device_context = GetDC(hwnd);
@@ -493,8 +494,11 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         }
         
         win32_code_update(&win32_app_code);
-        win32_cleanup_opengl(&global_device_context);
+        
     }
+    
+    win32_code_unload(&win32_app_code);
+    win32_cleanup_opengl(&global_device_context);
     
     quit:;
     

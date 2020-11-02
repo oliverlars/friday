@@ -11,22 +11,37 @@
 #include "strings.cc"
 #include "platform.cc"
 
-extern "C" {
-    PERMANENT_LOAD {
-        platform = platform_;
-        load_all_opengl_procs();
-    }
-    
-    HOT_LOAD {
-        platform = platform_;
-    }
-    
-    HOT_UNLOAD {
-    }
-    
-    UPDATE {
-        glClearColor(1, 0,0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        platform->refresh_screen();
-    }
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ext/stb_image.h"
+
+
+#include "render.cc"
+
+BEGIN_C_EXPORT
+
+PERMANENT_LOAD {
+    platform = platform_;
+    load_all_opengl_procs();
+    init_opengl_renderer();
+    init_shaders();
 }
+
+HOT_LOAD {
+    platform = platform_;
+}
+
+HOT_UNLOAD {
+    
+}
+
+UPDATE {
+    opengl_start_frame();
+    {
+        push_rectangle(0, 0, 40, 40, 10, 0xFF0000FF);
+    }
+    opengl_end_frame();
+    platform->refresh_screen();
+}
+
+END_C_EXPORT

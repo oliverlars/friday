@@ -141,3 +141,6 @@ internal void hot_unload_stub(void) {}
 #define UPDATE __declspec(dllexport) void update(void)
 typedef void Update_Callback(void);
 internal void update_stub(void) {}
+
+#define BEGIN_C_EXPORT extern "C" {
+#define END_C_EXPORT }

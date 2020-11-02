@@ -191,8 +191,8 @@ load_sdf_font(char* filename){
     expect_token(&l, "=");
     
     {
-        Temp_Arena temp_arena(platform.permanent_arena);
-        String8 filename = prepend_to_string(&temp_arena.arena, "../fonts/", read_token(&l));
+        String8 filename = make_stringf(&platform->permanent_arena, "../fonts/%s", 
+                                        cstr_to_string(&platform->permanent_arena, read_token(&l)));
         font.bitmap = make_bitmap(filename);
     }
     
@@ -259,52 +259,6 @@ enum Menu_Type {
     MENU_TYPE_USAGE,
     MENU_CREATE_NODE
 };
-
-struct {
-    int x;
-    int y;
-    int x_offset;
-    int y_offset;
-    int scroll_amount;
-    int indent;
-    
-    int pan_offset_x;
-    int pan_offset_y;
-    
-    int delta_x;
-    int delta_y;
-    
-    int cursor_index;
-    Node* active_node;
-    
-    Node* program_root;
-    
-    Node* test_node;
-    
-    Pool node_pool;
-    
-    f32 menu_x, menu_y;
-    Node* menu_node;
-    int selected;
-    
-    int minimap_x;
-    int minimap_y;
-    int minimap_x_offset;
-    int minimap_y_offset;
-    
-    int LOD;
-    
-    
-    f32 cursor_x;
-    f32 cursor_y;
-    
-    f32 cursor_target_x;
-    f32 cursor_target_y;
-    
-    
-    Node* selected_node;
-    
-} friday;
 
 enum Command_Type {
     COMMAND_RECTANGLE,
@@ -423,7 +377,7 @@ get_font_line_height(f32 font_scale = 1.0f) {
 
 internal Command*
 make_command(Command_Type type){
-    Command* command = (Command*)arena_allocate(&renderer.frame_arena, sizeof(Command));
+    Command* command = (Command*)arena_allocate_zero(&renderer.frame_arena, sizeof(Command));
     command->type = type;
     command->next = nullptr;
     command->previous = nullptr;
@@ -670,7 +624,7 @@ push_string8(f32 x, f32 y, String8 string, u32 colour, f32 font_scale = 1.0f){
     
     // NOTE(Oliver): '#' is used for ID purposes
     for(int i = 0; i < string.length; i++){
-        char text = string[i];
+        char text = string.text[i];
         if(text == '#'){break;}
         //while(string.text && *string.text && *string.text != '#'){
         if(text >= 32 && text < 128){
@@ -705,7 +659,7 @@ get_text_width(String8 string, f32 font_scale = 1.0f){
     font_scale *= renderer.font.scale;
     f32 result = 0;
     for(int i = 0; i < string.length; i++){
-        int id = string[i];
+        int id = string.text[i];
         result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
     }
     return result;
@@ -731,7 +685,7 @@ get_text_width_n(String8 string, int n, f32 font_scale = 1.0f){
     font_scale *= renderer.font.scale;
     f32 result = 0;
     for(int i = 0; (i < string.length) &&  i < n; i++){
-        int id = string[i];
+        int id = string.text[i];
         result += (renderer.font.characters[id].x_advance-renderer.font.padding.x)*font_scale;
     }
     return result;
@@ -758,11 +712,11 @@ internal void
 init_opengl_renderer(){
     
     renderer.shape_attribs = 
-        subdivide_arena(&platform.temporary_arena, MAX_DRAW*16);
+        subdivide_arena(&platform->temporary_arena, MAX_DRAW*16);
     
-    renderer.frame_arena = subdivide_arena(&platform.temporary_arena, 8192*4);
+    renderer.frame_arena = subdivide_arena(&platform->temporary_arena, 8192*4);
     
-    renderer.temp_string_arena = subdivide_arena(&platform.temporary_arena, 4096);
+    renderer.temp_string_arena = subdivide_arena(&platform->temporary_arena, 4096);
     
     {
         glGenVertexArrays(1, &renderer.vaos[COMMAND_RECTANGLE]);
@@ -1431,7 +1385,6 @@ init_shaders(){
 internal void
 process_and_draw_commands(){
     
-    OPTICK_EVENT();
     
     f32* rectangles = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE);
     f32* rectangle_outlines = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
@@ -1441,7 +1394,7 @@ process_and_draw_commands(){
     f32* rectangles_textured = (f32*)arena_allocate(&renderer.shape_attribs, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
     
     
-    v4f clip_range = v4f(0, 0, platform.width, platform.height);
+    v4f clip_range = v4f(0, 0, platform->window_size.width, platform->window_size.height);
     for(Command* command = renderer.head; command; command = command->next){
         Command* previous_command = command;
         
@@ -1455,7 +1408,7 @@ process_and_draw_commands(){
                 
             }break;
             case COMMAND_CLIP_RANGE_END:{
-                clip_range = v4f(0,0, platform.width, platform.height);
+                clip_range = v4f(0,0, platform->window_size.width, platform->window_size.height);
             }break;
             
             case COMMAND_RECTANGLE:{
@@ -1495,7 +1448,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(renderer.programs[COMMAND_RECTANGLE]);
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE], 1, resolution);
                     
                     glUniform4fv(renderer.clip_range_uniforms[COMMAND_RECTANGLE], 1, (f32*)&clip_range);
@@ -1543,7 +1496,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(renderer.programs[COMMAND_TRIANGLE]);
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_TRIANGLE], 1, resolution);
                     
                     glUniform4fv(renderer.clip_range_uniforms[COMMAND_TRIANGLE], 1, (f32*)&clip_range);
@@ -1585,7 +1538,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(renderer.programs[COMMAND_RECTANGLE_OUTLINE]);
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 
                                  1, resolution);
                     
@@ -1627,7 +1580,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_circle());
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
                     
                     glBindVertexArray(get_vao_circle());
@@ -1675,7 +1628,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_glyph());
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_GLYPH], 1, resolution);
                     
                     glUniform4fv(renderer.clip_range_uniforms[COMMAND_GLYPH], 1, (f32*)&clip_range);
@@ -1719,7 +1672,7 @@ process_and_draw_commands(){
                     
                     glUseProgram(get_program_rectangle_textured());
                     
-                    f32 resolution[2] = {(f32)platform.width, (f32)platform.height};
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer.resolution_uniforms[COMMAND_RECTANGLE_TEXTURED], 1, resolution);
                     
                     glActiveTexture(GL_TEXTURE0);
@@ -1745,15 +1698,12 @@ process_and_draw_commands(){
 
 internal void
 opengl_start_frame() {
-    OPTICK_EVENT();
     
-    arena_reset(&renderer.shape_attribs);
-    arena_reset(&renderer.frame_arena);
-    arena_reset(&renderer.temp_string_arena);
+    arena_clear(&renderer.shape_attribs);
+    arena_clear(&renderer.frame_arena);
+    arena_clear(&renderer.temp_string_arena);
     
     //arena_reset(&ui_state.frame_arena);
-    arena_reset(&ui_state.parameter_arena);
-    ui_state.widgets = nullptr;
     
     renderer.head = nullptr;
     renderer.tail = nullptr;
@@ -1762,14 +1712,9 @@ opengl_start_frame() {
 
 internal void
 opengl_end_frame() {
-    OPTICK_EVENT();
     
-    
-    glViewport(0, 0, platform.width, platform.height);
-    glClearColor(theme.background.r/255.0f,
-                 theme.background.g/255.0f,
-                 theme.background.b/255.0f,
-                 1);
+    glViewport(0, 0, platform->window_size.width, platform->window_size.height);
+    glClearColor(0,1, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
     
     process_and_draw_commands();
@@ -1777,819 +1722,3 @@ opengl_end_frame() {
     glUseProgram(0);
     
 }
-
-Bitmap cursor_bitmap;
-
-internal void
-display_modes(){
-    
-    return;
-    
-    f32 number_of_modes = 4;
-    
-    f32 mode_size = 60;
-    f32 padding = 10;
-    f32 offset = mode_size;
-    
-    f32 x = platform.width;
-    f32 y = platform.height;
-    
-    for(int i = 0; i < number_of_modes; i++){
-        push_rectangle(x-offset*2,y - (mode_size*number_of_modes) + (mode_size+padding)*i, 
-                       mode_size, mode_size, 
-                       0.3, theme.background.packed);
-    }
-}
-
-internal UI_ID
-button(f32 x, f32 y, char* text, Closure closure){
-    auto id = gen_unique_id(text);
-    
-    v4f bbox = get_text_bbox(x, y, text);
-    
-    auto widget = ui_push_widget(bbox.x, bbox.y, bbox.width, bbox.height, id, closure);
-    if(id == ui_state.clicked_id){
-        push_rectangle(bbox, 10, theme.button_highlight.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else if(id == ui_state.hover_id){
-        push_rectangle(bbox, 10, theme.button_highlight.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else{
-        push_string(x, y, text, theme.text.packed);
-    }
-    
-    return id;
-}
-
-internal UI_ID
-text_button(char* text, f32 x, f32 y, b32* state, Closure closure){
-    auto id = gen_unique_id(text);
-    f32 line_height = get_font_line_height();
-    auto widget = _push_widget(x, y, get_text_width(text), line_height,
-                               id, closure);
-    widget->clicked = state;
-    f32 border = 5.0f;
-    if(*state){
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10, theme.view_button.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else if(id == ui_state.hover_id){
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10, theme.view_button.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else{
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10, theme.button_highlight.packed);
-        push_string(x, y, text, theme.text.packed);
-    }
-    
-    return id;
-}
-
-internal UI_ID
-text_button(char* text, b32* state, Closure closure){
-    f32 x = ui_get_x();
-    f32 y = ui_get_y();
-    auto id = gen_unique_id(text);
-    auto widget = _push_widget(x, y, get_text_width(text), renderer.font.size,
-                               id, closure);
-    widget->clicked = state;
-    f32 line_height = get_font_line_height();
-    f32 border = 5.0f;
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = 0.2f;
-    }
-    if(*state){
-        animate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10, theme.view_button.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else if(id == ui_state.hover_id){
-        animate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10,
-                       theme.view_button.packed);
-        push_string(x, y, text, theme.text.packed);
-    }else{
-        unanimate(anim_state);
-        f32 sx = (1.0 + anim_state->rect.x);
-        v4f bbox = get_text_bbox(x, y, text);
-        push_rectangle(bbox, 10,
-                       theme.button_highlight.packed);
-        push_string(x, y, text, theme.text.packed);
-    }
-    
-    ui_state.x_offset += get_text_width(text) + 30.0f;
-    
-    return id;
-}
-
-internal UI_ID
-icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
-    auto id = gen_unique_id(label);
-    auto widget = _push_widget(x, y, size, size, id, closure);
-    
-    f32 line_height = get_font_line_height();
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = 0.5f;
-    }
-    if(id == ui_state.clicked_id){
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else if(id == ui_state.hover_id){
-        animate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else{
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }
-    
-    return id;
-}
-
-internal UI_ID
-icon_button(String8 label, f32 x, f32 y, f32 size, Bitmap bitmap, Closure closure){
-    auto id = gen_unique_id(label);
-    auto widget = _push_widget(x, y, size, size, id, closure);
-    
-    f32 line_height = get_font_line_height();
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = 0.5f;
-    }
-    if(id == ui_state.clicked_id){
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else if(id == ui_state.hover_id){
-        animate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else{
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }
-    
-    return id;
-}
-
-
-internal UI_ID
-small_icon_button(char* label, f32 x, f32 y, f32 size, Bitmap bitmap, b32* state, Closure closure){
-    auto id = gen_unique_id(label);
-    auto widget = _push_widget(x, y, size, size, id, closure);
-    widget->clicked = state;
-    f32 line_height = get_font_line_height();
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = 0.1f;
-    }
-    if(*state){
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else if(id == ui_state.hover_id){
-        animate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.button_highlight.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }else{
-        unanimate(anim_state);
-        
-        f32 sx = (1.0 + anim_state->rect.x);
-        size *= sx;
-        push_rectangle(x, y, size, size, 10, theme.view_button.packed);
-        push_rectangle_textured(x+size/4, y+size/4, size/2, size/2, 0, bitmap);
-    }
-    
-    return id;
-}
-
-
-Bitmap bitmap;
-Bitmap move_icon;
-Bitmap add_icon;
-Bitmap options_icon;
-Bitmap bin_icon;
-internal void
-find_node_types_helper(Node* root, Node*** node_list, u64 node_list_length, Node_Type type){
-    if(!root) return;
-    if(type == root->type){
-        **node_list = root;
-        (*node_list)++;
-    }
-    switch(root->type){
-        
-        case NODE_BINARY:{
-            auto binary = &root->binary;
-            find_node_types_helper(binary->left, node_list, node_list_length, type);
-            find_node_types_helper(binary->right, node_list, node_list_length, type);
-        }break;
-        
-        case NODE_LITERAL:{
-            
-        }break;
-        
-        case NODE_STRUCT:{
-            auto _struct = &root->_struct;
-            for(Node* member = _struct->members; member; member = member->next){
-                find_node_types_helper(member, node_list, node_list_length, type);
-            }
-        }break;
-        
-        case NODE_DECLARATION:{
-            auto decl = root->declaration.expression;
-            find_node_types_helper(root->declaration.type_usage, node_list, 
-                                   node_list_length, type);
-            find_node_types_helper(decl, node_list, node_list_length, type);
-        }break;
-        
-        case NODE_SCOPE:{
-            auto scope = &root->scope;
-            for(Node* stmt = scope->statements; stmt; stmt = stmt->next){
-                find_node_types_helper(stmt, node_list, node_list_length, type);
-            }
-        }break;
-        
-        case NODE_TYPE_USAGE:{
-        }break;
-    }
-}
-
-internal void
-find_node_types(Node** node_list, u64 node_list_length, Node_Type type){
-    find_node_types_helper(friday.program_root, &node_list, node_list_length, type);
-}
-
-
-internal void
-draw_menu(f32 x, f32 y, char* label, String8* strings, u64 num_rows, ...){
-    auto menu_id = gen_id(label);
-    f32 font_scale = 1.0f;
-    //debug_print("%d", menu_id);
-    auto anim_state = get_animation_state(menu_id);
-    if(!anim_state){
-        anim_state = init_animation_state(menu_id);
-    }
-    update_animation_state(anim_state,
-                           0,
-                           0,
-                           lerp(anim_state->x_scale, 1.2, 0.8f),
-                           lerp(anim_state->y_scale, 1.2, 0.8f));
-    
-    f32 line_height = get_font_line_height(font_scale);
-    f32 height = 40*anim_state->y_scale;
-    f32 size_x = 0;
-    f32 size_y = num_rows*height;
-    y = y-size_y+line_height;
-    
-    anim_state->last_updated = platform.tick;
-    
-    for(int i = 0; i < num_rows; i++){
-        f32 text_width = get_text_width(strings[i], font_scale);
-        text_width *= 1.2;
-        size_x = text_width >= size_x ? text_width : size_x;
-        
-    }
-    
-    push_rectangle(x,y, size_x, num_rows*height, 10, theme.menu.packed);
-    
-    va_list closures;
-    va_start (closures, num_rows);
-    for(int i = 0; i < num_rows; i++){
-        auto closure = va_arg(closures, Closure);
-        String8 string = strings[i];
-        f32 offset = i*height;
-        auto item_id = gen_unique_id(string);
-        auto menu_widget = _push_widget(x, y+ offset, size_x, height, item_id, closure);
-        push_rectangle(x,y + offset, size_x, height, 10, theme.menu.packed);
-        u32 text_colour = theme.text.packed;
-        
-        
-        if(is_mouse_in_rect(x, y + offset, size_x, height)){
-            text_colour = theme.cursor.packed;
-        }
-        
-        push_string8(x+10, y + i*height+line_height/2, string,
-                     text_colour, font_scale);
-    }
-    
-}
-
-internal void
-draw_menu_bar(){
-    int size = 40;
-    int x = 0;
-    push_rectangle(x, platform.height-size, platform.width, size+10, 0, theme.panel.packed);
-    x += 10;
-    push_rectangle_textured(x,platform.height-size/2-30/2, 30, 30, 1, bitmap);
-    
-    UI_ID file_id = 0;
-    UI_ID edit_id = 0;
-    UI_ID help_id = 0;
-    
-    f32 file_x = 0;
-    f32 edit_x = 0;
-    f32 help_x = 0;
-    
-    auto menu_callback = [](u8* parameters){
-    };
-    
-    f32 gap = 30.0f;
-    {
-        char* file = "File"; 
-        
-        Closure file_menu = make_closure(menu_callback, 0);
-        x+=get_text_width(file);
-        file_id = button(x, platform.height-size+5, file, file_menu);
-        file_x = x;
-        
-    }
-    
-    {
-        
-        char* edit = "Edit"; 
-        Closure edit_menu = make_closure(menu_callback, 0);
-        x+=get_text_width(edit)+gap;
-        edit_id = button(x, platform.height-size+5, edit, edit_menu);
-        edit_x = x;
-    }
-    
-    {
-        
-        char* help = "Help"; 
-        Closure help_menu = make_closure(menu_callback, 0);
-        x += get_text_width(help)+gap;
-        
-        help_id = button(x, platform.height-size+5, help, help_menu);
-        help_x = x;
-    }
-    
-    if(help_id == ui_state.hover_id){
-        int x = 5;
-    }
-    
-    if(file_id == ui_state.clicked_id){
-        String8 items[4] = {};
-        Arena* arena = &renderer.temp_string_arena;
-        items[3] = make_string(arena, "New");
-        items[2] = make_string(arena, "Open");
-        items[1] = make_string(arena, "Open Recent");
-        items[0] = make_string(arena, "Save");
-        Closure empty_closures[5] = {};
-        draw_menu(file_x, platform.height-size-40, "file_menu",
-                  items, 4, empty_closures[0],
-                  empty_closures[1],
-                  empty_closures[2],
-                  empty_closures[3],
-                  empty_closures[4]);
-        
-    }
-    
-    if(edit_id == ui_state.clicked_id){
-        String8 items[5] = {};
-        Arena* arena = &renderer.temp_string_arena;
-        items[4] = make_string(arena, "Undo");
-        items[3] = make_string(arena, "Redo");
-        items[2] = make_string(arena, "Undo History");
-        items[1] = make_string(arena, "Repeat");
-        items[0] = make_string(arena, "Preferences");
-        Closure empty_closures[5] = {};
-        draw_menu(edit_x, platform.height-size-40, "edit_menu",
-                  items, 5, 
-                  empty_closures[0],
-                  empty_closures[1],
-                  empty_closures[2],
-                  empty_closures[3],
-                  empty_closures[4]);
-        
-    }
-    
-    if(help_id == ui_state.clicked_id){
-        String8 items[2] = {};
-        Arena* arena = &renderer.temp_string_arena;
-        items[1] = make_string(arena, "About");
-        items[0] = make_string(arena, "Splash Screen");
-        Closure empty_closure = {};
-        auto show_splash_screen = [](u8* parameters){
-            ui_state.show_splash_screen = 1;
-        };
-        Closure splash_screen = make_closure(show_splash_screen, 0);
-        draw_menu(help_x, platform.height-size-40, "help_menu",
-                  items, 2, splash_screen, empty_closure);
-        
-    }
-    
-}
-
-internal void
-draw_view_buttons(v2f pos){
-    f32 size = 60;
-    f32 x = 30+pos.x;
-    f32 spacing = 15;
-    f32 y = pos.y-150;
-    
-    Bitmap icons[4] = {move_icon, add_icon, options_icon, bin_icon};
-    Arena* arena = &renderer.temp_string_arena;
-    String8 icon_labels[4] = {
-        make_stringf(arena, "move_icon###%d%d",  (int)pos.x, (int)pos.y), 
-        make_stringf(arena,"add_icon###%d%d",  (int)pos.x, (int)pos.y), 
-        make_stringf(arena,"options_icon###%d%d",  (int)pos.x, (int)pos.y), 
-        make_stringf(arena,"bin_icon###%d%d", (int)pos.x, (int)pos.y)
-    };
-    for(int i = 0; i < 4; i++){
-        
-        auto callback = [](u8* parameters){};
-        Closure closure = make_closure(callback, 0);
-        icon_button(icon_labels[i], x, y, size, icons[i], closure);
-        y -= size + spacing;
-        
-    }
-    
-}
-
-
-internal UI_ID
-radio_button(char* label, f32 x, f32 y, b32* state, Closure closure){
-    auto id = gen_unique_id(label);
-    
-    f32 height = get_font_line_height();
-    f32 width = height*2;
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = width-height;
-    }
-    f32 start_x = x;
-    
-    push_string(x, y, label, theme.text.packed);
-    x += get_text_width(label);
-    
-    auto widget = _push_widget(x+5, y-5, width, height, id,
-                               closure);
-    Colour back_colour = theme.view_button;
-    
-    widget->clicked = state;
-    if(*widget->clicked){
-        animate(anim_state);
-    }else {
-        unanimate(anim_state);
-    }
-    
-    push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
-    push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
-    
-    return id;
-}
-
-internal UI_ID
-radio_button(char* label, b32* state, Closure closure){
-    f32 x = ui_get_x();
-    f32 y = ui_get_y();
-    
-    auto id = gen_unique_id(label);
-    
-    f32 height = get_font_line_height();
-    f32 width = height*2;
-    auto anim_state = get_animation_state(id);
-    if(!anim_state){
-        anim_state = init_animation_state(id);
-        anim_state->target_rect.x = width-height;
-    }
-    f32 start_x = x;
-    
-    push_string(x, y, label, theme.text.packed);
-    x += get_text_width(label);
-    
-    auto widget = _push_widget(x+5, y-5, width, height, id,
-                               closure);
-    Colour back_colour = theme.view_button;
-    
-    widget->clicked = state;
-    if(*widget->clicked){
-        animate(anim_state);
-    }else {
-        unanimate(anim_state);
-    }
-    
-    
-    
-    push_rectangle(x+5, y - 5, width, height, height/2, back_colour.packed);
-    push_circle(x+5+anim_state->rect.x, y-5, height, theme.text_misc.packed);
-    
-    ui_state.x_offset += get_text_width(label) +  width + 5 + 30;
-    
-    return id;
-}
-
-Bitmap search_icon;
-Bitmap run_icon;
-Bitmap layers_icon;
-Bitmap document_icon;
-
-
-internal void
-right_click_menu(Panel* panel, char* label){
-    String8 items[3];
-    
-    Arena* arena = &renderer.temp_string_arena;
-    items[0] = make_string(arena, "split vertically");
-    items[1] = make_string(arena, "split horizontally");
-    items[2] = make_string(arena, "delete split");
-    auto sv = [](u8* parameters){
-        Panel* panel = get_arg(parameters, Panel*);
-        ui_state.menu_open = 0;
-        split_panel(panel, 0.5, PANEL_SPLIT_VERTICAL, PANEL_EDITOR);
-    };
-    auto sh = [](u8* parameters){
-        Panel* panel = get_arg(parameters, Panel*);
-        ui_state.menu_open = 0;
-        split_panel(panel, 0.5, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
-    };
-    auto ds = [](u8* parameters){
-        Panel* panel = get_arg(parameters, Panel*);
-        ui_state.menu_open = 0;
-        delete_split(panel);
-        
-    };
-    Closure split_vertically = make_closure(sv, 1, arg(panel));
-    Closure split_horizontally = make_closure(sh, 1, arg(panel));
-    Closure delete_split = make_closure(ds, 1, arg(panel));
-    draw_menu(ui_state.menu_x, ui_state.menu_y, label, 
-              items, 3, split_vertically, split_horizontally,
-              delete_split);
-    
-}
-
-global bool cursor_size = 0;
-global f32 child_width = 0;
-global f32 parent_width = 0;
-
-internal void
-draw_panel_header(Panel* panel, v4f panel_rect){
-    f32 size = 40;
-    v4f rect = v4f(panel_rect.x+panel_rect.width-size,
-                   panel_rect.y + panel_rect.height-size, 
-                   panel_rect.width, panel_rect.height);
-    rect = rect_border(rect, -10);
-    
-    auto id = gen_unique_id(panel, sizeof(Panel));
-    _push_widget(rect.x, rect.y, size, size, id, {});
-    if(id == ui_state.clicked_id){
-        push_rectangle(rect.x, rect.y, size, size, 10, theme.button_highlight.packed);
-        push_triangle(v2f(rect.x +10 , rect.y + 10), 10, theme.text.packed);
-        
-        String8 items[2] = {};
-        Arena* arena = &renderer.temp_string_arena;
-        items[0] = make_string(arena, "properties");
-        items[1] = make_string(arena, "editor");
-        
-        auto make_editor = [](u8* parameters){
-            auto panel = get_arg(parameters, Panel*);
-            panel->type = PANEL_EDITOR;
-        };
-        auto make_properties = [](u8* parameters){
-            auto panel = get_arg(parameters, Panel*);
-            panel->type = PANEL_PROPERTIES;
-        };
-        
-        Closure make_editor_closure = make_closure(make_editor, 1, arg(panel));
-        Closure make_properties_closure = make_closure(make_properties, 1, arg(panel));
-        draw_menu(rect.x - get_text_width("properties"), rect.y - size, "panel selector", items, 2, 
-                  make_properties_closure,
-                  make_editor_closure);
-    }else {
-        push_rectangle(rect.x, rect.y, size, size, 10, theme.view_button.packed);
-        push_triangle(v2f(rect.x +10 , rect.y + 10), 10, theme.text.packed);
-    }
-    
-}
-
-internal void
-draw_editor_panel(Panel* panel, v4f rect){
-    ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
-    u32 colour = theme.panel.packed;
-    if(ui_state.resize_panel == panel){
-        colour += 0x08080800;
-    }
-    push_rectangle(rect.x, rect.y, rect.width, rect.height, 10, colour);
-    present(panel->presenter);
-    draw_panel_header(panel, rect);
-    draw_view_buttons(v2f(rect.x, rect.y+rect.height));
-    
-    ui_end_panel();
-    
-    reset_presenter(panel->presenter);
-    
-    auto id = gen_unique_id(panel);
-    if(ui_state.right_clicked_id == id){
-        ui_state.menu_open = 1;
-        ui_state.menu_x = platform.mouse_x;
-        ui_state.menu_y = platform.mouse_y;
-        ui_state.active_panel = panel;
-    }
-}
-
-internal void
-draw_property_panel(Panel* panel, v4f rect){
-    ui_begin_panel(rect.x, rect.y, rect.width, rect.height);
-    
-    u32 colour = theme.panel.packed;
-    
-    Bitmap icons[] = {
-        search_icon,
-        run_icon,
-        layers_icon,
-        document_icon,
-    };
-    char* icon_labels[] = {
-        "search",
-        "run",
-        "layers",
-        "document"
-    };
-    f32 x = rect.x+35;
-    f32 y = rect.y+rect.height;
-    f32 spacing = 15;
-    f32 size = 40;
-    local_persist b32 previous_states[4] = {true, false, false, false};
-    local_persist b32 property_states[4] = {true, false, false, false};
-    bool dummy = false;
-    int index = -1;
-    for(int i = 0; i < 4; i++){
-        y -= size + spacing;
-        
-        auto callback = [](u8* parameters){};
-        Closure closure = make_closure(callback, 0);
-        
-        small_icon_button(icon_labels[i], x-30, y, size, icons[i], &property_states[i], closure);
-        
-    }
-    for(int i = 0; i < 4; i++){
-        if(property_states[i] && !previous_states[i]){
-            
-            property_states[0] = false;
-            property_states[1] = false;
-            property_states[2] = false;
-            property_states[3] = false;
-            property_states[i] = true;
-            
-            previous_states[0] = property_states[0];
-            previous_states[1] = property_states[1];
-            previous_states[2] = property_states[2];
-            previous_states[3] = property_states[3];
-        }
-    }
-    push_rectangle(rect.x+35, rect.y, rect.width-35, rect.height, 5, colour);
-    
-    local_persist b32 button_states[6] = {0};
-    local_persist b32 state = false;
-    if(property_states[0]){
-        radio_button("test", &state, {});
-    }else if(property_states[1]){
-        text_button("compile", &button_states[0], {});
-        text_button("edit", &button_states[1], {});
-        ui_new_line();
-        
-        radio_button("flip", &button_states[2], {});
-        text_button("interpret", &button_states[3], {});
-    }
-    draw_panel_header(panel, rect);
-    
-    ui_end_panel();
-}
-
-internal void 
-draw_panels(Panel* root, int posx, int posy, int width, int height){
-    if(!root) return;
-    auto id = gen_unique_id(root);
-    
-    if(root->first && root->second){
-        switch(root->first->split_type){
-            case PANEL_SPLIT_VERTICAL:{
-                draw_panels(root->first, posx, posy, width*root->first->split_ratio, height);
-                draw_panels(root->second, posx+width*root->first->split_ratio, posy, width*root->second->split_ratio, height);
-            }break;
-            case PANEL_SPLIT_HORIZONTAL:{
-                draw_panels(root->second, posx, posy, width, height*root->first->split_ratio);
-                draw_panels(root->first, posx, posy + height*root->first->split_ratio, width, height*root->second->split_ratio);
-            }break;
-        }
-    }else {
-        assert(!root->first && !root->second);
-        
-        auto callback = [](u8* parameters){
-            ui_state.active_panel = get_arg(parameters, Panel*);
-        };
-        
-        Closure closure = make_closure(callback, 1, arg(root));
-        auto widget = _push_widget(posx+PANEL_BORDER, posy+PANEL_BORDER,
-                                   width-PANEL_BORDER*2, height-PANEL_BORDER*2, id,
-                                   closure);
-        
-        bool is_in_border = is_mouse_in_left_or_right_border(v4f(posx, posy, width, height),
-                                                             PANEL_BORDER);
-        if(is_in_border){
-            SDL_Cursor* cursor;
-            cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-            SDL_SetCursor(cursor);
-        }
-        if(root->split_type == PANEL_SPLIT_HORIZONTAL){
-            is_in_border =is_mouse_in_bottom_or_top_border(v4f(posx, posy, width, height),
-                                                           PANEL_BORDER);
-            if(is_in_border){
-                SDL_Cursor* cursor;
-                cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-                SDL_SetCursor(cursor);
-            }
-        }
-        // NOTE(Oliver): Credits to Max Jordan for using the depth first
-        // search to correctly resize the right panel
-        if(platform.mouse_left_down && !ui_state.panel_is_resizing &&
-           is_in_border){
-            ui_state.panel_is_resizing = true;
-            ui_state.resize_panel = root;
-        }else if(!platform.mouse_left_down){
-            ui_state.panel_is_resizing = false;
-        }
-        if(ui_state.panel_is_resizing && root == ui_state.resize_panel){
-            
-            Panel* parent = root->parent;
-            f32 delta = platform.mouse_delta_x;
-            f32 divisor = width/root->split_ratio;
-            if(root->split_type == PANEL_SPLIT_HORIZONTAL){
-                delta = platform.mouse_delta_y;
-                divisor = height/root->split_ratio;
-            }
-            parent->first->split_ratio += delta/divisor;
-            clampf(&parent->first->split_ratio, 0.0f, 1.0f);
-            
-            parent->second->split_ratio = 1.0f - parent->first->split_ratio;
-            clampf(&parent->second->split_ratio, 0.0f, 1.0f);
-        }
-        
-        
-        if(root->type == PANEL_PROPERTIES){
-            draw_property_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
-        }else {
-            draw_editor_panel(root, rect_border(v4f(posx, posy, width, height), PANEL_BORDER));
-        }
-    }
-}
-
-
-internal void
-draw_splash_screen(Bitmap splash){
-    if(!ui_state.show_splash_screen) return;
-    auto id = gen_unique_id("splash screen");
-    f32 ar = 3.79f;
-    f32 size = 150;
-    f32 x = platform.width/2.0f - size*ar/2.0f;
-    f32 y  =  platform.height/2.0f - size/2.0f;
-    f32 width =  size*2;
-    f32 height = size;
-    v4f bbox = rect_border(v4f(x, y, width, height), 0.0f);
-    push_rectangle(bbox, 10,  theme.background.packed);
-    push_rectangle_textured(platform.width/2.0f, 
-                            platform.height/2.0f, 50*ar, 50, 10, splash);
-}
-
-// NOTE(Oliver): send clip ranges as uniforms to frag shaders
-// then just clip them by discarding fragments

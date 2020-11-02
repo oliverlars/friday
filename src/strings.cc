@@ -93,3 +93,70 @@ string_from_cstr(char* string){
     result.length = strlen(string);
     return result;
 }
+
+
+internal void
+advance_lexer(Lexer* l){
+    l->pos++;
+}
+
+#define is_newline(x) ((x) == '\n' || (x) == '\r')
+#define is_whitespace(x) ((x) == ' ' || (x) == '\t' || (x) == '\v' || (x) == '\f' || is_newline(x))
+#define is_digit(x) ((x) <= '9' && (x) >= '0')
+#define is_upper_hex(x) (is_digit(x) || ((x) <= 'F' && (x) >= 'A'))
+#define is_lower_hex(x) (is_digit(x) || ((x) <= 'f' && (x) >= 'a'))
+#define is_hex(x) (is_upper(x)  || is_lower_hex(x))
+#define is_lower_alpha(x) ((x) <= 'z' && (x) >= 'a')
+#define is_upper_alpha(x) ((x) <= 'Z' && (x) >= 'A')
+#define is_alpha(x) ((is_lower_alpha(x) || is_upper_alpha(x)))
+
+internal void
+gobble_whitespace(Lexer* l){
+    while(is_whitespace(*l->pos)){
+        advance_lexer(l);
+    }
+}
+
+internal String8
+read_token(Lexer* l){
+    gobble_whitespace(l);
+    
+    char c = *l->pos;
+    String8 token = {};
+    token.text = l->pos;
+    token.length = 1;
+    advance_lexer(l);
+    switch(c){
+        case '\0':{}break;
+        case ':':{} break;
+        case ',':{} break;
+        case '=':{} break;
+        case '\"':{
+            while(*l->pos != '\"'){
+                advance_lexer(l);
+            }
+            token.text++;
+            token.length = l->pos - token.text;
+            advance_lexer(l);
+        } break;
+        
+        default:{
+            if(is_alpha(c)){
+                while(is_alpha(*l->pos)){advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }else if(is_digit(c)){
+                while(is_digit(*l->pos)){ advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }else if(c == '-'){
+                while(is_digit(*l->pos)){ advance_lexer(l); }
+                token.length = l->pos - token.text;
+            }
+        }break;
+    }
+    return token;
+}
+
+internal void
+expect_token(Lexer* l, char* string){
+    assert(string_eq(read_token(l), string));
+}

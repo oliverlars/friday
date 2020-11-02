@@ -462,6 +462,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         
         {
             RECT client_rect;
+            GetClientRect(hwnd, &client_rect);
             global_platform.window_size.x = client_rect.right - client_rect.left;
             global_platform.window_size.y = client_rect.bottom - client_rect.top;
         }

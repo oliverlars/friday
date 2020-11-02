@@ -38,7 +38,7 @@ HOT_UNLOAD {
 UPDATE {
     opengl_start_frame();
     {
-        push_rectangle(0, 0, 40, 40, 10, 0xFF0000FF);
+        push_rectangle(30, 50, 400, 400, 1, 0xFF0000FF);
     }
     opengl_end_frame();
     platform->refresh_screen();

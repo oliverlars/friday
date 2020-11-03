@@ -1,140 +1,77 @@
-typedef u64 UI_ID;
+global UI_State* ui_state = 0;
 
+internal b32
+has_left_clicked(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_PRESS && event->mouse_button == MOUSE_BUTTON_LEFT){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
 
+internal b32
+has_left_clicked(){
+    Platform_Event* event = 0;
+    b32 result = has_left_clicked(&event);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
 
+internal b32
+has_right_clicked(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_PRESS && event->mouse_button == MOUSE_BUTTON_RIGHT){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
 
-struct Theme {
-    Colour background;
-    Colour panel;
-    
-    Colour tab;
-    Colour tab_pressed;
-    
-    Colour icon;
-    
-    Colour button_highlight;
-    
-    Colour menu;
-    
-    Colour text;
-    
-    Colour text_comment;
-    Colour text_function;
-    Colour text_type;
-    Colour text_literal;
-    Colour text_misc;
-    
-    Colour cursor;
-    
-    Colour error;
-    
-    Colour view_button;
-};
-
-global Theme theme;
+internal b32
+has_right_clicked(){
+    Platform_Event* event = 0;
+    b32 result = has_right_clicked(&event);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
 
 internal void
 load_theme_ayu(){
     
-    theme.background.packed = 0x070707ff;
-    theme.panel.packed = 0x161925ff;
-    theme.menu.packed = 0x0D1012ff;
-    theme.text.packed = 0xE7E7E7ff;
-    theme.text_comment.packed = 0xffc2d94d;
-    theme.text_literal.packed = 0x31A231ff;
-    theme.text_function.packed = 0x21AFD4ff;
-    theme.text_type.packed = 0xDC593Fff;
-    theme.text_misc.packed = 0x646464ff;
-    theme.cursor.packed = 0xe08c17ff;
-    theme.error.packed = 0xffcc3333;
+    ui_state->theme.background.packed = 0x070707ff;
+    ui_state->theme.panel.packed = 0x161925ff;
+    ui_state->theme.menu.packed = 0x0D1012ff;
+    ui_state->theme.text.packed = 0xE7E7E7ff;
+    ui_state->theme.text_comment.packed = 0xffc2d94d;
+    ui_state->theme.text_literal.packed = 0x31A231ff;
+    ui_state->theme.text_function.packed = 0x21AFD4ff;
+    ui_state->theme.text_type.packed = 0xDC593Fff;
+    ui_state->theme.text_misc.packed = 0x646464ff;
+    ui_state->theme.cursor.packed = 0xe08c17ff;
+    ui_state->theme.error.packed = 0xffcc3333;
     
-    theme.view_button.packed = 0x0D1012ff;
-    theme.button_highlight.packed = 0x292D3Dff;
+    ui_state->theme.view_button.packed = 0x0D1012ff;
+    ui_state->theme.button_highlight.packed = 0x292D3Dff;
     
 }
-
-struct Closure {
-    u8* parameters;
-    void(*callback)(u8* parameters);
-};
-
-enum Click_Type {
-    CLICK_LEFT,
-    CLICK_RIGHT,
-    CLICK_DRAG,
-    CLICK_COUNT, 
-};
-
-struct Widget {
-    f32 x, y;
-    f32 width, height;
-    UI_ID id;
-    Widget* next;
-    Widget* last;
-    
-    Click_Type click_type;
-    
-    Closure closures[CLICK_COUNT];
-    
-    b32* clicked;
-};
-
-struct Panel;
-
-global struct {
-    Widget* widgets = nullptr;
-    Widget* widgets_tail = nullptr;
-    UI_ID hover_id;
-    UI_ID clicked_id;
-    UI_ID right_clicked_id;
-    UI_ID drag_id;
-    UI_ID menu_id;
-    
-    
-    Arena frame_arena;
-    Arena parameter_arena;
-    
-    f32 x_start;
-    f32 y_start;
-    f32 x_offset;
-    f32 y_offset;
-    
-    bool menu_open;
-    f32 menu_x;
-    f32 menu_y;
-    
-    Panel* active_panel;
-    
-    Panel* resize_panel;
-    bool panel_is_resizing;
-    
-    bool show_splash_screen;
-} ui_state;
-
-struct Arg_Type {
-    u8* arg;
-    u64 size;
-};
-
-Arg_Type
-make_arg_type(u8* arg, int size){
-    Arg_Type result;
-    result.arg = arg;
-    result.size = size;
-    return result;
-}
-
-#define MAX_PARAM_SIZE 512
-
-#define arg(x) make_arg_type((unsigned char*)&x, sizeof(x))
-#define get_arg(params, type) *((type*)params); params += sizeof(type)
 
 
 internal Closure 
 make_closure(void(*callback)(unsigned char* parameters), int num, ...) {
     
     Closure closure;
-    closure.parameters = (u8*)arena_allocate(&ui_state.parameter_arena, MAX_PARAM_SIZE);
+    closure.parameters = (u8*)arena_allocate(&ui_state->parameter_arena, MAX_PARAM_SIZE);
     closure.callback = callback;
     va_list args;
     
@@ -207,81 +144,71 @@ gen_unique_id(void* data, int num_bytes){
 }
 
 internal Widget* 
-_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id, 
-             Closure closure, Click_Type click_type = CLICK_LEFT){
+push_widget(v4f rect, UI_ID id, 
+            Closure closure, Click_Type click_type = CLICK_LEFT){
     
-    auto widget = (Widget*)arena_allocate(&ui_state.frame_arena, sizeof(Widget));
-    widget->x = x;
-    widget->y = y;
-    widget->width = width;
-    widget->height = height;
+    auto widget = (Widget*)arena_allocate_zero(&renderer->frame_arena, sizeof(Widget));
+    widget->x = rect.x;
+    widget->y = rect.y;
+    widget->width = rect.width;
+    widget->height = rect.height;
     widget->id = id;
     widget->next = nullptr;
     widget->closures[click_type] = closure;
     widget->clicked = nullptr;
     widget->click_type = click_type;
     
-    if(!ui_state.widgets){
-        ui_state.widgets = widget;
-        ui_state.widgets_tail = ui_state.widgets;
+    if(!ui_state->widgets){
+        ui_state->widgets = widget;
+        ui_state->widgets_tail = ui_state->widgets;
     }else{
-        ui_state.widgets_tail->next = widget;
-        ui_state.widgets_tail = ui_state.widgets_tail->next;
+        ui_state->widgets_tail->next = widget;
+        ui_state->widgets_tail = ui_state->widgets_tail->next;
     }
     return widget;
 }
 
 
-internal Widget* 
-ui_push_widget(f32 x, f32 y, f32 width, f32 height, UI_ID id,
-               Closure closure, Click_Type click_type = CLICK_LEFT){
-    
-    return _push_widget(x, y, width, height, id, closure, click_type);
-}
-
 #define PANEL_MARGIN_X 60
 #define PANEL_MARGIN_Y 5
 
-internal inline void push_clip_range_begin(f32 x, f32 y, f32 width, f32 height);
-internal inline void push_clip_range_end();
-
 internal void
 ui_begin_panel(f32 x, f32 y, f32 width, f32 height){
-    ui_state.x_start = x + PANEL_MARGIN_X;
-    ui_state.y_start = height - (y + PANEL_MARGIN_Y);
-    ui_state.x_offset = 0;
-    ui_state.y_offset = 0;
-    push_clip_range_begin(x,y, width, height);
+    ui_state->x_start = x + PANEL_MARGIN_X;
+    ui_state->y_start = height - (y + PANEL_MARGIN_Y);
+    ui_state->x_offset = 0;
+    ui_state->y_offset = 0;
+    push_clip_range_begin(v4f(x,y, width, height));
 }
 
 internal void
 ui_end_panel(){
-    ui_state.x_start = 0;
-    ui_state.y_start = 0;
-    ui_state.x_offset = 0;
-    ui_state.y_offset = 0;
+    ui_state->x_start = 0;
+    ui_state->y_start = 0;
+    ui_state->x_offset = 0;
+    ui_state->y_offset = 0;
     push_clip_range_end();
 }
 
 internal f32
 ui_get_x(){
-    return ui_state.x_start + ui_state.x_offset;
+    return ui_state->x_start + ui_state->x_offset;
 }
 
 internal f32
 ui_get_y(){
-    return ui_state.y_start + ui_state.y_offset;
+    return ui_state->y_start + ui_state->y_offset;
 }
 
 internal void
 ui_new_line(){
-    ui_state.x_offset = 0;
-    ui_state.y_offset -= 60.0f;
+    ui_state->x_offset = 0;
+    ui_state->y_offset -= 60.0f;
 }
 
 
 internal void
-process_widgets_and_handle_events(){
+ui_process_widgets_and_handle_events(){
     // TODO(Oliver): this should handle more than just events
     // make it also handle the drawing and clipping
     // would solve a few issues i have
@@ -290,44 +217,36 @@ process_widgets_and_handle_events(){
     
     bool hovered = false;
     
-    for(Widget* widget = ui_state.widgets; widget; widget = widget->next){
-        if(is_mouse_in_rect(widget->x, widget->y, widget->width, widget->height)){
+    for(Widget* widget = ui_state->widgets; widget != ui_state->widgets_tail; widget = widget->next){
+        if(is_in_rect(platform->mouse_position,
+                      v4f(widget->x, widget->y, widget->width, widget->height))){
             hovered = true;
-            ui_state.hover_id = widget->id;
+            ui_state->hover_id = widget->id;
             
             active_hover = widget;
-            if(platform.mouse_left_clicked){
+            if(has_left_clicked()){
                 if(widget->clicked){
                     *widget->clicked  = !*widget->clicked;
                 }
-                if(ui_state.clicked_id == widget->id){
-                    ui_state.clicked_id = HASH_INITIAL;
+                if(ui_state->clicked_id == widget->id){
+                    ui_state->clicked_id = HASH_INITIAL;
                 }else{
                     active = widget;
-                    ui_state.clicked_id = widget->id;
+                    ui_state->clicked_id = widget->id;
                 }
-            }else if(platform.mouse_right_down){
-                if(ui_state.right_clicked_id == widget->id){
-                    ui_state.right_clicked_id = HASH_INITIAL;
+            }else if(has_right_clicked()){
+                if(ui_state->right_clicked_id == widget->id){
+                    ui_state->right_clicked_id = HASH_INITIAL;
                 }else {
                     //active = widget;
-                    ui_state.right_clicked_id = widget->id;
-                }
-            }
-            
-            if(platform.mouse_drag){
-                if(ui_state.drag_id == widget->id){
-                    ui_state.drag_id = HASH_INITIAL;
-                }else {
-                    active = widget;
-                    ui_state.drag_id = widget->id;
+                    ui_state->right_clicked_id = widget->id;
                 }
             }
             
         }
     }
     if(!hovered){
-        ui_state.hover_id = HASH_INITIAL;
+        ui_state->hover_id = HASH_INITIAL;
     }
     if(active){
         auto click_type = active->click_type;
@@ -339,34 +258,6 @@ process_widgets_and_handle_events(){
     
 }
 
-
-enum Panel_Split_Type {
-    PANEL_SPLIT_VERTICAL,
-    PANEL_SPLIT_HORIZONTAL,
-};
-
-enum Panel_Type {
-    PANEL_EDITOR,
-    PANEL_PROPERTIES,
-};
-
-struct Presenter;
-internal void present(Presenter* presenter);
-internal void reset_presenter(Presenter* presenter);
-
-struct Panel {
-    Panel_Split_Type split_type;
-    Panel_Type type;
-    f32 split_ratio;
-    Panel* first; 
-    Panel* second;
-    Panel* parent;
-    Presenter* presenter;
-};
-
-internal void push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour);
-internal void push_rectangle(v4f rect, f32 radius, u32 colour);
-
 #define PANEL_BORDER 5
 
 static bool panel_hover = 0;
@@ -375,26 +266,14 @@ Panel* active_panel = nullptr;
 static f32 old_width = 0;
 static f32 split_ratio = 0;
 
-internal bool
-is_mouse_dragged(f32 x, f32 y, f32 width, f32 height){
-    return platform.mouse_drag && platform.mouse_drag_x >= x && platform.mouse_drag_x <= x + width &&
-        platform.mouse_drag_y >= y && platform.mouse_drag_y <= y + height;
-    
-}
-
-internal bool
-is_mouse_dragged(v4f rect){
-    return is_mouse_dragged(rect.x, rect.y, rect.width, rect.height);
-}
-
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
     if(!panel) return;
     
     assert(!panel->first && !panel->second);
     
-    panel->first = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
-    panel->second = (Panel*)arena_allocate(&platform.permanent_arena, sizeof(Panel));
+    panel->first = (Panel*)arena_allocate(&platform->permanent_arena, sizeof(Panel));
+    panel->second = (Panel*)arena_allocate(&platform->permanent_arena, sizeof(Panel));
     
     panel->first->split_ratio = split_ratio;
     panel->second->split_ratio = 1.0f- split_ratio;
@@ -417,27 +296,12 @@ delete_split(Panel* panel){
     panel->parent->second = nullptr;
 }
 
-struct Animation_State {
-    UI_ID id = U64Max;
-    f32 x_offset = 0;
-    f32 y_offset = 0;
-    f32 x_scale = 0;
-    f32 y_scale = 0;
-    
-    
-    u64 last_updated = 0;
-    
-    v4f source_rect;
-    v4f target_rect;
-    v4f rect;
-};
-
 #define ANIM_STATE_SIZE 1024
 global Animation_State animation_state[ANIM_STATE_SIZE];
 
 internal Animation_State*
 init_animation_state(UI_ID id){
-    u64 tick = platform.tick;
+    u64 tick = platform->get_time();
     int index = 0;
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
         if(animation_state[i].last_updated < tick){
@@ -448,7 +312,7 @@ init_animation_state(UI_ID id){
     Animation_State state = {};
     animation_state[index] = state;
     animation_state[index].id = id;
-    animation_state[index].last_updated = platform.tick;
+    animation_state[index].last_updated = platform->get_time();
     animation_state[index].rect = v4f(0,0,0,0);
     animation_state[index].source_rect = v4f(0,0,0,0);
     animation_state[index].target_rect = v4f(0,0,0,0);
@@ -460,7 +324,7 @@ get_animation_state(UI_ID id){
     for(int i = 0; i < ANIM_STATE_SIZE; i++){
         
         if(animation_state[i].id == id && 
-           (platform.tick - animation_state[i].last_updated  < 2)){
+           (platform->get_time() - animation_state[i].last_updated  < 2)){
             return &animation_state[i];
         }
     } 
@@ -476,7 +340,7 @@ update_animation_state(Animation_State* anim_state, f32 x_offset, f32 y_offset, 
     anim_state->x_scale += x_scale;
     anim_state->y_scale += y_scale;
     
-    anim_state->last_updated = platform.tick;
+    anim_state->last_updated = platform->get_time();
 }
 
 internal void
@@ -484,7 +348,7 @@ unanimate(Animation_State* anim_state){
     if(!anim_state) return;
     lerp_rects(&anim_state->rect, anim_state->source_rect, 0.2f);
     
-    anim_state->last_updated = platform.tick;
+    anim_state->last_updated = platform->get_time();
 }
 
 internal void
@@ -492,5 +356,26 @@ animate(Animation_State* anim_state){
     if(!anim_state) return; 
     lerp_rects(&anim_state->rect, anim_state->target_rect, 0.2f);
     
-    anim_state->last_updated = platform.tick;
+    anim_state->last_updated = platform->get_time();
+}
+
+
+internal UI_ID
+button(v2f pos, char* text, Closure closure){
+    auto id = gen_unique_id(text);
+    
+    v4f bbox = get_text_bbox(pos.x, pos.y, text);
+    
+    auto widget = push_widget(bbox, id, closure);
+    push_rectangle(bbox, 10, ui_state->theme.button_highlight.packed);
+    
+    if(id == ui_state->clicked_id){
+        push_string(pos, text, ui_state->theme.text.packed);
+    }else if(id == ui_state->hover_id){
+        push_string(pos, text, ui_state->theme.text.packed);
+    }else{
+        push_string(pos, text, ui_state->theme.text.packed);
+    }
+    
+    return id;
 }

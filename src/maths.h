@@ -1,4 +1,15 @@
 
+// NOTE(Oliver): 0xAABBGGRR 
+union Colour {
+    u32 packed;
+    struct {
+        u8 a;
+        u8 b;
+        u8 g;
+        u8 r;
+    };
+};
+
 union mat4x4 {
     float e[16];
     struct {

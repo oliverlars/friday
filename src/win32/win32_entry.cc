@@ -108,7 +108,8 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         platform_push_event(platform_mouse_move(global_platform.mouse_position,
                                                 v2f(global_platform.mouse_position.x - last_mouse.x,
                                                     global_platform.mouse_position.y - last_mouse.y)));
-        
+        log("%f %f", global_platform.mouse_position.x,
+            global_platform.mouse_position.y);
         if(!mouse_hover_active){
             mouse_hover_active = 1;
             TRACKMOUSEEVENT track_mouse_event = {};
@@ -496,7 +497,11 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         
         win32_code_update(&win32_app_code);
         
+        win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
+        
     }
+    
+    ShowWindow(hwnd, SW_HIDE);
     
     win32_code_unload(&win32_app_code);
     win32_cleanup_opengl(&global_device_context);

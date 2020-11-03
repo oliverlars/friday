@@ -75,6 +75,8 @@ struct Platform {
     Arena permanent_arena;
     Arena temporary_arena;
     
+    void* globals;
+    
     String8 executable_folder_absolute_path;
     String8 executable_absolute_path;
     String8 working_directory_path;

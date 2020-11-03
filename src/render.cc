@@ -151,7 +151,7 @@ load_sdf_font(char* filename){
 
 
 internal int
-get_font_line_height(f32 font_scale = 1.0f) {
+get_font_line_height( f32 font_scale = 1.0f) {
     font_scale *= renderer->font.scale;
     return renderer->font.line_height*font_scale;
 }
@@ -166,7 +166,7 @@ make_command(Command_Type type){
 }
 
 internal void
-insert_command(Command* next_command){
+insert_command( Command* next_command){
     
     if(!renderer->head){
         renderer->head = next_command;
@@ -177,101 +177,13 @@ insert_command(Command* next_command){
     }
 }
 
-internal inline GLuint
-get_vao_rectangle() {
-    return renderer->vaos[COMMAND_RECTANGLE];
-}
-
-internal inline GLuint
-get_buffer_rectangle() {
-    return renderer->buffers[COMMAND_RECTANGLE];
-}
-
-internal inline GLuint
-get_program_rectangle() {
-    return renderer->programs[COMMAND_RECTANGLE];
-}
-
-internal inline GLuint
-get_vao_glyph() {
-    return renderer->vaos[COMMAND_GLYPH];
-}
-
-internal inline GLuint
-get_buffer_glyph() {
-    return renderer->buffers[COMMAND_GLYPH];
-}
-
-internal inline GLuint
-get_program_glyph() {
-    return renderer->programs[COMMAND_GLYPH];
-}
-
-internal inline GLuint
-get_vao_rectangle_outline() {
-    return renderer->vaos[COMMAND_RECTANGLE_OUTLINE];
-}
-
-internal inline GLuint
-get_buffer_rectangle_outline() {
-    return renderer->buffers[COMMAND_RECTANGLE_OUTLINE];
-}
-
-internal inline GLuint
-get_program_rectangle_outline() {
-    return renderer->programs[COMMAND_RECTANGLE_OUTLINE];
-}
-
-internal inline GLuint
-get_vao_circle() {
-    return renderer->vaos[COMMAND_CIRCLE];
-}
-
-internal inline GLuint
-get_buffer_circle() {
-    return renderer->buffers[COMMAND_CIRCLE];
-}
-
-internal inline GLuint
-get_program_circle() {
-    return renderer->programs[COMMAND_CIRCLE];
-}
-
-internal inline GLuint
-get_vao_rectangle_textured() {
-    return renderer->vaos[COMMAND_RECTANGLE_TEXTURED];
-}
-
-internal inline GLuint
-get_buffer_rectangle_textured() {
-    return renderer->buffers[COMMAND_RECTANGLE_TEXTURED];
-}
-
-internal inline GLuint
-get_program_rectangle_textured() {
-    return renderer->programs[COMMAND_RECTANGLE_TEXTURED];
-}
-
-internal inline void
-push_rectangle(f32 x, f32 y, f32 width, f32 height, f32 radius, u32 colour){
-    
-    auto rectangle = make_command(COMMAND_RECTANGLE);
-    rectangle->rectangle.x = x;
-    rectangle->rectangle.y = y;
-    rectangle->rectangle.width = width;
-    rectangle->rectangle.height = height;
-    rectangle->rectangle.corner_radius = radius;
-    rectangle->colour.packed = colour;
-    insert_command(rectangle);
-}
-
-internal inline void
-push_clip_range_begin(f32 x, f32 y, f32 width, f32 height){
+internal void
+push_clip_range_begin( v4f rect){
     auto clip_range = make_command(COMMAND_CLIP_RANGE_BEGIN);
-    clip_range->clip_range.x = x;
-    clip_range->clip_range.y = y;
-    clip_range->clip_range.width = width;
-    clip_range->clip_range.height = height;
+    clip_range->clip_range.x = rect.x;
+    clip_range->clip_range.y = rect.y;
+    clip_range->clip_range.width = rect.width;
+    clip_range->clip_range.height = rect.height;
     insert_command(clip_range);
 }
 
@@ -282,7 +194,7 @@ push_clip_range_end(){
 }
 
 internal inline void
-push_rectangle(v4f rect, f32 radius, u32 colour){
+push_rectangle( v4f rect, f32 radius, u32 colour){
     
     auto rectangle = make_command(COMMAND_RECTANGLE);
     rectangle->rectangle.x = rect.x;
@@ -295,7 +207,7 @@ push_rectangle(v4f rect, f32 radius, u32 colour){
 }
 
 internal inline void
-push_triangle(v2f pos, f32 size, u32 colour){
+push_triangle( v2f pos, f32 size, u32 colour){
     
     auto triangle = make_command(COMMAND_TRIANGLE);
     triangle->triangle.x = pos.x;
@@ -306,13 +218,13 @@ push_triangle(v2f pos, f32 size, u32 colour){
 }
 
 internal inline void
-push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
+push_rectangle_outline( v4f rect, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto rectangle = make_command(COMMAND_RECTANGLE_OUTLINE);
-    rectangle->rectangle_outline.x = x;
-    rectangle->rectangle_outline.y = y;
-    rectangle->rectangle_outline.width = width;
-    rectangle->rectangle_outline.height = height;
+    rectangle->rectangle_outline.x = rect.x;
+    rectangle->rectangle_outline.y = rect.y;
+    rectangle->rectangle_outline.width = rect.width;
+    rectangle->rectangle_outline.height = rect.height;
     rectangle->rectangle_outline.border_size = border;
     rectangle->rectangle_outline.corner_radius = radius;
     rectangle->colour.packed = colour;
@@ -320,11 +232,11 @@ push_rectangle_outline(f32 x, f32 y, f32 width, f32 height, f32 border, f32 radi
 }
 
 internal inline void
-push_circle(f32 x, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
+push_circle( v2f pos, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
     
     auto circle = make_command(COMMAND_CIRCLE);
-    circle->circle.x = x;
-    circle->circle.y = y;
+    circle->circle.x = pos.x;
+    circle->circle.y = pos.y;
     circle->circle.radius = radius;
     circle->colour.packed = colour;
     insert_command(circle);
@@ -332,7 +244,7 @@ push_circle(f32 x, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
 
 
 internal void
-push_glyph(v4f positions, v4f uvs, u32 colour){
+push_glyph( v4f positions, v4f uvs, u32 colour){
     
     f32 x0, x1, y0, y1, s0, s1, t0, t1;
     x0 = positions.x0;
@@ -357,50 +269,27 @@ push_glyph(v4f positions, v4f uvs, u32 colour){
 }
 
 internal inline void
-push_rectangle_textured(f32 x, f32 y, f32 width, f32 height, f32 radius, Bitmap bitmap){
+push_rectangle_textured( v4f rect, f32 radius, Bitmap bitmap){
     
     auto rectangle = make_command(COMMAND_RECTANGLE_TEXTURED);
-    rectangle->rectangle_textured.x = x;
-    rectangle->rectangle_textured.y = y;
-    rectangle->rectangle_textured.width = width;
-    rectangle->rectangle_textured.height = height;
+    rectangle->rectangle_textured.x = rect.x;
+    rectangle->rectangle_textured.y = rect.y;
+    rectangle->rectangle_textured.width = rect.width;
+    rectangle->rectangle_textured.height = rect.height;
     rectangle->rectangle_textured.corner_radius = radius;
     rectangle->rectangle_textured.u = 0;
     rectangle->rectangle_textured.v = 0;
-    rectangle->rectangle_textured.u_width = width;
-    rectangle->rectangle_textured.v_height = height;
+    rectangle->rectangle_textured.u_width = rect.width;
+    rectangle->rectangle_textured.v_height = rect.height;
     rectangle->rectangle_textured.bitmap = bitmap;
     insert_command(rectangle);
 }
 
 internal void
-push_string(f32 x, f32 y, char* text, u32 colour, f32 font_scale = 1.0f){
+push_string8( v2f pos, String8 string, u32 colour, f32 font_scale = 1.0f){
     
-    y = -y;
-    y -= get_font_line_height(font_scale);
-    font_scale *= renderer->font.scale;
-    // NOTE(Oliver): '#' is used for ID purposes
-    while(*text && *text != '#'){
-        if(*text >= 32 && *text < 128){
-            auto font = renderer->font;
-            auto c  = font.characters[*text];
-            v4f positions = v4f(x + c.x_offset*font_scale, 
-                                y + c.y_offset*font_scale, 
-                                x + c.x_offset*font_scale + c.width*font_scale,
-                                y + c.y_offset*font_scale + c.height*font_scale);
-            v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
-            push_glyph(positions, uvs, colour);
-            x += (c.x_advance-font.padding.x)*font_scale;
-        }
-        text++;
-    }
-}
-
-internal void
-push_string8(f32 x, f32 y, String8 string, u32 colour, f32 font_scale = 1.0f){
-    
-    y = -y;
-    y -= get_font_line_height(font_scale);
+    pos.y = -pos.y;
+    pos.y -= get_font_line_height(font_scale);
     font_scale *= renderer->font.scale;
     
     // NOTE(Oliver): '#' is used for ID purposes
@@ -411,15 +300,20 @@ push_string8(f32 x, f32 y, String8 string, u32 colour, f32 font_scale = 1.0f){
         if(text >= 32 && text < 128){
             auto font = renderer->font;
             auto c  = font.characters[text];
-            v4f positions = v4f(x + c.x_offset*font_scale, 
-                                y + c.y_offset*font_scale, 
-                                x + c.x_offset*font_scale + c.width*font_scale,
-                                y + c.y_offset*font_scale + c.height*font_scale);
+            v4f positions = v4f(pos.x + c.x_offset*font_scale, 
+                                pos.y + c.y_offset*font_scale, 
+                                pos.x + c.x_offset*font_scale + c.width*font_scale,
+                                pos.y + c.y_offset*font_scale + c.height*font_scale);
             v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
             push_glyph(positions, uvs, colour);
-            x += (c.x_advance - font.padding.x)*font_scale;
+            pos.x += (c.x_advance - font.padding.x)*font_scale;
         }
     }
+}
+
+internal void
+push_string(v2f pos, char* text, u32 colour, f32 font_scale = 1.0f){
+    push_string8(pos, string_from_cstr(text), colour, font_scale);
 }
 
 internal f32
@@ -596,10 +490,10 @@ init_opengl_renderer(){
     
     {
         glGenVertexArrays(1, &renderer->vaos[COMMAND_CIRCLE]);
-        glBindVertexArray(get_vao_circle());
+        glBindVertexArray(renderer->vaos[COMMAND_CIRCLE]);
         
         glGenBuffers(1, &renderer->buffers[COMMAND_CIRCLE]);
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
+        glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_CIRCLE]);
         
         // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
         glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_CIRCLE, 0, GL_DYNAMIC_DRAW);
@@ -624,10 +518,10 @@ init_opengl_renderer(){
     
     {
         glGenVertexArrays(1, &renderer->vaos[COMMAND_GLYPH]);
-        glBindVertexArray(get_vao_glyph());
+        glBindVertexArray(renderer->vaos[COMMAND_GLYPH]);
         
         glGenBuffers(1, &renderer->buffers[COMMAND_GLYPH]);
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
+        glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_GLYPH]);
         
         // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
         glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_GLYPH, 0, GL_DYNAMIC_DRAW);
@@ -662,10 +556,10 @@ init_opengl_renderer(){
     
     {
         glGenVertexArrays(1, &renderer->vaos[COMMAND_RECTANGLE_TEXTURED]);
-        glBindVertexArray(get_vao_rectangle_textured());
+        glBindVertexArray(renderer->vaos[COMMAND_RECTANGLE_TEXTURED]);
         
         glGenBuffers(1, &renderer->buffers[COMMAND_RECTANGLE_TEXTURED]);
-        glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_textured());
+        glBindBuffer(GL_ARRAY_BUFFER, renderer->vaos[COMMAND_RECTANGLE_TEXTURED]);
         
         // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
         glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED, 0, GL_DYNAMIC_DRAW);
@@ -1350,18 +1244,18 @@ process_and_draw_commands(){
                 
                 // NOTE(Oliver): draw circle data
                 {
-                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_circle());
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_CIRCLE]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
                                     MAX_DRAW*BYTES_PER_CIRCLE,
                                     circles);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
-                    glUseProgram(get_program_circle());
+                    glUseProgram(renderer->programs[COMMAND_CIRCLE]);
                     
                     f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer->resolution_uniforms[COMMAND_CIRCLE], 1, resolution);
                     
-                    glBindVertexArray(get_vao_circle());
+                    glBindVertexArray(renderer->vaos[COMMAND_CIRCLE]);
                     glDrawArrays(GL_TRIANGLES, 0, num_verts);
                     glUseProgram(0);
                 }
@@ -1398,13 +1292,13 @@ process_and_draw_commands(){
                     }
                 }
                 {
-                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_glyph());
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_GLYPH]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
                                     MAX_DRAW*BYTES_PER_GLYPH,
                                     glyphs);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
-                    glUseProgram(get_program_glyph());
+                    glUseProgram(renderer->programs[COMMAND_GLYPH]);
                     
                     f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer->resolution_uniforms[COMMAND_GLYPH], 1, resolution);
@@ -1419,7 +1313,7 @@ process_and_draw_commands(){
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                     
-                    glBindVertexArray(get_vao_glyph());
+                    glBindVertexArray(renderer->vaos[COMMAND_GLYPH]);
                     glDrawArrays(GL_TRIANGLES, 0, num_verts);
                     glUseProgram(0);
                 }
@@ -1442,13 +1336,13 @@ process_and_draw_commands(){
                 }
                 
                 {
-                    glBindBuffer(GL_ARRAY_BUFFER, get_buffer_rectangle_textured());
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_RECTANGLE_TEXTURED]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
                                     MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED,
                                     rectangles_textured);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
-                    glUseProgram(get_program_rectangle_textured());
+                    glUseProgram(renderer->programs[COMMAND_RECTANGLE_TEXTURED]);
                     
                     f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer->resolution_uniforms[COMMAND_RECTANGLE_TEXTURED], 1, resolution);
@@ -1461,7 +1355,7 @@ process_and_draw_commands(){
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                     
-                    glBindVertexArray(get_vao_rectangle_textured());
+                    glBindVertexArray(renderer->vaos[COMMAND_RECTANGLE_TEXTURED]);
                     glDrawArrays(GL_TRIANGLES, 0, 6);
                     glUseProgram(0);
                 }

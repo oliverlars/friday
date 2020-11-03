@@ -115,7 +115,7 @@ struct Command {
 
 const int MAX_DRAW = 8192;
 
-struct Renderer {
+struct Renderer_State {
     
     GLuint vaos[COMMAND_COUNT];
     GLuint buffers[COMMAND_COUNT];
@@ -138,4 +138,4 @@ struct Renderer {
     Arena frame_arena;
 };
 
-global Renderer* renderer = 0;
+global Renderer_State* renderer = 0;

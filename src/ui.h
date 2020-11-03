@@ -43,8 +43,7 @@ enum Click_Type {
 };
 
 struct Widget {
-    f32 x, y;
-    f32 width, height;
+    v4f rect;
     UI_ID id;
     Widget* next;
     Widget* last;

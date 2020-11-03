@@ -254,10 +254,6 @@ is_in_rect(v2f pos, v4f rect){
 }
 
 internal inline bool
-is_in_rect_border(v4f rect, f32 thickness){
-}
-
-internal inline bool
 is_in_bottom_or_top_border(v2f pos, v4f rect, f32 thickness){
     bool top = is_in_rect(pos, v4f(rect.x, rect.y, rect.width, thickness));
     bool bottom = is_in_rect(pos, v4f(rect.x, rect.y+rect.height-thickness, rect.width, thickness));

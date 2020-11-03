@@ -29,6 +29,7 @@ initialise_globals(){
     globals = (Friday_Globals*)platform->globals;
     renderer = globals->renderer;
     ui_state = globals->ui;
+    
 }
 
 BEGIN_C_EXPORT
@@ -65,7 +66,15 @@ UPDATE {
     {
         push_rectangle(v4f(0 + sinf(platform->get_time())*20, 100, 100, 100),
                        10,  0xFFFF00FF);
+        
+        ui_begin();
+        
         button(v2f(300, 300), "button", {});
+        push_rectangle(v4f(platform->mouse_position.x,
+                           platform->mouse_position.y,
+                           50, 50),
+                       10, 0xFF00FFFF);
+        
         ui_process_widgets_and_handle_events();
     }
     opengl_end_frame();

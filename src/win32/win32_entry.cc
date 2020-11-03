@@ -61,7 +61,9 @@ win32_get_mouse_position(HWND window)
     GetCursorPos(&mouse);
     ScreenToClient(window, &mouse);
     result.x = (f32)(mouse.x);
-    result.y = (f32)(mouse.y);
+    RECT rect;
+    GetClientRect(window, &rect);
+    result.y = rect.bottom - (f32)mouse.y;
     return result;
 }
 

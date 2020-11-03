@@ -143,15 +143,17 @@ gen_unique_id(void* data, int num_bytes){
     return (UI_ID)result;
 }
 
+internal void
+ui_begin(){
+    ui_state->widgets = nullptr;
+}
+
 internal Widget* 
 push_widget(v4f rect, UI_ID id, 
             Closure closure, Click_Type click_type = CLICK_LEFT){
     
     auto widget = (Widget*)arena_allocate_zero(&renderer->frame_arena, sizeof(Widget));
-    widget->x = rect.x;
-    widget->y = rect.y;
-    widget->width = rect.width;
-    widget->height = rect.height;
+    widget->rect = rect;
     widget->id = id;
     widget->next = nullptr;
     widget->closures[click_type] = closure;
@@ -217,9 +219,8 @@ ui_process_widgets_and_handle_events(){
     
     bool hovered = false;
     
-    for(Widget* widget = ui_state->widgets; widget != ui_state->widgets_tail; widget = widget->next){
-        if(is_in_rect(platform->mouse_position,
-                      v4f(widget->x, widget->y, widget->width, widget->height))){
+    for(Widget* widget = ui_state->widgets; widget; widget = widget->next){
+        if(is_in_rect(platform->mouse_position, widget->rect)){
             hovered = true;
             ui_state->hover_id = widget->id;
             
@@ -367,11 +368,12 @@ button(v2f pos, char* text, Closure closure){
     v4f bbox = get_text_bbox(pos.x, pos.y, text);
     
     auto widget = push_widget(bbox, id, closure);
-    push_rectangle(bbox, 10, ui_state->theme.button_highlight.packed);
     
     if(id == ui_state->clicked_id){
         push_string(pos, text, ui_state->theme.text.packed);
+        push_rectangle(bbox, 10, ui_state->theme.button_highlight.packed);
     }else if(id == ui_state->hover_id){
+        push_rectangle(bbox, 10, ui_state->theme.button_highlight.packed);
         push_string(pos, text, ui_state->theme.text.packed);
     }else{
         push_string(pos, text, ui_state->theme.text.packed);

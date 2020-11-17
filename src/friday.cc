@@ -28,7 +28,7 @@ internal void
 initialise_globals(){
     globals = (Friday_Globals*)platform->globals;
     renderer = globals->renderer;
-    ui_state = globals->ui;
+    ui = globals->ui;
     
 }
 
@@ -49,12 +49,16 @@ PERMANENT_LOAD {
     init_opengl_renderer();
     init_shaders();
     load_theme_ayu();
+    
+    ui->widgets[0].arena = subdivide_arena(&platform->permanent_arena, 8192);
+    ui->widgets[1].arena = subdivide_arena(&platform->permanent_arena, 8192);
 }
 
 HOT_LOAD {
     platform = platform_;
     load_all_opengl_procs();
     initialise_globals();
+    load_theme_ayu();
 }
 
 HOT_UNLOAD {
@@ -64,19 +68,15 @@ HOT_UNLOAD {
 UPDATE {
     opengl_start_frame();
     {
-        push_rectangle(v4f(0 + sinf(platform->get_time())*20, 100, 100, 100),
-                       10,  0xFFFF00FF);
-        
-        ui_begin();
-        
-        button(v2f(300, 300), "button", {});
-        push_rectangle(v4f(platform->mouse_position.x,
-                           platform->mouse_position.y,
-                           50, 50),
-                       10, 0xFF00FFFF);
-        
-        ui_process_widgets_and_handle_events();
+        if(button("dog")){
+            push_string(v2f(10, 20), "asdfasdf", ui->theme.text);
+        }
+        ui_layout_and_render();
     }
+    ui->widget_frame = !ui->widget_frame;
+    arena_clear(&ui->widgets[ui->widget_frame].arena);
+    ui->widgets[ui->widget_frame].head = nullptr;
+    ui->widgets[ui->widget_frame].tail = nullptr;
     opengl_end_frame();
     platform->refresh_screen();
 }

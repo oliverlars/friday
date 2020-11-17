@@ -234,6 +234,16 @@ add_colours(Colour a, Colour b){
     return result;
 }
 
+internal v4f
+union_rects(v4f a, v4f b){
+    v4f result = {};
+    result.x = min(a.x, b.x);
+    result.y = min(a.x, b.x);
+    result.width = max(a.width, b.width);
+    result.height = max(a.height, b.height);
+    return result;
+}
+
 internal inline bool
 between(f32 value, f32 min, f32 max){
     return (value < max) && value > min;

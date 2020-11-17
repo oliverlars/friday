@@ -194,7 +194,7 @@ push_clip_range_end(){
 }
 
 internal inline void
-push_rectangle( v4f rect, f32 radius, u32 colour){
+push_rectangle( v4f rect, f32 radius, Colour colour){
     
     auto rectangle = make_command(COMMAND_RECTANGLE);
     rectangle->rectangle.x = rect.x;
@@ -202,23 +202,23 @@ push_rectangle( v4f rect, f32 radius, u32 colour){
     rectangle->rectangle.width = rect.width;
     rectangle->rectangle.height = rect.height;
     rectangle->rectangle.corner_radius = radius;
-    rectangle->colour.packed = colour;
+    rectangle->colour = colour;
     insert_command(rectangle);
 }
 
 internal inline void
-push_triangle( v2f pos, f32 size, u32 colour){
+push_triangle( v2f pos, f32 size, Colour colour){
     
     auto triangle = make_command(COMMAND_TRIANGLE);
     triangle->triangle.x = pos.x;
     triangle->triangle.y = pos.y;
     triangle->triangle.size = size;
-    triangle->colour.packed = colour;
+    triangle->colour = colour;
     insert_command(triangle);
 }
 
 internal inline void
-push_rectangle_outline( v4f rect, f32 border, f32 radius, u32 colour = 0xFF00FFFF){
+push_rectangle_outline( v4f rect, f32 border, f32 radius, Colour colour = {0xFF00FFFF}){
     
     auto rectangle = make_command(COMMAND_RECTANGLE_OUTLINE);
     rectangle->rectangle_outline.x = rect.x;
@@ -227,24 +227,24 @@ push_rectangle_outline( v4f rect, f32 border, f32 radius, u32 colour = 0xFF00FFF
     rectangle->rectangle_outline.height = rect.height;
     rectangle->rectangle_outline.border_size = border;
     rectangle->rectangle_outline.corner_radius = radius;
-    rectangle->colour.packed = colour;
+    rectangle->colour = colour;
     insert_command(rectangle);
 }
 
 internal inline void
-push_circle( v2f pos, f32 y, f32 radius, u32 colour = 0xFF00FFFF){
+push_circle( v2f pos, f32 y, f32 radius, Colour colour = {0xFF00FFFF}){
     
     auto circle = make_command(COMMAND_CIRCLE);
     circle->circle.x = pos.x;
     circle->circle.y = pos.y;
     circle->circle.radius = radius;
-    circle->colour.packed = colour;
+    circle->colour = colour;
     insert_command(circle);
 }
 
 
 internal void
-push_glyph( v4f positions, v4f uvs, u32 colour){
+push_glyph( v4f positions, v4f uvs, Colour colour){
     
     f32 x0, x1, y0, y1, s0, s1, t0, t1;
     x0 = positions.x0;
@@ -264,7 +264,7 @@ push_glyph( v4f positions, v4f uvs, u32 colour){
     glyph->glyph.v = t0;
     glyph->glyph.u_width = s1 - s0;
     glyph->glyph.v_height = t1 - t0;
-    glyph->colour.packed = colour;
+    glyph->colour = colour;
     insert_command(glyph);
 }
 
@@ -286,7 +286,7 @@ push_rectangle_textured( v4f rect, f32 radius, Bitmap bitmap){
 }
 
 internal void
-push_string8( v2f pos, String8 string, u32 colour, f32 font_scale = 1.0f){
+push_string( v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
     
     pos.y = -pos.y;
     pos.y -= get_font_line_height(font_scale);
@@ -312,8 +312,8 @@ push_string8( v2f pos, String8 string, u32 colour, f32 font_scale = 1.0f){
 }
 
 internal void
-push_string(v2f pos, char* text, u32 colour, f32 font_scale = 1.0f){
-    push_string8(pos, string_from_cstr(text), colour, font_scale);
+push_string(v2f pos, char* text, Colour colour, f32 font_scale = 1.0f){
+    push_string(pos, string_from_cstr(text), colour, font_scale);
 }
 
 internal f32
@@ -367,21 +367,20 @@ get_text_width_n(String8 string, int n, f32 font_scale = 1.0f){
 }
 
 internal v4f
-get_text_bbox(f32 x, f32 y, String8 string, f32 font_scale = 1.0f, f32 border = 5.0f){
+get_text_bbox(v2f pos, String8 string, f32 font_scale = 1.0f, f32 border = 5.0f){
     f32 width = get_text_width(string, font_scale) + border*2;
     f32 height = get_font_line_height(font_scale);
-    x -= border;
-    return v4f(x, y, width, height);
+    pos.x -= border;
+    return v4f(pos.x, pos.y, width, height);
 }
 
 internal v4f
-get_text_bbox(f32 x, f32 y, char* string, f32 font_scale = 1.0f, f32 border = 5.0f){
+get_text_bbox(v2f pos, char* string, f32 font_scale = 1.0f, f32 border = 5.0f){
     f32 width = get_text_width(string, font_scale) + border*2;
     f32 height = get_font_line_height(font_scale);
-    x -= border;
-    return v4f(x, y, width, height);
+    pos.x -= border;
+    return v4f(pos.x, pos.y, width, height);
 }
-
 
 internal void
 init_opengl_renderer(){
@@ -1100,10 +1099,10 @@ process_and_draw_commands(){
                         *attribs++ = rectangle->rectangle.width;
                         *attribs++ = rectangle->rectangle.height;
                         *attribs++ = rectangle->rectangle.corner_radius;
-                        *attribs++ = (rectangle->colour.a/255.0f);
-                        *attribs++ = (rectangle->colour.b/255.0f);
-                        *attribs++ = (rectangle->colour.g/255.0f);
                         *attribs++ = (rectangle->colour.r/255.0f);
+                        *attribs++ = (rectangle->colour.g/255.0f);
+                        *attribs++ = (rectangle->colour.b/255.0f);
+                        *attribs++ = (rectangle->colour.a/255.0f);
                         num_verts++;
                         
                     }

@@ -48,12 +48,7 @@ enum Command_Type {
 
 struct Command {
     Command_Type type;
-    union {
-        struct {
-            u8 r, g, b, a;
-        };
-        u32 packed;
-    } colour;
+    Colour colour;
     Command* previous = nullptr;
     Command* next = nullptr;
     

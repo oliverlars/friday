@@ -6,7 +6,6 @@ struct Arena {
     u64 commit_position;
 };
 
-
 struct Pool_Node {
     Pool_Node* next;
 };

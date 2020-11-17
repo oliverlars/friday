@@ -28,35 +28,6 @@ struct Theme {
     Colour view_button;
 };
 
-
-
-struct Closure {
-    u8* parameters;
-    void(*callback)(u8* parameters);
-};
-
-enum Click_Type {
-    CLICK_LEFT,
-    CLICK_RIGHT,
-    CLICK_DRAG,
-    CLICK_COUNT, 
-};
-
-struct Widget {
-    v4f rect;
-    UI_ID id;
-    Widget* next;
-    Widget* last;
-    
-    Click_Type click_type;
-    
-    Closure closures[CLICK_COUNT];
-    
-    b32* clicked;
-};
-
-
-
 enum Panel_Split_Type {
     PANEL_SPLIT_VERTICAL,
     PANEL_SPLIT_HORIZONTAL,
@@ -71,6 +42,11 @@ struct Presenter;
 internal void present(Presenter* presenter);
 internal void reset_presenter(Presenter* presenter);
 
+#define PANEL_MARGIN_X 60
+#define PANEL_MARGIN_Y 5
+
+#define PANEL_BORDER 5
+
 struct Panel {
     Panel_Split_Type split_type;
     Panel_Type type;
@@ -81,70 +57,70 @@ struct Panel {
     Presenter* presenter;
 };
 
-struct UI_State {
-    Widget* widgets = nullptr;
-    Widget* widgets_tail = nullptr;
-    UI_ID hover_id;
-    UI_ID clicked_id;
-    UI_ID right_clicked_id;
-    UI_ID drag_id;
-    UI_ID menu_id;
-    
-    
-    Arena frame_arena;
-    Arena parameter_arena;
-    
-    f32 x_start;
-    f32 y_start;
-    f32 x_offset;
-    f32 y_offset;
-    
-    bool menu_open;
-    f32 menu_x;
-    f32 menu_y;
-    
-    Panel* active_panel;
-    
-    Panel* resize_panel;
-    bool panel_is_resizing;
-    
-    bool show_splash_screen;
-    
-    Theme theme;
+enum Widget_Type {
+    WIDGET_TEXT_BOX,
+    WIDGET_BUTTON_ICON,
+    WIDGET_BUTTON,
+    WIDGET_PANEL,
+    WIDGET_CHECKBOX,
 };
 
-struct Arg_Type {
-    u8* arg;
-    u64 size;
-};
-
-Arg_Type
-make_arg_type(u8* arg, int size){
-    Arg_Type result;
-    result.arg = arg;
-    result.size = size;
-    return result;
-}
-
-#define MAX_PARAM_SIZE 512
-
-#define arg(x) make_arg_type((unsigned char*)&x, sizeof(x))
-#define get_arg(params, type) *((type*)params); params += sizeof(type)
-
-
-struct Animation_State {
-    UI_ID id = U64Max;
-    f32 x_offset = 0;
-    f32 y_offset = 0;
-    f32 x_scale = 0;
-    f32 y_scale = 0;
+struct Widget {
+    UI_ID id;
+    String8 string;
     
-    
-    u64 last_updated = 0;
-    
+    Widget* sibling;
+    Widget* child;
+    Widget* parent;
+    v4f rect;
     v4f source_rect;
     v4f target_rect;
-    v4f rect;
+    
+    Widget_Type type;
+    union {
+        struct {
+            Panel_Split_Type split_type;
+            Panel_Type type;
+            f32 split_ratio;
+            Presenter* presenter;
+        } panel;
+        
+        struct {
+            
+        } button;
+        
+        struct {
+            
+        } checkbox;
+        
+        struct {
+            
+        } button_icon;
+        
+        struct {
+            
+        } text_box;
+    };
+};
+
+struct UI_State {
+    UI_ID hover_id;
+    UI_ID clicked_id;
+    
+    Arena frame_arena;
+    
+    struct Storage {
+        Arena arena;
+        Widget* head;
+        Widget* tail;
+    };
+    
+    Storage widgets[2];
+    bool widget_frame;
+    
+    Theme theme;
+    
+    f32 round_amount;
 };
 
 typedef u64 UI_ID;

@@ -8,7 +8,10 @@ union Colour {
         u8 g;
         u8 r;
     };
+    
 };
+
+#define hex_to_colour(x) {x}
 
 union mat4x4 {
     float e[16];
@@ -109,8 +112,13 @@ union v4i {
 
 union v4f {
     struct {
-        f32 x;
-        f32 y;
+        union{
+            struct {
+                f32 x;
+                f32 y;
+            };
+            v2f pos;
+        };
         union{
             struct{
                 f32 z;
@@ -120,6 +128,7 @@ union v4f {
                 f32 width;
                 f32 height;
             };
+            v2f size;
         };
     };
     struct {

@@ -50,8 +50,6 @@ PERMANENT_LOAD {
     init_shaders();
     load_theme_ayu();
     
-    ui->widgets[0].arena = subdivide_arena(&platform->permanent_arena, 8192);
-    ui->widgets[1].arena = subdivide_arena(&platform->permanent_arena, 8192);
 }
 
 HOT_LOAD {
@@ -67,16 +65,7 @@ HOT_UNLOAD {
 
 UPDATE {
     opengl_start_frame();
-    {
-        if(button("dog")){
-            push_string(v2f(10, 20), "asdfasdf", ui->theme.text);
-        }
-        ui_layout_and_render();
-    }
-    ui->widget_frame = !ui->widget_frame;
-    arena_clear(&ui->widgets[ui->widget_frame].arena);
-    ui->widgets[ui->widget_frame].head = nullptr;
-    ui->widgets[ui->widget_frame].tail = nullptr;
+    
     opengl_end_frame();
     platform->refresh_screen();
 }

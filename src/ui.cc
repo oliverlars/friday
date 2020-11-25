@@ -1,5 +1,15 @@
 global UI_State* ui = 0;
 
+internal Arena*
+current_frame_widget_arena() {
+    return &ui->widget_arena[ui->widget_frame];
+}
+
+internal Arena*
+last_frame_widget_arena() {
+    return &ui->widget_arena[!ui->widget_frame];
+}
+
 internal b32
 has_left_clicked(Platform_Event **event_out){
     b32 result = 0;
@@ -120,123 +130,12 @@ gen_unique_id(void* data, int num_bytes){
     return (UI_ID)result;
 }
 
-internal void
-ui_begin(){
-}
-
 internal Widget*
 make_widget(String8 string){
-    auto result = (Widget*)arena_allocate(&ui->widgets[ui->widget_frame].arena, sizeof(Widget));
-    result->string = string;
-    result->id = gen_unique_id(string);
-    return result;
+    
 }
 
 internal Widget*
 push_widget(String8 string){
-    auto widget = make_widget(string);
-    if(!ui->widgets[ui->widget_frame].head){
-        ui->widgets[ui->widget_frame].head = widget;
-        ui->widgets[ui->widget_frame].tail = widget;
-    }else {
-        ui->widgets[ui->widget_frame].tail->child = widget;
-        ui->widgets[ui->widget_frame].tail = widget;
-    }
-    return widget;
-}
-
-internal Widget*
-push_button_widget(String8 string){
-    auto widget = push_widget(string);
-    widget->type = WIDGET_BUTTON;
-    widget->rect = get_text_bbox({}, string);
-    return widget;
-}
-
-internal void
-ui_begin_panel(char* label, v4f rect){
-    auto widget = push_widget(make_string(label));
-    widget->rect = rect;
-    push_clip_range_begin(rect);
-}
-
-internal void
-ui_end_panel(){
     
-    push_clip_range_end();
-}
-
-#define ui_panel(label, rect) defer_loop(ui_begin_panel(label, rect), ui_end_panel())
-
-internal void 
-split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
-    if(!panel) return;
-    
-    assert(!panel->first && !panel->second);
-    
-    panel->first = (Panel*)arena_allocate(&platform->permanent_arena, sizeof(Panel));
-    panel->second = (Panel*)arena_allocate(&platform->permanent_arena, sizeof(Panel));
-    
-    panel->first->split_ratio = split_ratio;
-    panel->second->split_ratio = 1.0f - split_ratio;
-    
-    panel->first->parent = panel;
-    panel->second->parent = panel;
-    
-    panel->first->type = panel->type;
-    panel->second->type = type;
-    
-    panel->first->split_type = split_type;
-    panel->second->split_type = split_type;
-    panel->first->presenter = panel->presenter;
-}
-
-internal void 
-delete_split(Panel* panel){
-    if(!panel) return;
-    panel->parent->first = nullptr;
-    panel->parent->second = nullptr;
-}
-
-internal void
-render_widgets(Widget* widget) {
-    switch(widget->type){
-        case WIDGET_BUTTON:{
-            push_rectangle(widget->rect, 5, ui->theme.panel);
-            push_string(v2f(widget->rect.x, widget->rect.y), widget->string, ui->theme.text);
-        }break;
-    }
-}
-
-internal bool
-update_widget(Widget* widget){
-    bool last_frame = !ui->widget_frame;
-    for(auto it = ui->widgets[last_frame].head; it; it = it->child){
-        if(it->id == widget->id){
-            if(is_in_rect(platform->mouse_position, it->rect)){
-                return true;
-            }
-        }
-    }
-    
-    return false;
-}
-
-#define ui_widthfill defer_loop(ui_push_widthfill(), ui_pop_widthfill())
-#define ui_heightfill defer_loop(ui_push_heightfill(), ui_pop_heightfill())
-#define ui_row defer_loop(ui_push_row(), ui_pop_row())
-
-internal void
-ui_layout_and_render(){
-    auto head = ui->widgets[ui->widget_frame].head;
-    auto tail = ui->widgets[ui->widget_frame].tail;
-    for(auto it = head; it; it = it->child){
-        render_widgets(it);
-    }
-}
-
-internal bool
-button(char* text){
-    auto widget = push_button_widget(make_string(text));
-    return update_widget(widget);
 }

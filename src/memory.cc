@@ -12,8 +12,13 @@ make_arena() {
     return arena;
 }
 
+#define push_type(arena, type) (type*)_arena_allocate(arena, sizeof(type))
+#define push_type_zero(arena, type) (type*)_arena_allocate(arena, sizeof(type))
+#define push_size(arena, size) _arena_allocate(arena, size)
+#define push_size_zero(arena, size) _arena_allocate_zero(arena, size)
+
 internal void *
-arena_allocate(Arena *arena, u64 size)
+_arena_allocate(Arena *arena, u64 size)
 {
     void *memory = 0;
     if(arena->alloc_position + size > arena->commit_position)
@@ -31,9 +36,9 @@ arena_allocate(Arena *arena, u64 size)
 }
 
 internal void *
-arena_allocate_zero(Arena *arena, u64 size)
+_arena_allocate_zero(Arena *arena, u64 size)
 {
-    void *memory = arena_allocate(arena, size);
+    void *memory = push_size(arena, size);
     memset(memory, 0, size);
     return memory;
 }
@@ -62,7 +67,7 @@ arena_free(Arena* arena) {
 internal Arena
 subdivide_arena(Arena* arena, u64 size){
     Arena result = {};
-    result.base = arena_allocate_zero(arena, size);
+    result.base = push_size_zero(arena, size);
     result.size = size;
     return result;
 }

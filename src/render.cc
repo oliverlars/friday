@@ -158,7 +158,7 @@ get_font_line_height( f32 font_scale = 1.0f) {
 
 internal Command*
 make_command(Command_Type type){
-    Command* command = (Command*)arena_allocate_zero(&renderer->frame_arena, sizeof(Command));
+    Command* command = push_type(&renderer->frame_arena, Command);
     command->type = type;
     command->next = nullptr;
     command->previous = nullptr;
@@ -461,9 +461,9 @@ init_opengl_renderer(){
         
         GLuint pos = 0;
         GLuint dim = 2;
-        GLuint border_size = 3;
-        GLuint radius = 4;
-        GLuint colour = 5;
+        GLuint border_size = 4;
+        GLuint radius = 5;
+        GLuint colour = 6;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -803,9 +803,9 @@ init_shaders(){
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in vec2 dim; \n"
-            "layout(location = 3) in float border_size; \n"
-            "layout(location = 4) in float radius; \n"
-            "layout(location = 5) in vec4 colour; \n"
+            "layout(location = 4) in float border_size; \n"
+            "layout(location = 5) in float radius; \n"
+            "layout(location = 6) in vec4 colour; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
@@ -826,6 +826,7 @@ init_shaders(){
             "out_radius = radius;\n"
             "out_dim = dim;\n"
             "frag_colour = colour;\n"
+            "out_border = border_size;\n"
             "}\n";
         
         GLchar* rectangle_fs =   "#version 330 core\n"
@@ -837,10 +838,16 @@ init_shaders(){
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             
+            "float box_no_pointy(vec2 p, vec2 b, float r){\n"
+            "return length(max(abs(p)-b+r,0.0))-r;\n"
+            "}\n"
+            
+            "float sub_sdf(float a, float b) {\n"
+            "return max(-a, b);\n"
+            "}\n"
+            
             "float box_dist(vec2 p, vec2 size, float radius, float border){\n"
-            "size -= vec2(radius);\n"
-            "vec2 d = abs(p) - size;\n"
-            "return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;\n"
+            "return sub_sdf(box_no_pointy(p, size - border, radius), box_no_pointy(p, size, radius));\n"
             "}\n"
             
             "void main(){\n"
@@ -1056,12 +1063,12 @@ internal void
 process_and_draw_commands(){
     
     
-    f32* rectangles = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE);
-    f32* rectangle_outlines = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
-    f32* triangles = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_TRIANGLE);
-    f32* circles = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_CIRCLE);
-    f32* glyphs = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_GLYPH);
-    f32* rectangles_textured = (f32*)arena_allocate_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
+    f32* rectangles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE);
+    f32* rectangle_outlines = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
+    f32* triangles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_TRIANGLE);
+    f32* circles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_CIRCLE);
+    f32* glyphs = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_GLYPH);
+    f32* rectangles_textured = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
     
     v4f clip_range = v4f(0, 0, platform->window_size.width, platform->window_size.height);
     for(Command* command = renderer->head; command; command = command->next){
@@ -1149,10 +1156,10 @@ process_and_draw_commands(){
                         *attribs++ = triangle->triangle.y;
                         *attribs++ = triangle->triangle.size;
                         *attribs++ = triangle->triangle.size;
-                        *attribs++ = (triangle->colour.a/255.0f);
-                        *attribs++ = (triangle->colour.b/255.0f);
-                        *attribs++ = (triangle->colour.g/255.0f);
                         *attribs++ = (triangle->colour.r/255.0f);
+                        *attribs++ = (triangle->colour.g/255.0f);
+                        *attribs++ = (triangle->colour.b/255.0f);
+                        *attribs++ = (triangle->colour.a/255.0f);
                         num_verts++;
                         
                     }
@@ -1192,10 +1199,10 @@ process_and_draw_commands(){
                         *attribs++ = rectangle->rectangle_outline.height;
                         *attribs++ = rectangle->rectangle_outline.border_size;
                         *attribs++ = rectangle->rectangle_outline.corner_radius;
-                        *attribs++ = (rectangle->colour.a/255.0f);
-                        *attribs++ = (rectangle->colour.b/255.0f);
-                        *attribs++ = (rectangle->colour.g/255.0f);
                         *attribs++ = (rectangle->colour.r/255.0f);
+                        *attribs++ = (rectangle->colour.g/255.0f);
+                        *attribs++ = (rectangle->colour.b/255.0f);
+                        *attribs++ = (rectangle->colour.a/255.0f);
                     }
                     num_verts += 6;
                 }

@@ -56,6 +56,10 @@ union v2f {
         f32 u;
         f32 v;
     };
+    struct {
+        f32 width;
+        f32 height;
+    };
 };
 
 union v3i {

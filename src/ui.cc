@@ -88,7 +88,7 @@ hash32(u64* hash, char* data, int size){
 }
 
 internal UI_ID
-gen_unique_id(char* label){
+generate_id(char* label){
     int size = strlen(label);
     UI_ID result = 0;
     hash32(&result, label, size);
@@ -96,46 +96,166 @@ gen_unique_id(char* label){
 }
 
 internal UI_ID
-gen_unique_id(String8 label){
+generate_id(String8 label){
     int size = label.length;
     UI_ID result = 0;
     hash32(&result, label.text, size);
     return result;
 }
 
-internal UI_ID
-gen_id(char* label){
+internal bool
+widget_has_property(Widget* widget, Widget_Property property){
+    return !!(widget->properties[property / 64] & ((u64)1 << (property % 64)));
+}
+
+internal void
+widget_set_property(Widget* widget, Widget_Property property){
+    widget->properties[property / 64] |= ((u64)1 << (property % 64));
+}
+
+internal void
+widget_remove_property(Widget* widget, Widget_Property property){
+    widget->properties[property / 64] &= ~((u64)1 << (property % 64));
+}
+
+internal Widget*
+make_widget(){
     
-    u64 id = (u64)(void*)label;
-    return (UI_ID)id;
-}
-
-internal UI_ID
-gen_id(String8 label){
+    Widget* widget = push_type_zero(&ui->frame_arena, Widget);
+    if(!ui->root){
+        ui->root = widget;
+    }
+    widget->min = v2f(20, 20);
     
-    u64 id = (u64)(void*)label.text;
-    return (UI_ID)id;
-}
-
-internal UI_ID
-gen_unique_id(void* data){
-    u64 id = (u64)data;
-    return (UI_ID)id;
-}
-
-internal UI_ID
-gen_unique_id(void* data, int num_bytes){
-    UI_ID result = 0;
-    hash32(&result, (char*)data, num_bytes);
-    return (UI_ID)result;
+    return widget;
 }
 
 internal Widget*
 make_widget(String8 string){
+    Widget* widget = make_widget();
+    widget->string = string;
+    return widget;
+}
+
+internal Layout*
+push_layout(Widget* widget){
+    auto layout = push_type_zero(&ui->frame_arena, Layout);
     
+    if(!ui->layout_stack){
+        ui->layout_stack = layout;
+    }else {
+        layout->prev = ui->layout_stack;
+        ui->layout_stack = layout;
+    }
+    layout->widget = widget;
+    
+    return layout;
+}
+
+internal Widget*
+push_widget(){
+    Widget* widget = make_widget();
+    
+    if(!ui->layout_stack){
+        //push_layout(widget);
+        return widget;
+    }
+    
+    auto it = ui->layout_stack->widget;
+    if(it->last_child){
+        it->last_child->next_sibling = widget;
+        widget->prev_sibling = it->last_child;
+        it->last_child = widget;
+        widget->next_sibling = nullptr;
+    }else {
+        it->first_child = widget;
+        it->last_child = widget;
+    }
+    
+    return widget;
 }
 
 internal Widget*
 push_widget(String8 string){
+    Widget* widget = push_widget();
+    widget->string = string;
+    return widget;
+}
+
+internal void
+pop_layout(){
+    if(ui->layout_stack){
+        ui->layout_stack = ui->layout_stack->prev;
+    }else{
+    }
+}
+
+internal void
+push_widget_row(){
+    auto widget = push_widget();
+    auto layout = push_layout(widget);
+    widget_set_property(widget, WP_ROW);
+}
+
+internal void
+push_widget_column(){
+    auto widget = push_widget();
+    auto layout = push_layout(widget);
+    widget_set_property(widget, WP_COLUMN);
+}
+
+
+#define UI_ROW defer_loop(push_widget_row(), pop_layout())
+#define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
+#define UI_WINDOW defer_loop(push_widget_window(), pop_layout())
+
+internal v2f layout_and_render(Widget* widget, v2f pos);
+
+internal void
+layout_row(Widget* widget, v2f pos){
+    if(!widget) return;
+    for(auto it = widget; it; it = it->next_sibling){
+        v2f next_pos = layout_and_render(it, pos);
+        pos.x += next_pos.width;
+    }
+}
+
+internal void
+layout_column(Widget* widget, v2f pos){
+    if(!widget) return;
+    for(auto it = widget; it; it = it->next_sibling){
+        pos.y -= layout_and_render(it, pos).height;
+    }
+}
+
+internal v2f
+layout_and_render(Widget* widget, v2f pos){
+    if(!widget) return {};
+    if(widget_has_property(widget, WP_COLUMN)){
+        layout_column(widget->first_child, pos);
+    }
+    else if(widget_has_property(widget, WP_ROW)){
+        layout_row(widget->first_child, pos);
+    }
     
+    if(widget_has_property(widget, WP_RENDER_TEXT)){
+        v4f bbox = get_text_bbox(pos, widget->string, 1);
+        widget->min = bbox.size;
+        if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
+            push_rectangle(bbox, 1, ui->theme.panel);
+        }
+        if(widget_has_property(widget, WP_RENDER_BORDER)){
+            push_rectangle_outline(bbox, 5, 3, ui->theme.text);
+        }
+        push_string(pos, widget->string, ui->theme.panel);
+    }
+    return widget->min;
+}
+
+internal void
+button(char* label){
+    String8 string = make_string(label);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_TEXT);
+    widget_set_property(widget, WP_RENDER_BORDER);
 }

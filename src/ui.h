@@ -28,76 +28,38 @@ struct Theme {
     Colour view_button;
 };
 
-enum Widget_Layout_Type {
-    LAYOUT_WIDTHFILL,
-    LAYOUT_HEIGHTFILL,
-    LAYOUT_ROW,
-    LAYOUT_COLUMN,
-    LAYOUT_PANEL,
-};
+#define PROPERTIES_MAX 256
 
-struct Widget_Layout {
-    Widget_Layout_Type type;
-    Widget_Layout* next;
-    Widget_Layout* prev;
-};
-
-enum Widget_Type {
-    WIDGET_TEXT_BOX,
-    WIDGET_BUTTON_ICON,
-    WIDGET_BUTTON,
-    WIDGET_CHECKBOX,
+enum Widget_Property {
+    WP_RENDER_TEXT,
+    WP_RENDER_BORDER,
+    WP_RENDER_BACKGROUND,
+    WP_CLICKABLE,
+    WP_ROW,
+    WP_COLUMN,
+    WP_WINDOW,
 };
 
 struct Widget {
     UI_ID id;
     String8 string;
     
-    Widget* sibling;
-    Widget* child;
+    Widget* prev_sibling;
+    Widget* next_sibling;
+    Widget* first_child;
+    Widget* last_child;
     Widget* parent;
-    v4f rect;
-    v4f source_rect;
-    v4f target_rect;
     
-    Widget_Type type;
-    union {
-        struct {
-            
-        } button;
-        
-        struct {
-            
-        } checkbox;
-        
-        struct {
-            
-        } button_icon;
-        
-        struct {
-            
-        } text_box;
-    };
+    v2f min;
+    v2f max;
+    
+    u64 properties[PROPERTIES_MAX/64 + 1];
 };
 
-#define PANEL_MARGIN_X 60
-#define PANEL_MARGIN_Y 5
-
-#define PANEL_BORDER 5
-
-enum Panel_Split_Type {
-    PANEL_SPLIT_VERTICAL,
-    PANEL_SPLIT_HORIZONTAL,
+struct Layout {
+    Layout* prev;
+    Widget* widget;
 };
-
-enum Panel_Type {
-    PANEL_EDITOR,
-    PANEL_PROPERTIES,
-};
-
-struct Presenter;
-internal void present(Presenter* presenter);
-internal void reset_presenter(Presenter* presenter);
 
 struct UI_State {
     UI_ID hover_id;
@@ -114,6 +76,8 @@ struct UI_State {
     
     f32 round_amount;
     
+    Layout* layout_stack;
+    Widget* root;
 };
 
 typedef u64 UI_ID;

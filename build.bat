@@ -10,6 +10,4 @@ if not exist build mkdir build
 pushd build
 start /b /wait "" "cl.exe"  %build_options% %compile_flags% ../src/win32/win32_entry.cc /link %platform_link_flags% /out:%application_name%.exe
 start /b /wait "" "cl.exe"  %build_options% %compile_flags% ../src/friday.cc /LD /link %common_link_flags% /out:%application_name%.dll
-del temp_friday.pdb
-ren friday.pdb temp_friday.pdb
 popd

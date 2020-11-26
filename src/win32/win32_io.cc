@@ -2,7 +2,7 @@ internal char *
 win32_cstr_from_string(String8 string)
 {
     char *buffer = 0;
-    buffer = (char*)arena_allocate(&platform->temporary_arena, string.length+1);
+    buffer = (char*)push_size(&platform->temporary_arena, string.length+1);
     memcpy(buffer, string.text, string.length);
     return buffer;
 }
@@ -108,7 +108,7 @@ win32_load_entire_file(Arena* arena, String8 path, void** data, u64* data_len) {
             DWORD read_bytes = GetFileSize(file, 0);
             if(read_bytes)
             {
-                void *read_data = arena_allocate(arena, read_bytes+1);
+                void *read_data = push_size(arena, read_bytes+1);
                 DWORD bytes_read = 0;
                 OVERLAPPED overlapped = {0};
                 
@@ -148,7 +148,7 @@ win32_load_file_and_null_terminate(Arena* arena, String8 path)
             DWORD read_bytes = GetFileSize(file, 0);
             if(read_bytes)
             {
-                result = (char*)arena_allocate(arena, read_bytes+1);
+                result = (char*)push_size(arena, read_bytes+1);
                 DWORD bytes_read = 0;
                 OVERLAPPED overlapped = {0};
                 

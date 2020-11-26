@@ -32,16 +32,27 @@ initialise_globals(){
     
 }
 
+internal void
+start_frame(){
+    opengl_start_frame();
+    arena_clear(&globals->ui->frame_arena);
+}
+
+internal void
+end_frame(){
+    opengl_end_frame();
+}
+
 BEGIN_C_EXPORT
 
 PERMANENT_LOAD {
     platform = platform_;
     
-    platform->globals = arena_allocate_zero(&platform->permanent_arena, sizeof(Friday_Globals));
+    platform->globals = push_type(&platform->permanent_arena, Friday_Globals);
     globals = (Friday_Globals*)platform->globals;
-    globals->renderer = (Renderer_State*)arena_allocate_zero(&platform->permanent_arena, sizeof(Renderer_State));
-    globals->ui = (UI_State*)arena_allocate_zero(&platform->permanent_arena, sizeof(UI_State));
-    
+    globals->renderer = push_type_zero(&platform->permanent_arena, Renderer_State);
+    globals->ui = push_type_zero(&platform->permanent_arena, UI_State);
+    globals->ui->frame_arena = subdivide_arena(&platform->permanent_arena, 8192);
     load_all_opengl_procs();
     
     globals->renderer->font = load_sdf_font("../fonts/friday_default.fnt");
@@ -64,9 +75,28 @@ HOT_UNLOAD {
 }
 
 UPDATE {
-    opengl_start_frame();
-    
-    opengl_end_frame();
+    start_frame();
+    {
+        
+        UI_COLUMN{
+            button("1");
+            button("2");
+            button("3");
+            UI_ROW{
+                button("A long thing row sadfadfasdfadfsadfasdfdsf asdf test");
+                button("C");
+                button("D");
+            }
+            UI_ROW{
+                button("E");
+                button("F");
+            }
+            button("G");
+        }
+        
+        layout_and_render(ui->root, v2f(200, 200));
+    }
+    end_frame();
     platform->refresh_screen();
 }
 

@@ -9,7 +9,7 @@ make_string(char* string){
 
 internal char*
 cstr_to_string(Arena* arena, String8 string){
-    char* result = (char*)arena_allocate(arena, string.length+1);
+    char* result = (char*)push_size(arena, string.length+1);
     result[string.length] = 0;
     for(int i = 0; i < string.length; i++){
         result[i] = string.text[i];
@@ -25,7 +25,7 @@ make_stringfv(Arena *arena, char *format, va_list args)
     va_copy(args2, args);
     u32 needed_bytes = vsnprintf(0, 0, format, args) + 1;
     String8 result = {0};
-    result.text = (char*)arena_allocate(arena, needed_bytes);
+    result.text = (char*)push_size(arena, needed_bytes);
     result.length = vsnprintf((char*)result.text, needed_bytes, format, args2);
     result.text[result.length] = 0;
     return(result);

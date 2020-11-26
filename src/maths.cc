@@ -244,10 +244,19 @@ union_rects(v4f a, v4f b){
     return result;
 }
 
+internal v4f
+divide_rect(v4f a, f32 b){
+    v4f result = a;
+    result.x /= b;
+    result.y /= b;
+    result.z /= b;
+    result.w /= b;
+    return result;
+}
+
 internal inline bool
 between(f32 value, f32 min, f32 max){
     return (value < max) && value > min;
-    
 }
 
 internal inline v4f

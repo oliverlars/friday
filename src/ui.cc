@@ -211,43 +211,56 @@ push_widget_column(){
 
 internal v2f layout_and_render(Widget* widget, v2f pos);
 
-internal void
+internal v2f
 layout_row(Widget* widget, v2f pos){
-    if(!widget) return;
+    v2f size = {};
+    if(!widget) return size;
     for(auto it = widget; it; it = it->next_sibling){
         v2f next_pos = layout_and_render(it, pos);
         pos.x += next_pos.width;
+        size.width += next_pos.width;
+        size.height = max(size.height, next_pos.height);
     }
+    return size;
 }
 
-internal void
+internal v2f
 layout_column(Widget* widget, v2f pos){
-    if(!widget) return;
+    v2f size = {};
+    
+    if(!widget) return size;
+    
     for(auto it = widget; it; it = it->next_sibling){
-        pos.y -= layout_and_render(it, pos).height;
+        v2f next_pos = layout_and_render(it, pos);
+        pos.y -= next_pos.height;
+        size.height -= next_pos.height;
+        size.width = max(size.width, next_pos.width);
     }
+    return size;
 }
 
 internal v2f
 layout_and_render(Widget* widget, v2f pos){
     if(!widget) return {};
+    
     if(widget_has_property(widget, WP_COLUMN)){
-        layout_column(widget->first_child, pos);
+        return layout_column(widget->first_child, pos);
     }
-    else if(widget_has_property(widget, WP_ROW)){
-        layout_row(widget->first_child, pos);
+    
+    if(widget_has_property(widget, WP_ROW)){
+        return layout_row(widget->first_child, pos);
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
-        v4f bbox = get_text_bbox(pos, widget->string, 1);
+        v4f bbox = get_text_bbox(pos, widget->string, 2);
         widget->min = bbox.size;
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
             push_rectangle(bbox, 1, ui->theme.panel);
         }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
-            push_rectangle_outline(bbox, 5, 3, ui->theme.text);
+            push_rectangle_outline(bbox, 2, 3, ui->theme.text);
         }
-        push_string(pos, widget->string, ui->theme.panel);
+        push_string(pos, widget->string, ui->theme.text, 2);
     }
     return widget->min;
 }

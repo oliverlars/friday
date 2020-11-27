@@ -78,20 +78,17 @@ UPDATE {
     start_frame();
     {
         
-        UI_COLUMN{
-            button("1");
-            button("2");
-            button("3");
-            UI_ROW{
-                button("A long thing row sadfadfasdfadfsadfasdfdsf asdf test");
+        UI_COLUMN {
+            UI_ROW {
+                button("Wide boy");
+                button("B");
                 button("C");
+            }
+            UI_ROW {
                 button("D");
-            }
-            UI_ROW{
                 button("E");
-                button("F");
             }
-            button("G");
+            button("F");
         }
         
         layout_and_render(ui->root, v2f(200, 200));

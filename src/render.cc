@@ -1289,10 +1289,10 @@ process_and_draw_commands(){
                         *attribs++ = glyph->glyph.v;
                         *attribs++ = glyph->glyph.u_width;
                         *attribs++ = glyph->glyph.v_height;
-                        *attribs++ = glyph->colour.a/255.0f;
-                        *attribs++ = glyph->colour.b/255.0f;
-                        *attribs++ = glyph->colour.g/255.0f;
                         *attribs++ = glyph->colour.r/255.0f;
+                        *attribs++ = glyph->colour.g/255.0f;
+                        *attribs++ = glyph->colour.b/255.0f;
+                        *attribs++ = glyph->colour.a/255.0f;
                         num_verts++;
                         //}
                     }

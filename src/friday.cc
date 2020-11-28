@@ -77,21 +77,14 @@ HOT_UNLOAD {
 UPDATE {
     start_frame();
     {
-        
-        UI_COLUMN {
-            UI_ROW {
-                button("Wide boy");
-                button("B");
-                button("C");
-            }
-            UI_ROW {
-                button("D");
-                button("E");
-            }
-            button("F");
+        UI_WINDOW(v4f(20, 20, 100, 100), "test") UI_COLUMN {
+            button("this");
+            button("is");
+            button("a");
+            button("window");
         }
-        
-        layout_and_render(ui->root, v2f(200, 200));
+        layout_widgets(ui->root);
+        render_widgets(ui->root);
     }
     end_frame();
     platform->refresh_screen();

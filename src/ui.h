@@ -38,6 +38,8 @@ enum Widget_Property {
     WP_ROW,
     WP_COLUMN,
     WP_WINDOW,
+    WP_WIDTHFILL,
+    WP_HEIGHTFILL,
 };
 
 struct Widget {
@@ -52,14 +54,21 @@ struct Widget {
     
     v2f min;
     v2f max;
-    
+    v2f pos;
     u64 properties[PROPERTIES_MAX/64 + 1];
+};
+
+struct Widget_Update {
+    
+    b32 clicked;
 };
 
 struct Layout {
     Layout* prev;
     Widget* widget;
 };
+
+
 
 struct UI_State {
     UI_ID hover_id;
@@ -78,6 +87,8 @@ struct UI_State {
     
     Layout* layout_stack;
     Widget* root;
+    
+    Pool widget_pool;
 };
 
 typedef u64 UI_ID;

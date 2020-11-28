@@ -127,7 +127,16 @@ make_v4f(f32 x, f32 y, f32 z, f32 w){
     return result;
 }
 
+internal v4f
+make_v4f(v2f pos, v2f size){
+    v4f result;
+    result.pos = pos;
+    result.size = size;
+    return result;
+}
+
 #define v4f(x, y, z, w) make_v4f(x, y, z, w)
+#define v4f2(pos, size) make_v4f(pos, size)
 
 
 internal f32
@@ -195,6 +204,15 @@ add_rects(v4f a, v4f b){
     return result;
 }
 
+internal v4f
+rect_expand(v4f a, f32 amount){
+    v4f result = a;
+    result.x -= amount/2.0f;
+    result.width += amount;
+    result.y += amount/2.0f;
+    result.height += amount;
+    return result;
+}
 
 internal b32
 rects_eq(v4f a, v4f b){

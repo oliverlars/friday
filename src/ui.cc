@@ -257,6 +257,7 @@ push_widget_window(v4f rect, char* label){
     auto widget = push_widget(make_string(label));
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_WINDOW);
+    widget_set_property(widget, WP_CLIP);
     widget->min = rect.size;
     widget->pos = rect.pos;
     update_widget(widget);
@@ -269,13 +270,16 @@ push_widget_window(v4f rect, char* label){
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 
+#define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
+#define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)
+
 internal v2f layout_widgets(Widget* widget, v2f pos);
 
 internal v2f
 layout_row(Widget* widget, v2f pos){
     
     v2f size = {};
-    for(auto it = widget; it; it = it->next_sibling){
+    ForEachWidgetSibling(widget){
         v2f next_pos = layout_widgets(it, pos);
         pos.x += next_pos.width;
         size.width += next_pos.width;
@@ -288,7 +292,7 @@ internal v2f
 layout_column(Widget* widget, v2f pos){
     
     v2f size = {};
-    for(auto it = widget; it; it = it->next_sibling){
+    ForEachWidgetSibling(widget){
         v2f next_pos = layout_widgets(it, pos);
         pos.y -= next_pos.height;
         size.height -= next_pos.height;
@@ -314,7 +318,7 @@ layout_widthfill(Widget* widget, v2f pos){
     v2f available_space = widget->parent->min;
     f32 width = (available_space.width - total_width)/(f32)number_of_children;
     f32 accum_pos = 0;
-    for(auto it = widget; it; it = it->next_sibling){
+    ForEachWidgetSibling(widget) {
         it->min.width += width;
         it->pos.x += accum_pos;
         accum_pos += width;
@@ -364,14 +368,24 @@ render_widgets(Widget* widget){
     if(!widget) return;
     
     if(widget_has_property(widget, WP_WINDOW)){
+        
         widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
-        push_rectangle(bbox, 10, ui->theme.panel);
+        push_rectangle(bbox, 3, ui->theme.panel);
+        
+    }
+    if(widget_has_property(widget, WP_CLIP)){
+        RENDER_CLIP(v4f2(widget->pos, widget->min)){
+            ForEachWidgetChild(widget){
+                render_widgets(it);
+            }
+        }
+    }else {
+        ForEachWidgetChild(widget){
+            render_widgets(it);
+        }
     }
     
-    for(auto it = widget->first_child; it; it = it->next_sibling){
-        render_widgets(it);
-    }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget->pos.y -= widget->min.height;
@@ -381,7 +395,7 @@ render_widgets(Widget* widget){
         }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             f32 border_size = 0;
-            push_rectangle_outline(bbox, 2, 3, ui->theme.text);
+            push_rectangle_outline(bbox, 1, 3, ui->theme.text);
             bbox.x += 4;
         }
         push_string(bbox.pos, widget->string, ui->theme.text);

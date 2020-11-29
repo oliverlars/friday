@@ -193,6 +193,8 @@ push_clip_range_end(){
     insert_command(clip_range);
 }
 
+#define RENDER_CLIP(rect) defer_loop(push_clip_range_begin(rect), push_clip_range_end())
+
 internal inline void
 push_rectangle( v4f rect, f32 radius, Colour colour){
     

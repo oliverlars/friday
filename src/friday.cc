@@ -79,9 +79,7 @@ UPDATE {
     {
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
                       platform->window_size.height/2.0f, 200, 200), "test") UI_COLUMN {
-            for(int i = 0; i < 11; i++){
-                button("%d", i);
-            }
+            button("test button");
         }
         layout_widgets(ui->root);
         render_widgets(ui->root);

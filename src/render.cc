@@ -839,6 +839,7 @@ init_shaders(){
             "in vec4 frag_colour;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
+            "uniform vec4 clip_range;\n"
             
             "float box_no_pointy(vec2 p, vec2 b, float r){\n"
             "return length(max(abs(p)-b+r,0.0))-r;\n"
@@ -856,12 +857,19 @@ init_shaders(){
             "float dist = box_dist(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius, out_border);\n"
             "float alpha = mix(1, 0,  dist);\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), dist);\n"
+            "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
+            "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
+            "}else {\n"
+            "return;\n"
+            "}\n"
             "}\n";
         
         GLuint program = make_program(rectangle_vs, rectangle_fs);
         
         renderer->resolution_uniforms[COMMAND_RECTANGLE_OUTLINE] = glGetUniformLocation(program, "resolution");
+        renderer->clip_range_uniforms[COMMAND_RECTANGLE_OUTLINE] = glGetUniformLocation(program, "clip_range");
+        
         
         renderer->programs[COMMAND_RECTANGLE_OUTLINE] = program;
         
@@ -1221,6 +1229,7 @@ process_and_draw_commands(){
                     f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
                     glUniform2fv(renderer->resolution_uniforms[COMMAND_RECTANGLE_OUTLINE], 
                                  1, resolution);
+                    glUniform4fv(renderer->clip_range_uniforms[COMMAND_RECTANGLE_OUTLINE], 1, (f32*)&clip_range);
                     
                     glBindVertexArray(renderer->vaos[COMMAND_RECTANGLE_OUTLINE]);
                     glDrawArrays(GL_TRIANGLES, 0, num_verts);

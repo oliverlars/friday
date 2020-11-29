@@ -156,7 +156,6 @@ push_layout(Widget* widget){
 internal Widget*
 push_widget(){
     Widget* widget = make_widget();
-    
     if(!ui->layout_stack){
         //push_layout(widget);
         return widget;
@@ -245,6 +244,15 @@ push_widget_widthfill(){
 }
 
 internal void
+push_widget_padding(v2f padding){
+    auto widget = push_widget();
+    auto layout = push_layout(widget);
+    widget->min = padding;
+    widget_set_property(widget, WP_PADDING);
+    update_widget(widget);
+}
+
+internal void
 push_widget_window(v4f rect, char* label){
     auto widget = push_widget(make_string(label));
     auto layout = push_layout(widget);
@@ -252,6 +260,7 @@ push_widget_window(v4f rect, char* label){
     widget->min = rect.size;
     widget->pos = rect.pos;
     update_widget(widget);
+    push_widget_padding(v2f(10, 10));
 }
 
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
@@ -320,7 +329,18 @@ layout_widgets(Widget* widget, v2f pos = {}){
     
     if(widget_has_property(widget, WP_WINDOW)){
         pos = widget->pos;
-        layout_widgets(widget->first_child, widget->pos);
+        v2f size = layout_widgets(widget->first_child, widget->pos);
+        widget->pos.y -= size.y;
+    }
+    
+    if(widget_has_property(widget, WP_PADDING)){
+        v2f padding = widget->min;
+        widget->min = widget->parent->min;
+        widget->min.x += padding.width;
+        widget->min.y += padding.height;
+        pos.x += padding.width;
+        pos.y -= padding.height;
+        layout_widgets(widget->first_child, pos);
     }
     
     if(widget_has_property(widget, WP_COLUMN)){
@@ -344,6 +364,7 @@ render_widgets(Widget* widget){
     if(!widget) return;
     
     if(widget_has_property(widget, WP_WINDOW)){
+        widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
         push_rectangle(bbox, 10, ui->theme.panel);
     }
@@ -353,14 +374,17 @@ render_widgets(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
+        widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
             push_rectangle(bbox, 1, ui->theme.panel);
         }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
+            f32 border_size = 0;
             push_rectangle_outline(bbox, 2, 3, ui->theme.text);
+            bbox.x += 4;
         }
-        push_string(widget->pos, widget->string, ui->theme.text);
+        push_string(bbox.pos, widget->string, ui->theme.text);
     }
     
 }

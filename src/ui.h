@@ -40,6 +40,7 @@ enum Widget_Property {
     WP_WINDOW,
     WP_WIDTHFILL,
     WP_HEIGHTFILL,
+    WP_PADDING,
 };
 
 struct Widget {

@@ -78,8 +78,15 @@ UPDATE {
     start_frame();
     {
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
-                      platform->window_size.height/2.0f, 200, 200), "test") UI_COLUMN {
-            button("test button");
+                      platform->window_size.height/2.0f, 400, 200), "test") UI_COLUMN {
+            for(int i = 0; i < 5; i++){
+                button("%d", i);
+            }
+            UI_ROW {
+                button("next to ");
+                button("next to ");
+                button("next to ");
+            }
         }
         layout_widgets(ui->root);
         render_widgets(ui->root);

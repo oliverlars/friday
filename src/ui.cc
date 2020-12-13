@@ -197,11 +197,11 @@ update_widget(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_ROW)){
-        widget->min = v2f(100, 20);
+        widget->min = widget->parent->min;
     }
     
     if(widget_has_property(widget, WP_COLUMN)){
-        widget->min = v2f(100, 100);
+        widget->min = widget->parent->min;
     }
     
     if(widget_has_property(widget, WP_WIDTHFILL)){
@@ -247,7 +247,9 @@ internal void
 push_widget_padding(v2f padding){
     auto widget = push_widget();
     auto layout = push_layout(widget);
-    widget->min = padding;
+    widget->min = widget->parent->min;
+    widget->min.x -= padding.width*2;
+    widget->min.y -= padding.height*2;
     widget_set_property(widget, WP_PADDING);
     update_widget(widget);
 }
@@ -279,6 +281,7 @@ internal v2f
 layout_row(Widget* widget, v2f pos){
     
     v2f size = {};
+    
     ForEachWidgetSibling(widget){
         v2f next_pos = layout_widgets(it, pos);
         pos.x += next_pos.width;
@@ -292,6 +295,7 @@ internal v2f
 layout_column(Widget* widget, v2f pos){
     
     v2f size = {};
+    
     ForEachWidgetSibling(widget){
         v2f next_pos = layout_widgets(it, pos);
         pos.y -= next_pos.height;
@@ -308,7 +312,8 @@ layout_widthfill(Widget* widget, v2f pos){
     
     f32 total_width = 0;
     int number_of_children = 0;
-    for(auto it = widget; it; it = it->next_sibling){
+    
+    ForEachWidgetSibling(widget) {
         v2f next_pos = layout_widgets(it, pos);
         pos.x += next_pos.width;
         size.width += next_pos.width;
@@ -323,6 +328,7 @@ layout_widthfill(Widget* widget, v2f pos){
         it->pos.x += accum_pos;
         accum_pos += width;
     }
+    push_rectangle_outline(v4f2(pos, available_space), 1, 3, hex_to_colour(0xFF0000FF));
     
     return size;
 }
@@ -338,12 +344,13 @@ layout_widgets(Widget* widget, v2f pos = {}){
     }
     
     if(widget_has_property(widget, WP_PADDING)){
+        v2f size = widget->parent->min;
         v2f padding = widget->min;
-        widget->min = widget->parent->min;
-        widget->min.x += padding.width;
-        widget->min.y += padding.height;
-        pos.x += padding.width;
-        pos.y -= padding.height;
+        pos.x += (size.width - padding.width)/2.0f;
+        pos.y -= (size.height - padding.height)/2.0f;
+        
+        widget->pos = pos;
+        
         layout_widgets(widget->first_child, pos);
     }
     
@@ -358,6 +365,7 @@ layout_widgets(Widget* widget, v2f pos = {}){
     if(widget_has_property(widget, WP_WIDTHFILL)){
         return layout_widthfill(widget->first_child, pos);
     }
+    
     widget->pos = pos;
     
     return widget->min;
@@ -368,7 +376,6 @@ render_widgets(Widget* widget){
     if(!widget) return;
     
     if(widget_has_property(widget, WP_WINDOW)){
-        
         widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
         push_rectangle(bbox, 3, ui->theme.panel);
@@ -385,7 +392,6 @@ render_widgets(Widget* widget){
             render_widgets(it);
         }
     }
-    
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget->pos.y -= widget->min.height;

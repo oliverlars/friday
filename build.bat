@@ -2,7 +2,7 @@
 
 set application_name=friday
 set build_options= -DBUILD_WIN32=1
-set compile_flags= -nologo /W0 /Zi /FC /I ../src/
+set compile_flags= -nologo /FS /W0 /Zi /FC /I ../src/
 set common_link_flags= opengl32.lib -opt:ref -incremental:no /Debug:fastlink
 set platform_link_flags= gdi32.lib user32.lib winmm.lib %common_link_flags% friday.res
 

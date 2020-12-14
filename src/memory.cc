@@ -99,7 +99,6 @@ void pool_reset(Pool* pool){
         void* start = block->memory;
         void* end = &block->memory[block->size-1];
         
-        //active->clear(chunk_size);
         for(int i = 0; i < pool->active->size/pool->chunk_size; i++){
             void* pointer = &block->memory[i * pool->chunk_size];
             Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);

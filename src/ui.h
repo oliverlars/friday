@@ -2,18 +2,10 @@ typedef u64 UI_ID;
 
 struct Theme {
     Colour background;
-    Colour panel;
-    
-    Colour tab;
-    Colour tab_pressed;
-    
-    Colour icon;
-    
-    Colour button_highlight;
-    
-    Colour menu;
-    
     Colour text;
+    
+    Colour sub_colour;
+    Colour border;
     
     Colour text_comment;
     Colour text_function;
@@ -25,13 +17,13 @@ struct Theme {
     
     Colour error;
     
-    Colour view_button;
 };
 
 #define PROPERTIES_MAX 256
 
 enum Widget_Property {
     WP_RENDER_TEXT,
+    WP_RENDER_TRIANGLE,
     WP_RENDER_BORDER,
     WP_RENDER_BACKGROUND,
     WP_CLICKABLE,
@@ -43,6 +35,8 @@ enum Widget_Property {
     WP_PADDING,
     WP_CLIP,
     WP_FIXED_SIZE,
+    WP_RENDER_HOOK,
+    
 };
 
 struct Widget {
@@ -59,6 +53,8 @@ struct Widget {
     v2f max;
     v2f pos;
     u64 properties[PROPERTIES_MAX/64 + 1];
+    
+    void (*render_hook)(Widget* widget);
 };
 
 struct Widget_Update {
@@ -89,6 +85,7 @@ struct UI_State {
     f32 round_amount;
     
     Layout* layout_stack;
+    
     Widget* root;
     
     Pool widget_pool;

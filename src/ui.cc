@@ -59,6 +59,7 @@ has_right_clicked(){
 internal void
 load_theme_ayu(){
     
+#if 0    
     ui->theme.background.packed = 0x070707ff;
     ui->theme.panel.packed = 0x161925ff;
     ui->theme.menu.packed = 0x0D1012ff;
@@ -73,9 +74,30 @@ load_theme_ayu(){
     
     ui->theme.view_button.packed = 0x0D1012ff;
     ui->theme.button_highlight.packed = 0x292D3Dff;
+#endif
     
 }
 
+internal void
+load_theme_dots(){
+    
+    ui->theme.background.packed = 0x121520ff;
+    ui->theme.text.packed = 0xE7E7E7ff;
+    
+    ui->theme.sub_colour.packed = 0x676e8aff;
+    
+    ui->theme.border.packed = 0xE7E7E7ff;
+    
+    ui->theme.text_comment.packed = 0xffc2d94d;
+    ui->theme.text_literal.packed = 0x54CB8Fff;
+    ui->theme.text_function.packed = 0x47C7F3ff;
+    ui->theme.text_type.packed = 0xFED35Eff;
+    ui->theme.text_misc.packed = 0x676E88ff;
+    ui->theme.cursor.packed = 0xe08c17ff;
+    ui->theme.error.packed = 0xffcc3333;
+    
+    
+}
 
 #define HASH_INITIAL 2166136261
 
@@ -196,6 +218,12 @@ update_widget(Widget* widget){
         widget->min = bbox.size;
     }
     
+    if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
+        v2f size = get_text_bbox({}, "V").size;
+        size.width = size.height;
+        widget->min = size;
+    }
+    
     if(widget_has_property(widget, WP_ROW)){
         widget->min = widget->parent->min;
     }
@@ -265,6 +293,7 @@ push_widget_window(v4f rect, String8 string){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_WINDOW);
     widget_set_property(widget, WP_CLIP);
+    widget_set_property(widget, WP_RENDER_BACKGROUND);
     
     widget->min = rect.size;
     widget->pos = rect.pos;
@@ -307,7 +336,6 @@ layout_row(Widget* widget, v2f pos){
         pos.x += next_pos.width;
         size.width += next_pos.width;
         size.height = max(size.height, next_pos.height);
-        
     }
     return size;
 }
@@ -321,10 +349,12 @@ layout_column(Widget* widget, v2f pos){
         v2f next_pos = layout_widgets(it, pos);
         pos.y -= next_pos.height;
         pos.y -= PADDING;
-        size.height -= next_pos.height;
+        size.height += next_pos.height + PADDING;
         
         size.width = max(size.width, next_pos.width);
     }
+    size.height -= PADDING;
+    
     return size;
 }
 
@@ -403,12 +433,33 @@ layout_widgets(Widget* widget, v2f pos = {}){
 }
 
 internal void
+widget_render_text(Widget* widget, Colour colour){
+    v4f bbox = get_text_bbox(widget->pos, widget->string);
+    bbox = v4f2(widget->pos, widget->min);
+    if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
+        push_rectangle(bbox, 1, ui->theme.sub_colour);
+    }
+    if(widget_has_property(widget, WP_RENDER_BORDER)){
+        push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+        widget->pos.x += 1;
+        widget->pos.y -= 1;
+    }
+    f32 centre = widget->pos.x + widget->min.x/2.0f;
+    f32 text_centre = get_text_width(widget->string)/2.0f;
+    f32 text_x = centre - text_centre;
+    push_string(v2f(text_x, bbox.y), widget->string, colour);
+}
+
+internal void
 render_widgets(Widget* widget){
     if(!widget) return;
     
     if(widget_has_property(widget, WP_WINDOW)){
         widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
+        if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
+            push_rectangle(bbox, 3, ui->theme.background);
+        }
         push_rectangle_outline(bbox, 1, 3, ui->theme.text);
         
     }
@@ -427,26 +478,26 @@ render_widgets(Widget* widget){
     if(widget_has_property(widget, WP_PADDING)){
         v4f bbox = v4f2(widget->pos, widget->min);
     }
-    
+    widget->pos.y -= widget->min.height;
     if(widget_has_property(widget, WP_RENDER_TEXT)){
-        widget->pos.y -= widget->min.height;
-        v4f bbox = get_text_bbox(widget->pos, widget->string);
-        bbox = v4f2(widget->pos, widget->min);
-        if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
-            push_rectangle(bbox, 1, ui->theme.panel);
-        }
+        widget_render_text(widget, ui->theme.text);
+    }
+    if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
+        
+        v4f bbox = v4f2(widget->pos, widget->min);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
-            f32 border_size = 0;
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
-            widget->pos.x += 1;
-            widget->pos.y -= 1;
+            bbox.pos.x += 1;
+            bbox.pos.y -= 1;
         }
-        f32 centre = widget->pos.x + widget->min.x/2.0f;
-        f32 text_centre = get_text_width(widget->string)/2.0f;
-        f32 text_x = centre - text_centre;
-        push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
+        bbox.pos.x += bbox.size.width/6.0f;
+        bbox.pos.y += bbox.size.width/3.0f;
+        push_triangle(bbox.pos, bbox.size.width/3.0f, ui->theme.text);
     }
     
+    if(widget_has_property(widget, WP_RENDER_HOOK)){
+        widget->render_hook(widget);
+    }
 }
 
 internal void
@@ -457,6 +508,98 @@ label(char* fmt, ...){
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
+    update_widget(widget);
+}
+
+internal void
+present_keyword(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    
+    auto render_hook = [](Widget* widget){
+        widget_render_text(widget, ui->theme.text_type);
+        
+    };
+    widget->render_hook = render_hook;
+    v4f bbox = get_text_bbox({}, widget->string);
+    widget->min = bbox.size;
+    update_widget(widget);
+}
+
+internal void
+present_function(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    
+    auto render_hook = [](Widget* widget){
+        widget_render_text(widget, ui->theme.text_function);
+        
+    };
+    widget->render_hook = render_hook;
+    v4f bbox = get_text_bbox({}, widget->string);
+    widget->min = bbox.size;
+    update_widget(widget);
+}
+
+internal void
+present_id(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    
+    auto render_hook = [](Widget* widget){
+        widget_render_text(widget, ui->theme.text);
+        
+    };
+    widget->render_hook = render_hook;
+    v4f bbox = get_text_bbox({}, widget->string);
+    widget->min = bbox.size;
+    update_widget(widget);
+}
+
+internal void
+present_misc(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    
+    auto render_hook = [](Widget* widget){
+        widget_render_text(widget, ui->theme.text_misc);
+        
+    };
+    widget->render_hook = render_hook;
+    v4f bbox = get_text_bbox({}, widget->string);
+    widget->min = bbox.size;
+    update_widget(widget);
+}
+
+internal b32
+arrow_dropdown(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_TRIANGLE);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_FIXED_SIZE);
+    auto result = update_widget(widget);
+    return result.clicked;
 }
 
 internal b32
@@ -468,6 +611,7 @@ button(char* fmt, ...){
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
+    //widget_set_property(widget, WP_RENDER_BACKGROUND);
     auto result = update_widget(widget);
     return result.clicked;
 }
@@ -513,10 +657,11 @@ ui_window(v4f rect, char* fmt, ...) {
     
     push_widget_column();
     UI_ROW {
-        button("%.*s", string.length, string.text);
+        label("%.*s", string.length, string.text);
         UI_WIDTHFILL{
             xspacer(20);
-            button_fixed("V");
+            //button_fixed("V");
+            arrow_dropdown("window type");
         }
     }
 }

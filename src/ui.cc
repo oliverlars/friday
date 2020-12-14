@@ -208,6 +208,10 @@ update_widget(Widget* widget){
         widget->min = widget->parent->min;
     }
     
+    if(widget_has_property(widget, WP_FIXED_SIZE)){
+        widget->max = widget->min;
+    }
+    
     return result;
 }
 
@@ -339,8 +343,9 @@ layout_widthfill(Widget* widget, v2f pos){
         total_width += next_pos.width + PADDING;
         size.width += next_pos.width;
         size.height = max(size.height, next_pos.height);
-        
-        number_of_children++;
+        if(!widget_has_property(it, WP_FIXED_SIZE)){
+            number_of_children++;
+        }
     }
     v2f available_space = widget->parent->min;
     f32 width = (available_space.width - total_width + PADDING)/(f32)number_of_children;
@@ -348,9 +353,14 @@ layout_widthfill(Widget* widget, v2f pos){
     f32 accum_pos = 0;
     
     ForEachWidgetSibling(widget) {
-        it->min.width += width;
-        it->pos.x += accum_pos;
-        accum_pos += width;
+        if(widget_has_property(it, WP_FIXED_SIZE) && 
+           width + it->min.width > it->max.width){
+            it->pos.x += accum_pos;
+        }else {
+            it->min.width += width;
+            it->pos.x += accum_pos;
+            accum_pos += width;
+        }
     }
     
     return size;
@@ -462,19 +472,33 @@ button(char* fmt, ...){
     return result.clicked;
 }
 
+internal b32
+button_fixed(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_TEXT);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_FIXED_SIZE);
+    auto result = update_widget(widget);
+    return result.clicked;
+}
+
 internal void
-spacer(v2f space){
+xspacer(f32 space){
     
     auto widget = push_widget();
-    widget->min = space;
+    widget->min = v2f(space, 0);
     update_widget(widget);
 }
 
 internal void
-spacer(){
+yspacer(f32 space){
     
     auto widget = push_widget();
-    widget->min = v2f(PADDING, PADDING);
+    widget->min = v2f(0, space);
     update_widget(widget);
 }
 
@@ -490,7 +514,9 @@ ui_window(v4f rect, char* fmt, ...) {
     push_widget_column();
     UI_ROW {
         button("%.*s", string.length, string.text);
-        spacer(v2f(150, 20));
-        button("V");
+        UI_WIDTHFILL{
+            xspacer(20);
+            button_fixed("V");
+        }
     }
 }

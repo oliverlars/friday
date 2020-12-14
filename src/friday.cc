@@ -85,8 +85,9 @@ UPDATE {
             UI_ROW  {
                 
                 UI_WIDTHFILL {
-                    button("F1");
-                    button("F2");
+                    button("That's swag");
+                    button("Uh oh");
+                    button("danger");
                 }
             }
             

@@ -277,6 +277,8 @@ push_widget_window(v4f rect, char* label){
 
 internal v2f layout_widgets(Widget* widget, v2f pos);
 
+#define PADDING 10
+
 internal v2f
 layout_row(Widget* widget, v2f pos){
     
@@ -288,6 +290,7 @@ layout_row(Widget* widget, v2f pos){
             it->pos.x = pos.x;
         }
         v2f next_pos = layout_widgets(it, pos);
+        pos.x += PADDING;
         pos.x += next_pos.width;
         size.width += next_pos.width;
         size.height = max(size.height, next_pos.height);
@@ -304,6 +307,7 @@ layout_column(Widget* widget, v2f pos){
     ForEachWidgetSibling(widget){
         v2f next_pos = layout_widgets(it, pos);
         pos.y -= next_pos.height;
+        pos.y -= PADDING;
         size.height -= next_pos.height;
         
         size.width = max(size.width, next_pos.width);
@@ -321,16 +325,16 @@ layout_widthfill(Widget* widget, v2f pos){
     
     ForEachWidgetSibling(widget) {
         v2f next_pos = layout_widgets(it, pos);
+        pos.x += PADDING;
         pos.x += next_pos.width;
-        total_width += next_pos.width;
+        total_width += next_pos.width + PADDING;
         size.width += next_pos.width;
         size.height = max(size.height, next_pos.height);
         
         number_of_children++;
     }
     v2f available_space = widget->parent->min;
-    assert(available_space.width - total_width >= 0);
-    f32 width = (available_space.width - total_width)/(f32)number_of_children;
+    f32 width = (available_space.width - total_width + PADDING)/(f32)number_of_children;
     f32 accum_pos = 0;
     
     ForEachWidgetSibling(widget) {

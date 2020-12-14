@@ -255,20 +255,29 @@ push_widget_padding(v2f padding){
 }
 
 internal void
-push_widget_window(v4f rect, char* label){
-    auto widget = push_widget(make_string(label));
+push_widget_window(v4f rect, String8 string){
+    auto widget = push_widget();
+    widget->string = string;
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_WINDOW);
     widget_set_property(widget, WP_CLIP);
+    
     widget->min = rect.size;
     widget->pos = rect.pos;
     update_widget(widget);
     push_widget_padding(v2f(10, 10));
+    
+}
+
+internal void
+pop_widget_window(){
+    pop_layout();
+    pop_layout();
 }
 
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
-#define UI_WINDOW(rect, label) defer_loop(push_widget_window(rect, label), pop_layout())
+#define UI_WINDOW(rect, text) defer_loop(ui_window(rect, text), pop_widget_window()) 
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 
@@ -335,6 +344,7 @@ layout_widthfill(Widget* widget, v2f pos){
     }
     v2f available_space = widget->parent->min;
     f32 width = (available_space.width - total_width + PADDING)/(f32)number_of_children;
+    width = width >= 0 ? width : 0;
     f32 accum_pos = 0;
     
     ForEachWidgetSibling(widget) {
@@ -352,8 +362,8 @@ layout_widgets(Widget* widget, v2f pos = {}){
     
     if(widget_has_property(widget, WP_WINDOW)){
         pos = widget->pos;
-        v2f size = layout_widgets(widget->first_child, widget->pos);
-        widget->pos.y -= size.y;
+        layout_widgets(widget->first_child, pos);
+        
     }
     
     if(widget_has_property(widget, WP_PADDING)){
@@ -361,9 +371,8 @@ layout_widgets(Widget* widget, v2f pos = {}){
         v2f padding = widget->min;
         pos.x += (size.width - padding.width)/2.0f;
         pos.y -= (size.height - padding.height)/2.0f;
-        
-        
         layout_widgets(widget->first_child, pos);
+        
     }
     
     if(widget_has_property(widget, WP_COLUMN)){
@@ -375,7 +384,6 @@ layout_widgets(Widget* widget, v2f pos = {}){
     }
     
     if(widget_has_property(widget, WP_WIDTHFILL)){
-        
         return layout_widthfill(widget->first_child, pos);
     }
     
@@ -391,7 +399,7 @@ render_widgets(Widget* widget){
     if(widget_has_property(widget, WP_WINDOW)){
         widget->pos.y -= widget->min.height;
         v4f bbox = v4f2(widget->pos, widget->min);
-        push_rectangle(bbox, 3, ui->theme.panel);
+        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
         
     }
     if(widget_has_property(widget, WP_CLIP)){
@@ -412,18 +420,33 @@ render_widgets(Widget* widget){
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget->pos.y -= widget->min.height;
-        v4f bbox = v4f2(widget->pos, widget->min);
+        v4f bbox = get_text_bbox(widget->pos, widget->string);
+        bbox = v4f2(widget->pos, widget->min);
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
             push_rectangle(bbox, 1, ui->theme.panel);
         }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             f32 border_size = 0;
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
-            bbox.x += 4;
+            widget->pos.x += 1;
+            widget->pos.y -= 1;
         }
-        push_string(bbox.pos, widget->string, ui->theme.text);
+        f32 centre = widget->pos.x + widget->min.x/2.0f;
+        f32 text_centre = get_text_width(widget->string)/2.0f;
+        f32 text_x = centre - text_centre;
+        push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
     }
     
+}
+
+internal void
+label(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_TEXT);
 }
 
 internal b32
@@ -439,13 +462,35 @@ button(char* fmt, ...){
     return result.clicked;
 }
 
+internal void
+spacer(v2f space){
+    
+    auto widget = push_widget();
+    widget->min = space;
+    update_widget(widget);
+}
 
 internal void
-label(char* fmt, ...){
+spacer(){
+    
+    auto widget = push_widget();
+    widget->min = v2f(PADDING, PADDING);
+    update_widget(widget);
+}
+
+internal void
+ui_window(v4f rect, char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&ui->frame_arena, fmt, args);
     va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_TEXT);
+    
+    push_widget_window(rect, string);
+    
+    push_widget_column();
+    UI_ROW {
+        button("%.*s", string.length, string.text);
+        spacer(v2f(150, 20));
+        button("V");
+    }
 }

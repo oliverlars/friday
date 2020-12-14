@@ -78,16 +78,13 @@ UPDATE {
     start_frame();
     {
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
-                      platform->window_size.height/2.0f, 400, 200), "test") UI_COLUMN {
-            for(int i = 0; i < 3; i++){
-                button("%d", i);
-            }
+                      platform->window_size.height/2.0f, 400, 200), "Properties") {
             UI_ROW  {
                 
                 UI_WIDTHFILL {
                     button("That's swag");
-                    button("Uh oh");
-                    button("danger");
+                    button("A");
+                    button("B");
                 }
             }
             

@@ -79,14 +79,17 @@ UPDATE {
     {
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
                       platform->window_size.height/2.0f, 400, 200), "test") UI_COLUMN {
-            for(int i = 0; i < 5; i++){
+            for(int i = 0; i < 3; i++){
                 button("%d", i);
             }
-            UI_ROW {
-                button("next to ");
-                button("next to ");
-                button("next to ");
+            UI_ROW  {
+                
+                UI_WIDTHFILL {
+                    button("F1");
+                    button("F2");
+                }
             }
+            
         }
         layout_widgets(ui->root);
         render_widgets(ui->root);

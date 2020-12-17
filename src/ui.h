@@ -85,8 +85,6 @@ struct Panel {
     Panel* second;
     Panel* parent;
     
-    Widget* widgets[2];
-    
 };
 
 
@@ -105,6 +103,8 @@ struct UI_State {
     
     
     Widget* root;
+    
+    Panel* panel;
 };
 
 typedef u64 UI_ID;

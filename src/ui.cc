@@ -589,3 +589,89 @@ ui_window(v4f rect, char* fmt, ...) {
         }
     }
 }
+
+internal void 
+split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
+    if(!panel) return;
+    
+    assert(!panel->first && !panel->second);
+    
+    panel->first = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
+    panel->second = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
+    
+    panel->first->split_ratio = split_ratio;
+    panel->second->split_ratio = 1.0f- split_ratio;
+    
+    panel->first->parent = panel;
+    panel->second->parent = panel;
+    
+    panel->first->type = panel->type;
+    panel->second->type = type;
+    
+    panel->first->split_type = split_type;
+    panel->second->split_type = split_type;
+}
+
+internal void
+render_panels(Panel* root, v4f rect){
+    if(!root) return;
+    
+    if(root->first && root->second){
+        switch(root->first->split_type){
+            case PANEL_SPLIT_VERTICAL:{
+                v4f first = rect;
+                first.width*= root->first->split_ratio;
+                render_panels(root->first, first);
+                
+                v4f second = rect;
+                second.x += rect.width*root->first->split_ratio;
+                second.width *= root->second->split_ratio;
+                render_panels(root->second, second);
+            }break;
+            case PANEL_SPLIT_HORIZONTAL:{
+                v4f first = rect;
+                first.height *= root->first->split_ratio;
+                render_panels(root->second, first);
+                
+                v4f second = rect;
+                second.y += rect.height*root->first->split_ratio;
+                second.height *= root->second->split_ratio;
+                render_panels(root->first, second);
+            }break;
+        }
+    }else {
+        assert(!root->first && !root->second);
+        
+        if(root->type == PANEL_PROPERTIES){
+            
+            UI_WINDOW(rect, "Properties") {
+                UI_ROW {
+                    button("Uh Oh");
+                    button("Widgetables");
+                }
+                
+                UI_ROW UI_WIDTHFILL {
+                    for(int i = 0; i < 5; i++){
+                        xspacer(i*10);
+                        button("%d", i);
+                    }
+                    
+                }
+                
+                for(int i = 5; i > 0; i--){
+                    button("%d", i);
+                }
+            }
+            
+        }else {
+            
+            UI_WINDOW(rect, "Code Editor") {
+                UI_ROW {
+                    button("test");
+                }
+                
+            }
+            
+        }
+    }
+}

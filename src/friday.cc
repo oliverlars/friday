@@ -63,6 +63,11 @@ PERMANENT_LOAD {
     init_shaders();
     load_theme_dots();
     
+    ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
+    ui->panel->split_ratio = 1.0f;
+    ui->panel->type = PANEL_EDITOR;
+    
+    split_panel(ui->panel, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
 }
 
 HOT_LOAD {
@@ -79,42 +84,7 @@ HOT_UNLOAD {
 UPDATE {
     FRAME
     {
-        
-        UI_WINDOW(v4f(platform->window_size.width/2.0f, 
-                      platform->window_size.height/2.0f, 400 + 1*sinf(platform->get_time()*5)*20.0f, 
-                      0*cosf(platform->get_time()*5)*20.0f + 200), "Properties") {
-            UI_ROW {
-                button("Uh Oh");
-                button("Widgetables");
-            }
-            
-            UI_ROW UI_WIDTHFILL {
-                for(int i = 0; i < 5; i++){
-                    xspacer(i*10);
-                    button("%d", i);
-                }
-                
-            }
-            
-            for(int i = 5; i > 0; i--){
-                button("%d", i);
-            }
-        }
-        
-#if 0        
-        UI_WINDOW(v4f(platform->window_size.width/2.0f - 600, 
-                      platform->window_size.height/2.0f + 200, 
-                      800+ sinf(platform->get_time()*5)*20.0f, 
-                      cosf(platform->get_time()*5)*20.0f + 500), "Code Editor") {
-            UI_ROW {
-                present_id("a");
-                present_misc(":");
-                present_keyword("int");
-            }
-            
-        }
-#endif
-        
+        render_panels(ui->panel, v4f(0,0, platform->window_size.width, platform->window_size.height));
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);

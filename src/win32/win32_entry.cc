@@ -110,8 +110,6 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         platform_push_event(platform_mouse_move(global_platform.mouse_position,
                                                 v2f(global_platform.mouse_position.x - last_mouse.x,
                                                     global_platform.mouse_position.y - last_mouse.y)));
-        log("%f %f", global_platform.mouse_position.x,
-            global_platform.mouse_position.y);
         if(!mouse_hover_active){
             mouse_hover_active = 1;
             TRACKMOUSEEVENT track_mouse_event = {};

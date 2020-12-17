@@ -81,39 +81,40 @@ UPDATE {
     {
         
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
-                      platform->window_size.height/2.0f, 400 + sinf(platform->get_time()*5)*20.0f, 
-                      cosf(platform->get_time()*5)*20.0f + 200), "Properties") {
+                      platform->window_size.height/2.0f, 400 + 1*sinf(platform->get_time()*5)*20.0f, 
+                      0*cosf(platform->get_time()*5)*20.0f + 200), "Properties") {
             UI_ROW {
                 button("Uh Oh");
                 button("Widgetables");
             }
+            
             UI_ROW UI_WIDTHFILL {
-                button("AAAAAAA");
-                button("3");
-            }
-            UI_ROW UI_WIDTHFILL{
                 for(int i = 0; i < 5; i++){
                     xspacer(i*10);
                     button("%d", i);
                 }
                 
             }
+            
             for(int i = 5; i > 0; i--){
                 button("%d", i);
             }
         }
         
-#if 1        
+#if 0        
         UI_WINDOW(v4f(platform->window_size.width/2.0f - 600, 
                       platform->window_size.height/2.0f + 200, 
                       800+ sinf(platform->get_time()*5)*20.0f, 
                       cosf(platform->get_time()*5)*20.0f + 500), "Code Editor") {
             UI_ROW {
-                present_keyword("where is the text?");
+                present_id("a");
+                present_misc(":");
+                present_keyword("int");
             }
             
         }
 #endif
+        
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);

@@ -52,9 +52,9 @@ const f32 Tau32_ = 6.283185307179f;
 
 #define auto auto
 
-#define Kilobytes(x) (1024*x)
-#define Megabytes(x) (1024*Kilobytes(x))
-#define Gigabytes(x) (1024*Megabytes(x))
+#define Kilobytes(x) (1024ll*x)
+#define Megabytes(x) (1024ll*Kilobytes(x))
+#define Gigabytes(x) (1024ll*Megabytes(x))
 
 u32 random_state = 0;
 

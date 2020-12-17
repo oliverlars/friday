@@ -1,4 +1,4 @@
-#define ARENA_MAX          Gigabytes(1)
+#define ARENA_MAX          Gigabytes(4)
 #define ARENA_COMMIT_SIZE  Kilobytes(4)
 
 internal Arena

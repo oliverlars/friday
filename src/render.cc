@@ -158,7 +158,7 @@ get_font_line_height( f32 font_scale = 1.0f) {
 
 internal Command*
 make_command(Command_Type type){
-    Command* command = push_type(&renderer->frame_arena, Command);
+    Command* command = push_type(&platform->frame_arena, Command);
     command->type = type;
     command->next = nullptr;
     command->previous = nullptr;
@@ -384,10 +384,26 @@ get_text_bbox(v2f pos, char* string, f32 font_scale = 1.0f, f32 border = 5.0f){
     return v4f(pos.x, pos.y, width, height);
 }
 
+internal v2f
+get_text_size(char* string, f32 font_scale = 1.0f){
+    v2f size = {};
+    size.width = get_text_width(string, font_scale);
+    size.height = get_font_line_height(font_scale);
+    return size;
+}
+
+internal v2f
+get_text_size(String8 string, f32 font_scale = 1.0f){
+    v2f size = {};
+    size.width = get_text_width(string, font_scale);
+    size.height = get_font_line_height(font_scale);
+    return size;
+}
+
 internal void
 init_opengl_renderer(){
     
-    renderer->frame_arena = subdivide_arena(&platform->frame_arena, Megabytes(1));
+    platform->frame_arena = subdivide_arena(&platform->frame_arena, Megabytes(1));
     
     
     {
@@ -1073,12 +1089,12 @@ internal void
 process_and_draw_commands(){
     
     
-    f32* rectangles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE);
-    f32* rectangle_outlines = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
-    f32* triangles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_TRIANGLE);
-    f32* circles = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_CIRCLE);
-    f32* glyphs = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_GLYPH);
-    f32* rectangles_textured = (f32*)push_size_zero(&renderer->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
+    f32* rectangles = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE);
+    f32* rectangle_outlines = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE);
+    f32* triangles = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_TRIANGLE);
+    f32* circles = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_CIRCLE);
+    f32* glyphs = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_GLYPH);
+    f32* rectangles_textured = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
     
     v4f clip_range = v4f(0, 0, platform->window_size.width, platform->window_size.height);
     for(Command* command = renderer->head; command; command = command->next){
@@ -1387,7 +1403,6 @@ process_and_draw_commands(){
 
 internal void
 opengl_start_frame() {
-    arena_clear(&renderer->frame_arena);
     renderer->head = nullptr;
     renderer->tail = nullptr;
     

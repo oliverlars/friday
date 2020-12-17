@@ -37,6 +37,7 @@ initialise_globals(){
 internal void
 start_frame(){
     ui->root = nullptr;
+    ui->layout_stack = nullptr;
     opengl_start_frame();
 }
 
@@ -84,6 +85,7 @@ HOT_UNLOAD {
 UPDATE {
     FRAME
     {
+        //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
         ForEachWidgetSibling(ui->root){

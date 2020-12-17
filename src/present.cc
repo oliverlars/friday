@@ -9,12 +9,11 @@ present_keyword(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_type);
-        
+        push_string(widget->pos, widget->string, ui->theme.text_type);
     };
     widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
+    v2f size = get_text_size(widget->string);
+    widget->min = size;
     update_widget(widget);
 }
 internal void
@@ -27,12 +26,11 @@ present_literal(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_literal);
-        
+        push_string(widget->pos, widget->string, ui->theme.text_literal);
     };
     widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
+    v2f size = get_text_size(widget->string);
+    widget->min = size;
     update_widget(widget);
 }
 
@@ -46,12 +44,13 @@ present_function(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_function);
+        //widget_render_text(widget, ui->theme.text_function);
+        push_string(widget->pos, widget->string, ui->theme.text_function);
         
     };
     widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
+    v2f size = get_text_size(widget->string);
+    widget->min = size;
     update_widget(widget);
 }
 
@@ -65,12 +64,13 @@ present_id(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text);
+        //widget_render_text(widget, ui->theme.text);
+        push_string(widget->pos, widget->string, ui->theme.text);
         
     };
     widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
+    v2f size = get_text_size(widget->string);
+    widget->min = size;
     update_widget(widget);
 }
 
@@ -84,11 +84,12 @@ present_misc(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_misc);
+        //widget_render_text(widget, ui->theme.text_misc);
+        push_string(widget->pos, widget->string, ui->theme.text_misc);
         
     };
     widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
+    v2f size = get_text_size(widget->string);
+    widget->min = size;
     update_widget(widget);
 }

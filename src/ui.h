@@ -36,7 +36,7 @@ enum Widget_Property {
     WP_CLIP,
     WP_FIXED_SIZE,
     WP_RENDER_HOOK,
-    
+    WP_SPACING,
 };
 
 struct Widget {

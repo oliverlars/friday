@@ -1,15 +1,5 @@
 global UI_State* ui = 0;
 
-internal Arena*
-current_frame_widget_arena() {
-    return &ui->widget_arena[ui->widget_frame];
-}
-
-internal Arena*
-last_frame_widget_arena() {
-    return &ui->widget_arena[!ui->widget_frame];
-}
-
 internal b32
 has_left_clicked(Platform_Event **event_out){
     b32 result = 0;
@@ -85,7 +75,6 @@ load_theme_dots(){
     ui->theme.text.packed = 0xE7E7E7ff;
     
     ui->theme.sub_colour.packed = 0x676e8aff;
-    
     ui->theme.border.packed = 0xE7E7E7ff;
     
     ui->theme.text_comment.packed = 0xffc2d94d;
@@ -93,6 +82,7 @@ load_theme_dots(){
     ui->theme.text_function.packed = 0x47C7F3ff;
     ui->theme.text_type.packed = 0xFED35Eff;
     ui->theme.text_misc.packed = 0x676E88ff;
+    
     ui->theme.cursor.packed = 0xe08c17ff;
     ui->theme.error.packed = 0xffcc3333;
     
@@ -140,15 +130,9 @@ widget_remove_property(Widget* widget, Widget_Property property){
     widget->properties[property / 64] &= ~((u64)1 << (property % 64));
 }
 
-internal Widget*
+internal inline Widget*
 make_widget(){
-    
-    Widget* widget = push_type_zero(&ui->frame_arena, Widget);
-    if(!ui->root){
-        ui->root = widget;
-    }
-    widget->min = v2f(20, 20);
-    
+    Widget* widget = push_type_zero(&platform->frame_arena, Widget);
     return widget;
 }
 
@@ -162,7 +146,7 @@ make_widget(String8 string){
 
 internal Layout*
 push_layout(Widget* widget){
-    auto layout = push_type_zero(&ui->frame_arena, Layout);
+    auto layout = push_type_zero(&platform->frame_arena, Layout);
     
     if(!ui->layout_stack){
         ui->layout_stack = layout;
@@ -178,8 +162,15 @@ push_layout(Widget* widget){
 internal Widget*
 push_widget(){
     Widget* widget = make_widget();
-    if(!ui->layout_stack){
-        //push_layout(widget);
+    
+    if(!ui->layout_stack && !ui->root){
+        ui->root = widget;
+        return widget;
+    }else if(!ui->layout_stack && ui->root) {
+        Widget* last = ui->root;
+        for(; last->next_sibling; last = last->next_sibling);
+        last->next_sibling = widget;
+        widget->prev_sibling = last;
         return widget;
     }
     
@@ -306,7 +297,10 @@ internal void
 pop_widget_window(){
     pop_layout();
     pop_layout();
+    pop_layout();
+    
 }
+
 
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
@@ -504,86 +498,10 @@ internal void
 label(char* fmt, ...){
     va_list args;
     va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
-    update_widget(widget);
-}
-
-internal void
-present_keyword(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    
-    auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_type);
-        
-    };
-    widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
-    update_widget(widget);
-}
-
-internal void
-present_function(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    
-    auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_function);
-        
-    };
-    widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
-    update_widget(widget);
-}
-
-internal void
-present_id(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    
-    auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text);
-        
-    };
-    widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
-    update_widget(widget);
-}
-
-internal void
-present_misc(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    
-    auto render_hook = [](Widget* widget){
-        widget_render_text(widget, ui->theme.text_misc);
-        
-    };
-    widget->render_hook = render_hook;
-    v4f bbox = get_text_bbox({}, widget->string);
-    widget->min = bbox.size;
     update_widget(widget);
 }
 
@@ -591,7 +509,7 @@ internal b32
 arrow_dropdown(char* fmt, ...){
     va_list args;
     va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     
     auto widget = push_widget(string);
@@ -606,7 +524,7 @@ internal b32
 button(char* fmt, ...){
     va_list args;
     va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
@@ -620,7 +538,7 @@ internal b32
 button_fixed(char* fmt, ...){
     va_list args;
     va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
@@ -650,7 +568,7 @@ internal void
 ui_window(v4f rect, char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    String8 string = make_stringfv(&ui->frame_arena, fmt, args);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     
     push_widget_window(rect, string);

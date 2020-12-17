@@ -2,7 +2,7 @@ internal char *
 win32_cstr_from_string(String8 string)
 {
     char *buffer = 0;
-    buffer = (char*)push_size(&platform->temporary_arena, string.length+1);
+    buffer = (char*)push_size(&platform->frame_arena, string.length+1);
     memcpy(buffer, string.text, string.length);
     return buffer;
 }

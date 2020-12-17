@@ -67,18 +67,35 @@ struct Layout {
     Widget* widget;
 };
 
+enum Panel_Split_Type {
+    PANEL_SPLIT_VERTICAL,
+    PANEL_SPLIT_HORIZONTAL,
+};
+
+enum Panel_Type {
+    PANEL_EDITOR,
+    PANEL_PROPERTIES,
+};
+
+struct Panel {
+    Panel_Split_Type split_type;
+    Panel_Type type;
+    f32 split_ratio;
+    Panel* first; 
+    Panel* second;
+    Panel* parent;
+    
+    Widget* widgets[2];
+    
+};
 
 
 struct UI_State {
     UI_ID hover_id;
     UI_ID clicked_id;
     
-    Arena frame_arena;
     
-    Arena widget_arena[2];
     bool widget_frame;
-    
-    Widget* widgets[2];
     
     Theme theme;
     
@@ -86,9 +103,10 @@ struct UI_State {
     
     Layout* layout_stack;
     
-    Widget* root;
     
-    Pool widget_pool;
+    Widget* root;
 };
 
 typedef u64 UI_ID;
+
+#define MAX_WIDGETS 1024

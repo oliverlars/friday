@@ -6,6 +6,7 @@
 #include "opengl.h"
 #include "render.h"
 #include "ui.h"
+#include "present.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -21,6 +22,7 @@
 
 #include "render.cc"
 #include "ui.cc"
+#include "present.cc"
 
 global Friday_Globals* globals = 0;
 
@@ -34,14 +36,16 @@ initialise_globals(){
 
 internal void
 start_frame(){
+    ui->root = nullptr;
     opengl_start_frame();
-    arena_clear(&globals->ui->frame_arena);
 }
 
 internal void
 end_frame(){
     opengl_end_frame();
 }
+
+#define FRAME defer_loop(start_frame(), end_frame())
 
 BEGIN_C_EXPORT
 
@@ -52,7 +56,6 @@ PERMANENT_LOAD {
     globals = (Friday_Globals*)platform->globals;
     globals->renderer = push_type_zero(&platform->permanent_arena, Renderer_State);
     globals->ui = push_type_zero(&platform->permanent_arena, UI_State);
-    globals->ui->frame_arena = subdivide_arena(&platform->permanent_arena, 8192);
     load_all_opengl_procs();
     globals->renderer->font = load_sdf_font("../fonts/friday_default.fnt");
     initialise_globals();
@@ -74,10 +77,9 @@ HOT_UNLOAD {
 }
 
 UPDATE {
-    start_frame();
+    FRAME
     {
         
-#if 0        
         UI_WINDOW(v4f(platform->window_size.width/2.0f, 
                       platform->window_size.height/2.0f, 400 + sinf(platform->get_time()*5)*20.0f, 
                       cosf(platform->get_time()*5)*20.0f + 200), "Properties") {
@@ -100,44 +102,23 @@ UPDATE {
                 button("%d", i);
             }
         }
-#endif
         
-        UI_WINDOW(v4f(platform->window_size.width/2.0f, 
-                      platform->window_size.height/2.0f + 200, 400 + sinf(platform->get_time()*5)*20.0f, 
+#if 1        
+        UI_WINDOW(v4f(platform->window_size.width/2.0f - 600, 
+                      platform->window_size.height/2.0f + 200, 
+                      800+ sinf(platform->get_time()*5)*20.0f, 
                       cosf(platform->get_time()*5)*20.0f + 500), "Code Editor") {
             UI_ROW {
-                present_keyword("struct");
-                present_misc("::");
-                present_id("dog");
-                present_misc("{");
+                present_keyword("where is the text?");
             }
-            UI_ROW{
-                xspacer(40);
-                UI_COLUMN {
-                    present_id("x");
-                    present_id("y");
-                    present_id("potato");
-                }
-                UI_COLUMN {
-                    present_misc(":");
-                    present_misc(":");
-                    present_misc(":");
-                }
-                UI_COLUMN {
-                    present_keyword("int");
-                    present_keyword("float");
-                    present_keyword("mat 4x4");
-                }
-                
-            }
-            UI_ROW {
-                present_misc("}");
-            }
+            
         }
-        layout_widgets(ui->root);
-        render_widgets(ui->root);
+#endif
+        ForEachWidgetSibling(ui->root){
+            layout_widgets(it);
+            render_widgets(it);
+        }
     }
-    end_frame();
     platform->refresh_screen();
 }
 

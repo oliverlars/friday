@@ -387,7 +387,7 @@ get_text_bbox(v2f pos, char* string, f32 font_scale = 1.0f, f32 border = 5.0f){
 internal void
 init_opengl_renderer(){
     
-    renderer->frame_arena = subdivide_arena(&platform->temporary_arena, Megabytes(1));
+    renderer->frame_arena = subdivide_arena(&platform->frame_arena, Megabytes(1));
     
     
     {
@@ -1395,7 +1395,6 @@ opengl_start_frame() {
 
 internal void
 opengl_end_frame() {
-    
     glViewport(0, 0, platform->window_size.width, platform->window_size.height);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);

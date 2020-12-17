@@ -13,7 +13,7 @@ make_arena() {
 }
 
 #define push_type(arena, type) (type*)_arena_allocate(arena, sizeof(type))
-#define push_type_zero(arena, type) (type*)_arena_allocate(arena, sizeof(type))
+#define push_type_zero(arena, type) (type*)_arena_allocate_zero(arena, sizeof(type))
 #define push_size(arena, size) _arena_allocate(arena, size)
 #define push_size_zero(arena, size) _arena_allocate_zero(arena, size)
 

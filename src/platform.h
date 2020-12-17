@@ -73,7 +73,7 @@ struct Platform {
     
     
     Arena permanent_arena;
-    Arena temporary_arena;
+    Arena frame_arena;
     
     void* globals;
     

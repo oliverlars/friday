@@ -642,8 +642,11 @@ render_panels(Panel* root, v4f rect){
     }else {
         assert(!root->first && !root->second);
         
+        rect.x += PADDING;
+        rect.y -= PADDING;
+        rect.width -= PADDING*2;
+        rect.height -= PADDING*2;
         if(root->type == PANEL_PROPERTIES){
-            
             UI_WINDOW(rect, "Properties") {
                 UI_ROW {
                     button("Uh Oh");
@@ -652,7 +655,6 @@ render_panels(Panel* root, v4f rect){
                 
                 UI_ROW UI_WIDTHFILL {
                     for(int i = 0; i < 5; i++){
-                        xspacer(i*10);
                         button("%d", i);
                     }
                     

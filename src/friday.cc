@@ -84,7 +84,8 @@ HOT_UNLOAD {
 UPDATE {
     FRAME
     {
-        render_panels(ui->panel, v4f(0,0, platform->window_size.width, platform->window_size.height));
+        render_panels(ui->panel, v4f(0,platform->window_size.height, 
+                                     platform->window_size.width, platform->window_size.height));
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);

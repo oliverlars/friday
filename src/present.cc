@@ -1,11 +1,7 @@
 
 internal void
 present_string(Widget* widget, Colour colour){
-    if(ui->hot == widget->id){
-        push_string(widget->pos, widget->string, colour, 1.0f + 0.5*sinf(3.14*widget->hot_transition));
-    }else {
-        push_string(widget->pos, widget->string, colour);
-    }
+    push_string(widget->pos, widget->string, colour, 1.0f + 0.25*sinf(3.14*widget->hot_transition));
 }
 
 internal void

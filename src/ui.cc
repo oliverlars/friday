@@ -496,9 +496,8 @@ widget_render_text(Widget* widget, Colour colour){
         push_rectangle(bbox, 1, ui->theme.sub_colour);
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
-        if(widget->id == ui->hot){
-            bbox.width *= widget->hot_transition;
-        }
+        
+        bbox = rect_expand(bbox, widget->hot_transition*5.0f);
         push_rectangle_outline(bbox, 1, 3, ui->theme.border);
         widget->pos.x += 1;
         widget->pos.y -= 1;
@@ -544,7 +543,7 @@ render_widgets(Widget* widget){
         lerp(&widget->hot_transition, 1.0f, 0.1f);
         ui->hot = widget->id; 
     }else {
-        widget->hot_transition = 0;
+        lerp(&widget->hot_transition, 0, 0.1f);
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
@@ -552,10 +551,8 @@ render_widgets(Widget* widget){
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(widget->pos, widget->min);
+        bbox = rect_expand(bbox, widget->hot_transition*5.0f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
-            if(widget->id == ui->hot){
-                bbox.width *= widget->hot_transition;
-            }
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
             bbox.pos.x += 1;
             bbox.pos.y -= 1;

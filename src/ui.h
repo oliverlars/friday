@@ -37,11 +37,14 @@ enum Widget_Property {
     WP_FIXED_SIZE,
     WP_RENDER_HOOK,
     WP_SPACING,
+    WP_CUSTOM_DATA,
 };
 
 struct Widget {
     UI_ID id;
     String8 string;
+    
+    Widget* next_hash;
     
     Widget* prev_sibling;
     Widget* next_sibling;
@@ -54,6 +57,10 @@ struct Widget {
     v2f pos;
     u64 properties[PROPERTIES_MAX/64 + 1];
     
+    f32 hot_transition;
+    f32 active_transition;
+    
+    void* data;
     void (*render_hook)(Widget* widget);
 };
 
@@ -87,6 +94,7 @@ struct Panel {
     
 };
 
+#define MAX_WIDGETS 4096
 
 struct UI_State {
     UI_ID hover_id;
@@ -101,12 +109,25 @@ struct UI_State {
     
     Layout* layout_stack;
     
+    UI_ID hot;
+    UI_ID active;
     
     Widget* root;
+    
+    Widget* widgets[MAX_WIDGETS];
     
     Panel* panel;
 };
 
 typedef u64 UI_ID;
 
-#define MAX_WIDGETS 1024
+
+#define UI_ROW defer_loop(push_widget_row(), pop_layout())
+#define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
+#define UI_WINDOW(rect, text) defer_loop(ui_window(rect, text), pop_widget_window()) 
+#define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
+#define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
+#define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
+
+#define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
+#define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)

@@ -53,7 +53,7 @@ BEGIN_C_EXPORT
 PERMANENT_LOAD {
     platform = platform_;
     
-    platform->globals = push_type(&platform->permanent_arena, Friday_Globals);
+    platform->globals = push_type_zero(&platform->permanent_arena, Friday_Globals);
     globals = (Friday_Globals*)platform->globals;
     globals->renderer = push_type_zero(&platform->permanent_arena, Renderer_State);
     globals->ui = push_type_zero(&platform->permanent_arena, UI_State);
@@ -88,6 +88,7 @@ UPDATE {
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
+        
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);

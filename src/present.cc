@@ -1,5 +1,14 @@
 
 internal void
+present_string(Widget* widget, Colour colour){
+    if(ui->hot == widget->id){
+        push_string(widget->pos, widget->string, colour, 1.0f + 0.5*sinf(3.14*widget->hot_transition));
+    }else {
+        push_string(widget->pos, widget->string, colour);
+    }
+}
+
+internal void
 present_keyword(char* fmt, ...){
     va_list args;
     va_start(args, fmt);
@@ -9,7 +18,7 @@ present_keyword(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        push_string(widget->pos, widget->string, ui->theme.text_type);
+        present_string(widget, ui->theme.text_type);
     };
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);
@@ -26,7 +35,7 @@ present_literal(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        push_string(widget->pos, widget->string, ui->theme.text_literal);
+        present_string(widget, ui->theme.text_literal);
     };
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);
@@ -44,9 +53,7 @@ present_function(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        //widget_render_text(widget, ui->theme.text_function);
-        push_string(widget->pos, widget->string, ui->theme.text_function);
-        
+        present_string(widget, ui->theme.text_function);
     };
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);
@@ -64,9 +71,7 @@ present_id(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        //widget_render_text(widget, ui->theme.text);
-        push_string(widget->pos, widget->string, ui->theme.text);
-        
+        present_string(widget, ui->theme.text);
     };
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);
@@ -84,9 +89,7 @@ present_misc(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        //widget_render_text(widget, ui->theme.text_misc);
-        push_string(widget->pos, widget->string, ui->theme.text_misc);
-        
+        present_string(widget, ui->theme.text_misc);
     };
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);

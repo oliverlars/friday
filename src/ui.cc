@@ -99,19 +99,25 @@ hash32(u64* hash, char* data, int size){
     }
 }
 
-internal UI_ID
-generate_id(char* label){
-    int size = strlen(label);
-    UI_ID result = 0;
-    hash32(&result, label, size);
-    return result;
+internal void
+hash64(u64* hash, char* data, int size){
+    
 }
 
 internal UI_ID
 generate_id(String8 label){
     int size = label.length;
     UI_ID result = 0;
+    auto layout = ui->layout_stack;
     hash32(&result, label.text, size);
+    while(layout){
+        result = (result ^ (char)layout) * 16777619;
+        
+        layout = layout->prev;
+    }
+    ForEachWidgetChild(ui->layout_stack->widget){
+        result = (result ^ (char)it) * 16777619;
+    }
     return result;
 }
 
@@ -130,16 +136,43 @@ widget_remove_property(Widget* widget, Widget_Property property){
     widget->properties[property / 64] &= ~(1ll << (property % 64));
 }
 
-internal inline Widget*
-make_widget(){
-    auto widget = push_type_zero(&platform->frame_arena, Widget);
+internal Widget*
+get_widget(String8 string){
+    auto id = generate_id(string);
+    auto hash = id & (MAX_WIDGETS-1);
+    auto widget = ui->widgets[hash];
+    if(!widget){
+        widget = push_type_zero(&platform->permanent_arena, Widget);
+        ui->widgets[hash] = widget;
+        return widget;
+    }
+    
+    do {
+        if(id == widget->id){
+            break;
+        }
+        if(!widget->next_hash){
+            widget = push_type_zero(&platform->permanent_arena, Widget);
+            widget->next_hash = widget;
+            break;
+        }
+        
+        widget = widget->next_hash;
+    }while(widget);
     
     return widget;
 }
 
 internal Widget*
+make_widget(){
+    auto widget = push_type_zero(&platform->frame_arena, Widget);
+    return widget;
+}
+
+internal Widget*
 make_widget(String8 string){
-    Widget* widget = make_widget();
+    
+    auto widget = get_widget(string);
     widget->string = string;
     widget->id = generate_id(string);
     return widget;
@@ -148,7 +181,6 @@ make_widget(String8 string){
 internal Layout*
 push_layout(Widget* widget){
     auto layout = push_type_zero(&platform->frame_arena, Layout);
-    
     if(!ui->layout_stack){
         ui->layout_stack = layout;
     }else {
@@ -194,7 +226,33 @@ push_widget(){
 
 internal Widget*
 push_widget(String8 string){
-    auto widget = push_widget();
+    auto widget = make_widget(string);
+    
+    if(!ui->layout_stack && !ui->root){
+        ui->root = widget;
+        return widget;
+    }else if(!ui->layout_stack && ui->root) {
+        Widget* last = ui->root;
+        for(; last->next_sibling; last = last->next_sibling);
+        last->next_sibling = widget;
+        widget->prev_sibling = last;
+        
+        return widget;
+    }
+    
+    auto it = ui->layout_stack->widget;
+    if(it->last_child){
+        it->last_child->next_sibling = widget;
+        widget->prev_sibling = it->last_child;
+        it->last_child = widget;
+        widget->parent = it;
+        widget->next_sibling = nullptr;
+    }else {
+        it->first_child = widget;
+        it->last_child = widget;
+        widget->parent = it;
+    }
+    
     widget->string = string;
     return widget;
 }
@@ -299,16 +357,6 @@ pop_widget_window(){
     while(ui->layout_stack) pop_layout();
     
 }
-
-#define UI_ROW defer_loop(push_widget_row(), pop_layout())
-#define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
-#define UI_WINDOW(rect, text) defer_loop(ui_window(rect, text), pop_widget_window()) 
-#define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
-#define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
-#define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
-
-#define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
-#define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)
 
 internal v2f layout_widgets(Widget* widget, v2f pos);
 
@@ -448,6 +496,9 @@ widget_render_text(Widget* widget, Colour colour){
         push_rectangle(bbox, 1, ui->theme.sub_colour);
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
+        if(widget->id == ui->hot){
+            bbox.width *= widget->hot_transition;
+        }
         push_rectangle_outline(bbox, 1, 3, ui->theme.border);
         widget->pos.x += 1;
         widget->pos.y -= 1;
@@ -489,12 +540,22 @@ render_widgets(Widget* widget){
     }
     widget->pos.y -= widget->min.height;
     
+    if(ui->hot == widget->id || is_in_rect(platform->mouse_position, v4f2(widget->pos, widget->min))){
+        lerp(&widget->hot_transition, 1.0f, 0.1f);
+        ui->hot = widget->id; 
+    }else {
+        widget->hot_transition = 0;
+    }
+    
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget_render_text(widget, ui->theme.text);
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(widget->pos, widget->min);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
+            if(widget->id == ui->hot){
+                bbox.width *= widget->hot_transition;
+            }
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
             bbox.pos.x += 1;
             bbox.pos.y -= 1;
@@ -583,6 +644,37 @@ yspacer(f32 space = 10.0f){
     auto widget = push_widget();
     widget->min = v2f(0, space);
     widget_set_property(widget, WP_SPACING);
+    update_widget(widget);
+}
+
+internal void
+fslider(f32 min, f32 max, f32* value){
+    
+    auto widget = push_widget();
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_CUSTOM_DATA);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    
+    
+    auto render_hook = [](Widget* widget) {
+        v4f bbox = get_text_bbox(widget->pos, widget->string);
+        bbox = v4f2(widget->pos, widget->min);
+        push_rectangle(bbox, 1, ui->theme.sub_colour);
+        push_rectangle(bbox, 1, ui->theme.text_function);
+        if(widget_has_property(widget, WP_RENDER_BORDER)){
+            push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+            widget->pos.x += 1;
+            widget->pos.y -= 1;
+        }
+        f32 centre = widget->pos.x + widget->min.x/2.0f;
+        f32 text_centre = get_text_width(widget->string)/2.0f;
+        f32 text_x = centre - text_centre;
+        push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
+    };
+    
+    widget->data = value;
+    widget->render_hook = render_hook;
+    widget->string = make_stringf(&platform->frame_arena, "%f", *value);
     update_widget(widget);
 }
 
@@ -676,20 +768,13 @@ render_panels(Panel* root, v4f rect){
         rect.height -= PADDING*2;
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties") {
-                UI_ROW {
-                    button("Uh Oh");
-                    button("Widgetables");
-                }
-                
-                UI_ROW UI_WIDTHFILL {
-                    for(int i = 0; i < 5; i++){
-                        button("%d", i);
+                char* names[] = {"test", "dog", "piano"};
+                UI_COLUMN {
+                    for(int i = 0; i < 3; i++){
+                        UI_ROW UI_WIDTHFILL {
+                            button("%d", i);
+                        }
                     }
-                    
-                }
-                
-                for(int i = 5; i > 0; i--){
-                    button("%d", i);
                 }
             }
             
@@ -725,7 +810,7 @@ render_panels(Panel* root, v4f rect){
                 
                 UI_ROW{
                     xspacer(100);
-                    xspacer(140);
+                    xspacer(40);
                     present_id("test variable");
                     
                     present_misc(":");
@@ -751,7 +836,10 @@ render_panels(Panel* root, v4f rect){
                     
                     
                 }
-                
+                UI_ROW{
+                    xspacer(100);
+                    present_misc("}");
+                }
             }
             
         }

@@ -1413,7 +1413,6 @@ opengl_end_frame() {
     glViewport(0, 0, platform->window_size.width, platform->window_size.height);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-    
     process_and_draw_commands();
     
     

@@ -174,25 +174,15 @@ hash32(u64* hash, char* data, int size){
     }
 }
 
-internal void
-hash64(u64* hash, char* data, int size){
-    
-}
-
 internal UI_ID
 generate_id(String8 label){
     int size = label.length;
-    UI_ID result = 0;
+    UI_ID lower = 0;
+    hash32(&lower, label.text, size);
     auto layout = ui->layout_stack;
-    hash32(&result, label.text, size);
-    while(layout){
-        result = (result ^ (char)layout) * 16777619;
-        
-        layout = layout->prev;
-    }
-    ForEachWidgetChild(ui->layout_stack->widget){
-        result = (result ^ (char)it) * 16777619;
-    }
+    UI_ID result = 0;
+    result = (layout->widget->id << 32) ^ lower;
+    
     return result;
 }
 
@@ -335,6 +325,15 @@ push_widget(String8 string){
 internal Widget_Update
 update_widget(Widget* widget){
     Widget_Update result = {};
+    
+    Widget* last_widget = get_widget(widget->string);
+    if(last_widget){
+        v4f bbox = v4f2(last_widget->pos, last_widget->min);
+        if(is_in_rect(platform->mouse_position, bbox) && has_left_clicked()){
+            result.clicked = true;
+        }
+    }
+    
     if(widget_has_property(widget, WP_CLICKABLE)){
         
     }
@@ -574,7 +573,7 @@ widget_render_text(Widget* widget, Colour colour){
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
         
-        bbox = inflate_rect(bbox, widget->hot_transition*5.0f);
+        bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
         push_rectangle_outline(bbox, 1, 3, ui->theme.border);
         widget->pos.x += 1;
         widget->pos.y -= 1;
@@ -628,7 +627,7 @@ render_widgets(Widget* widget){
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(widget->pos, widget->min);
-        bbox = inflate_rect(bbox, widget->hot_transition*5.0f);
+        bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
             bbox.pos.x += 1;
@@ -684,6 +683,24 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_SPACING);
     auto result = update_widget(widget);
     return result.clicked;
+}
+
+internal b32
+check(b32* checked, char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    Widget* widget;
+    widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_TEXT);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_SPACING);
+    auto result = update_widget(widget);
+    if(result.clicked){
+        *checked = !*checked;
+    }
+    return *checked;
 }
 
 internal b32
@@ -768,7 +785,7 @@ ui_window(v4f rect, bool title_bar, char* fmt, ...) {
             UI_WIDTHFILL{
                 xspacer(20);
                 //button_fixed("V");
-                arrow_dropdown("window type");
+                arrow_dropdown("change type%.*s", string.length, string.text);
             }
         }
     }
@@ -855,7 +872,10 @@ render_panels(Panel* root, v4f rect){
                     
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {
-                        button("Compile");
+                        static b32 checked = false;
+                        if(check(&checked, "Compile")){
+                            button("test");
+                        }
                         button("Run");
                     }
                 }
@@ -928,10 +948,9 @@ render_panels(Panel* root, v4f rect){
             
         }else if(root->type == PANEL_STATUS){
             UI_WINDOW(rect, false, "Status") {
-                UI_ROW UI_WIDTHFILL {
-                    label("active node:"); 
-                    xspacer(50);
-                    label("");
+                UI_ROW {
+                    label("mouse position:"); 
+                    label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
                 }
             }
         }

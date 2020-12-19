@@ -287,6 +287,7 @@ push_rectangle_textured( v4f rect, f32 radius, Bitmap bitmap){
     insert_command(rectangle);
 }
 
+
 internal void
 push_string( v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
     
@@ -316,6 +317,33 @@ push_string( v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
 internal void
 push_string(v2f pos, char* text, Colour colour, f32 font_scale = 1.0f){
     push_string(pos, string_from_cstr(text), colour, font_scale);
+}
+
+internal void
+push_stringi(v2f pos, String8 string, Colour colour, int index, f32 font_scale = 1.0f){
+    
+    pos.y = -pos.y;
+    pos.y -= get_font_line_height(font_scale);
+    font_scale *= renderer->font.scale;
+    
+    // NOTE(Oliver): '#' is used for ID purposes
+    for(int i = 0; i < string.length; i++){
+        char text = string.text[i];
+        if(text == '#'){break;}
+        //while(string.text && *string.text && *string.text != '#'){
+        if(text >= 32 && text < 128){
+            auto font = renderer->font;
+            auto c  = font.characters[text];
+            v4f positions = v4f(pos.x + c.x_offset*font_scale, 
+                                pos.y + c.y_offset*font_scale, 
+                                pos.x + c.x_offset*font_scale + c.width*font_scale,
+                                pos.y + c.y_offset*font_scale + c.height*font_scale);
+            v4f uvs = v4f(c.x/512.0f, c.y/512.0f, (c.x + c.width)/512.0f, (c.y+c.height)/512.0f);
+            if(i == index)
+                push_glyph(positions, uvs, colour);
+            pos.x += (c.x_advance - font.padding.x)*font_scale;
+        }
+    }
 }
 
 internal f32
@@ -398,6 +426,13 @@ get_text_size(String8 string, f32 font_scale = 1.0f){
     size.width = get_text_width(string, font_scale);
     size.height = get_font_line_height(font_scale);
     return size;
+}
+
+internal f32
+text_scale_from_pixels(String8 string, f32 pixels){
+    v2f size = get_text_size(string);
+    f32 scale = (size.width + pixels)/size.width;
+    return scale;
 }
 
 internal void

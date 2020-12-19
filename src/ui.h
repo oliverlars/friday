@@ -60,6 +60,8 @@ struct Widget {
     f32 hot_transition;
     f32 active_transition;
     
+    f32 font_scale;
+    
     void* data;
     void (*render_hook)(Widget* widget);
 };
@@ -114,7 +116,8 @@ struct UI_State {
     
     Widget* root;
     
-    Widget* widgets[MAX_WIDGETS];
+    Widget* widget_table[MAX_WIDGETS];
+    Pool widget_pool;
     
     Panel* panel;
 };

@@ -205,13 +205,22 @@ add_rects(v4f a, v4f b){
 }
 
 internal v4f
-rect_expand(v4f a, f32 amount){
+inflate_rect(v4f a, f32 amount){
     v4f result = a;
-    result.x -= amount/2.0f;
-    result.width += amount;
-    result.y += amount/2.0f;
-    result.height += amount;
+    result.x -= amount;
+    result.width += amount*2;
+    result.y += amount;
+    result.height += amount*2;
     return result;
+}
+
+internal f32
+aspectof(v2f a){
+    if(a.x > a.y){
+        return a.x/a.y;
+    }else {
+        return a.y/a.x;
+    }
 }
 
 internal b32

@@ -46,6 +46,58 @@ has_right_clicked(){
     return(result);
 }
 
+internal b32
+has_mouse_moved(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_MOVE){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_mouse_moved(v2f* delta = 0) {
+    Platform_Event* event = 0;
+    b32 result = has_mouse_moved(&event);
+    if(result){
+        platform_consume_event(event);
+        if(delta){
+            *delta = event->delta;
+        }
+    }
+    return result;
+}
+
+internal b32
+has_mouse_dragged(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_MOVE && event->mouse_button == MOUSE_BUTTON_LEFT){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_mouse_dragged(v2f* delta = 0) {
+    Platform_Event* event = 0;
+    b32 result = has_mouse_dragged(&event);
+    if(result){
+        platform_consume_event(event);
+        if(delta){
+            *delta = event->delta;
+        }
+    }
+    return result;
+}
+
 internal void
 load_theme_ayu(){
     
@@ -140,10 +192,10 @@ internal Widget*
 get_widget(String8 string){
     auto id = generate_id(string);
     auto hash = id & (MAX_WIDGETS-1);
-    auto widget = ui->widgets[hash];
+    auto widget = ui->widget_table[hash];
     if(!widget){
         widget = push_type_zero(&platform->permanent_arena, Widget);
-        ui->widgets[hash] = widget;
+        ui->widget_table[hash] = widget;
         return widget;
     }
     
@@ -497,7 +549,7 @@ widget_render_text(Widget* widget, Colour colour){
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
         
-        bbox = rect_expand(bbox, widget->hot_transition*5.0f);
+        bbox = inflate_rect(bbox, widget->hot_transition*5.0f);
         push_rectangle_outline(bbox, 1, 3, ui->theme.border);
         widget->pos.x += 1;
         widget->pos.y -= 1;
@@ -551,7 +603,7 @@ render_widgets(Widget* widget){
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(widget->pos, widget->min);
-        bbox = rect_expand(bbox, widget->hot_transition*5.0f);
+        bbox = inflate_rect(bbox, widget->hot_transition*5.0f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             push_rectangle_outline(bbox, 1, 3, ui->theme.text);
             bbox.pos.x += 1;
@@ -728,6 +780,7 @@ internal void present_literal(char* fmt, ...);
 internal void present_function(char* fmt, ...);
 internal void present_id(char* fmt, ...);
 internal void present_misc(char* fmt, ...);
+internal void present_cursor();
 
 internal void
 render_panels(Panel* root, v4f rect){
@@ -773,6 +826,7 @@ render_panels(Panel* root, v4f rect){
                         }
                     }
                 }
+                
             }
             
         }else {
@@ -792,8 +846,8 @@ render_panels(Panel* root, v4f rect){
                     present_keyword("s32");
                     
                     present_misc(",");
+                    present_cursor();
                     xspacer();
-                    
                     present_id("args");
                     present_misc(":");
                     xspacer();

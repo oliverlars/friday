@@ -71,6 +71,29 @@ has_mouse_moved(v2f* delta = 0) {
     }
     return result;
 }
+internal b32
+has_pressed_key(Platform_Event** event_out, Key key){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_KEY_PRESS && event->key == key){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_pressed_key(Key key){
+    Platform_Event *event = 0;
+    b32 result = has_pressed_key(&event, key);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
+
 
 internal b32
 has_mouse_dragged(Platform_Event **event_out){
@@ -366,6 +389,7 @@ push_widget_column(){
     auto widget = push_widget();
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_COLUMN);
+    widget_set_property(widget, WP_SPACING);
     update_widget(widget);
 }
 
@@ -374,6 +398,7 @@ push_widget_widthfill(){
     auto widget = push_widget();
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_WIDTHFILL);
+    widget_set_property(widget, WP_SPACING);
     update_widget(widget);
 }
 
@@ -728,7 +753,7 @@ fslider(f32 min, f32 max, f32* value){
 }
 
 internal void
-ui_window(v4f rect, char* fmt, ...) {
+ui_window(v4f rect, bool title_bar, char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -737,15 +762,18 @@ ui_window(v4f rect, char* fmt, ...) {
     push_widget_window(rect, string);
     
     push_widget_column();
-    UI_ROW {
-        label("%.*s", string.length, string.text);
-        UI_WIDTHFILL{
-            xspacer(20);
-            //button_fixed("V");
-            arrow_dropdown("window type");
+    if(title_bar){
+        UI_ROW {
+            label("%.*s", string.length, string.text);
+            UI_WIDTHFILL{
+                xspacer(20);
+                //button_fixed("V");
+                arrow_dropdown("window type");
+            }
         }
     }
 }
+
 
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
@@ -790,7 +818,7 @@ render_panels(Panel* root, v4f rect){
         switch(root->first->split_type){
             case PANEL_SPLIT_VERTICAL:{
                 v4f first = rect;
-                first.width*= root->first->split_ratio;
+                first.width *= root->first->split_ratio;
                 render_panels(root->first, first);
                 
                 v4f second = rect;
@@ -801,12 +829,12 @@ render_panels(Panel* root, v4f rect){
             case PANEL_SPLIT_HORIZONTAL:{
                 v4f first = rect;
                 first.height *= root->first->split_ratio;
-                render_panels(root->second, first);
+                render_panels(root->first, first);
                 
                 v4f second = rect;
-                second.y += rect.height*root->first->split_ratio;
+                second.y -= rect.height*root->first->split_ratio;
                 second.height *= root->second->split_ratio;
-                render_panels(root->first, second);
+                render_panels(root->second, second);
             }break;
         }
     }else {
@@ -816,22 +844,27 @@ render_panels(Panel* root, v4f rect){
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
+        
         if(root->type == PANEL_PROPERTIES){
-            UI_WINDOW(rect, "Properties") {
+            UI_WINDOW(rect, true, "Properties") {
                 char* names[] = {"test", "dog", "piano"};
                 UI_COLUMN {
-                    for(int i = 0; i < 3; i++){
-                        UI_ROW UI_WIDTHFILL {
-                            button("%d", i);
-                        }
+                    
+                    UI_WIDTHFILL button("Render as C");
+                    UI_WIDTHFILL button("Render as Jai");
+                    
+                    yspacer(20);
+                    UI_ROW UI_WIDTHFILL {
+                        button("Compile");
+                        button("Run");
                     }
                 }
                 
             }
             
-        }else {
-            
-            UI_WINDOW(rect, "Code Editor") {
+        }else if(root->type == PANEL_EDITOR) {
+            UI_WINDOW(rect, true, "Code Editor") {
+                
                 UI_ROW {
                     xspacer(100);
                     present_function("entry point");
@@ -893,6 +926,14 @@ render_panels(Panel* root, v4f rect){
                 }
             }
             
+        }else if(root->type == PANEL_STATUS){
+            UI_WINDOW(rect, false, "Status") {
+                UI_ROW UI_WIDTHFILL {
+                    label("active node:"); 
+                    xspacer(50);
+                    label("");
+                }
+            }
         }
         
     }

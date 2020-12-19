@@ -30,8 +30,8 @@ present_string(Widget* widget, Colour colour){
         widget->pos.x -= widget->min.width/2.0f;
     }
     for(int i = 0; i < widget->string.length; i++){
-        f32 offset = 10*sinf(widget->hot_transition*2*i*3.14f/(f32)widget->string.length);
-        v2f pos = v2f(widget->pos.x, widget->pos.y + offset);
+        v2f mp = platform->mouse_position;
+        v2f pos = v2f(widget->pos.x, widget->pos.y);
         push_stringi(pos, widget->string, colour, i);
     }
 }

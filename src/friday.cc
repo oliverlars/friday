@@ -19,7 +19,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb_image.h"
 
-
 #include "render.cc"
 #include "ui.cc"
 #include "present.cc"
@@ -69,6 +68,7 @@ PERMANENT_LOAD {
     ui->panel->type = PANEL_EDITOR;
     
     split_panel(ui->panel, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
+    split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
 }
 
 HOT_LOAD {
@@ -81,6 +81,7 @@ HOT_LOAD {
 HOT_UNLOAD {
     
 }
+
 
 UPDATE {
     FRAME

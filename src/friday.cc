@@ -67,7 +67,7 @@ PERMANENT_LOAD {
     ui->panel->split_ratio = 1.0f;
     ui->panel->type = PANEL_EDITOR;
     
-    split_panel(ui->panel, 0.75, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
+    split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
 }
 

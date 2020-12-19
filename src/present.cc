@@ -126,3 +126,72 @@ present_misc(char* fmt, ...){
     widget->min = size;
     update_widget(widget);
 }
+
+
+internal void
+present_as_c(){
+    UI_ROW {
+        xspacer(20);
+        present_keyword("int");
+        xspacer();
+        present_id("test variable");
+        xspacer();
+        present_misc("=");
+        xspacer();
+        present_literal("1024");
+        xspacer();
+        present_misc("+");
+        xspacer();
+        present_literal("2048");
+    }
+    
+}
+
+internal void
+present_as_jai(){
+    UI_ROW {
+        xspacer(20);
+        
+        present_id("test variable");
+        present_misc(":");
+        xspacer();
+        present_keyword("int");
+        xspacer();
+        present_misc("=");
+        xspacer();
+        present_literal("1024");
+        xspacer();
+        present_misc("+");
+        xspacer();
+        present_literal("2048");
+    }
+    
+}
+
+internal void
+present_as_python(){
+    UI_ROW {
+        xspacer(20);
+        
+        present_id("test variable");
+        xspacer();
+        present_misc("=");
+        xspacer();
+        present_literal("1024");
+        xspacer();
+        present_misc("+");
+        xspacer();
+        present_literal("2048");
+    }
+    
+}
+internal void
+present(int present_style){
+    if(present_style == 0){
+        present_as_jai();
+    }else if(present_style == 1){
+        present_as_c();
+    }else if(present_style == 2){
+        present_as_python();
+    }
+}

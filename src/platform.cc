@@ -109,6 +109,11 @@ platform_begin_frame(){
 internal void
 platform_end_frame(){
     platform->current_time += 1.0f / platform->target_fps;
+    
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        platform_consume_event(event);
+    }
 }
 
 internal void

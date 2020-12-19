@@ -62,7 +62,8 @@ struct Widget {
     
     f32 font_scale;
     
-    void* data;
+    b32 checked;
+    
     void (*render_hook)(Widget* widget);
 };
 

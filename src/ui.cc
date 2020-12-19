@@ -177,13 +177,12 @@ hash32(u64* hash, char* data, int size){
 internal UI_ID
 generate_id(String8 label){
     int size = label.length;
-    UI_ID lower = 0;
-    hash32(&lower, label.text, size);
+    UI_ID id = 0;
+    hash32(&id, label.text, size);
     auto layout = ui->layout_stack;
-    UI_ID result = 0;
-    result = (layout->widget->id << 32) ^ lower;
+    hash32(&id, layout->widget->string.text, layout->widget->string.length);
     
-    return result;
+    return id;
 }
 
 internal bool
@@ -327,10 +326,12 @@ update_widget(Widget* widget){
     Widget_Update result = {};
     
     Widget* last_widget = get_widget(widget->string);
-    if(last_widget){
+    if(last_widget && widget_has_property(widget, WP_CLICKABLE)){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
-        if(is_in_rect(platform->mouse_position, bbox) && has_left_clicked()){
-            result.clicked = true;
+        if(is_in_rect(platform->mouse_position, bbox)){
+            if(has_left_clicked()){
+                result.clicked = true;
+            }
         }
     }
     
@@ -546,7 +547,14 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         layout_widgets(widget->first_child, pos);
         
     }
-    widget->pos = pos;
+    if(widget_has_property(widget, WP_RENDER_HOOK)){
+        lerp(&widget->pos.x, pos.x, 0.1f);
+        //lerp(&widget->pos.y, pos.y, 0.1f);
+        widget->pos.y = pos.y;
+    }else {
+        widget->pos = pos;
+    }
+    
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);
@@ -662,12 +670,16 @@ arrow_dropdown(char* fmt, ...){
     va_end(args);
     
     auto widget = push_widget(string);
+    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TRIANGLE);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_FIXED_SIZE);
     widget_set_property(widget, WP_SPACING);
     auto result = update_widget(widget);
-    return result.clicked;
+    if(result.clicked){
+        widget->checked = !widget->checked;
+    }
+    return widget->checked;
 }
 
 internal b32
@@ -678,11 +690,31 @@ button(char* fmt, ...){
     va_end(args);
     Widget* widget;
     widget = push_widget(string);
+    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_SPACING);
     auto result = update_widget(widget);
     return result.clicked;
+}
+
+internal b32
+check(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    Widget* widget;
+    widget = push_widget(string);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_RENDER_TEXT);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_SPACING);
+    auto result = update_widget(widget);
+    if(result.clicked){
+        widget->checked = !widget->checked;
+    }
+    return widget->checked;
 }
 
 internal b32
@@ -695,6 +727,7 @@ check(b32* checked, char* fmt, ...){
     widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_SPACING);
     auto result = update_widget(widget);
     if(result.clicked){
@@ -710,7 +743,7 @@ button_fixed(char* fmt, ...){
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
-    widget->pos = v2f(0,0);
+    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_FIXED_SIZE);
@@ -763,7 +796,6 @@ fslider(f32 min, f32 max, f32* value){
         push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
     };
     
-    widget->data = value;
     widget->render_hook = render_hook;
     widget->string = make_stringf(&platform->frame_arena, "%f", *value);
     update_widget(widget);
@@ -777,7 +809,7 @@ ui_window(v4f rect, bool title_bar, char* fmt, ...) {
     va_end(args);
     
     push_widget_window(rect, string);
-    
+    b32 dropdown = false;
     push_widget_column();
     if(title_bar){
         UI_ROW {
@@ -785,7 +817,16 @@ ui_window(v4f rect, bool title_bar, char* fmt, ...) {
             UI_WIDTHFILL{
                 xspacer(20);
                 //button_fixed("V");
-                arrow_dropdown("change type%.*s", string.length, string.text);
+                dropdown = arrow_dropdown("change type%.*s", string.length, string.text);
+            }
+            
+        }
+        if(dropdown){
+            UI_WIDTHFILL {
+                xspacer(100);
+                if(button_fixed("properties")){
+                    ui->panel->first->first->type = PANEL_PROPERTIES;
+                }
             }
         }
     }
@@ -826,6 +867,9 @@ internal void present_function(char* fmt, ...);
 internal void present_id(char* fmt, ...);
 internal void present_misc(char* fmt, ...);
 internal void present_cursor();
+internal void present(int present_style);
+
+static int present_style;
 
 internal void
 render_panels(Panel* root, v4f rect){
@@ -861,89 +905,28 @@ render_panels(Panel* root, v4f rect){
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
-        
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, true, "Properties") {
                 char* names[] = {"test", "dog", "piano"};
                 UI_COLUMN {
                     
-                    UI_WIDTHFILL button("Render as C");
-                    UI_WIDTHFILL button("Render as Jai");
+                    UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
+                    UI_WIDTHFILL { if(button("Render as Jai")) present_style = 0;}
+                    UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {
-                        static b32 checked = false;
-                        if(check(&checked, "Compile")){
-                            button("test");
-                        }
+                        button("Compile");
                         button("Run");
                     }
                 }
                 
             }
             
+            
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, true, "Code Editor") {
-                
-                UI_ROW {
-                    xspacer(100);
-                    present_function("entry point");
-                    xspacer();
-                    present_misc("::");
-                    xspacer();
-                    present_misc("(");
-                    
-                    present_id("arg count");
-                    present_misc(":");
-                    xspacer();
-                    present_keyword("s32");
-                    
-                    present_misc(",");
-                    present_cursor();
-                    xspacer();
-                    present_id("args");
-                    present_misc(":");
-                    xspacer();
-                    present_keyword("s8*");
-                    
-                    present_misc(")");
-                    xspacer();
-                    present_misc("{");
-                    
-                }
-                
-                UI_ROW{
-                    xspacer(100);
-                    xspacer(40);
-                    present_id("test variable");
-                    
-                    present_misc(":");
-                    
-                    xspacer();
-                    
-                    present_keyword("s32");
-                    
-                    xspacer();
-                    present_misc("=");
-                    xspacer();
-                    
-                    present_literal("1024");
-                    
-                    
-                    xspacer();
-                    
-                    present_misc("+");
-                    
-                    xspacer();
-                    
-                    present_literal("1024");
-                    
-                    
-                }
-                UI_ROW{
-                    xspacer(100);
-                    present_misc("}");
-                }
+                present(present_style);
             }
             
         }else if(root->type == PANEL_STATUS){

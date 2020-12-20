@@ -266,7 +266,10 @@ push_layout(Widget* widget){
         ui->layout_stack = layout;
     }
     layout->widget = widget;
-    
+    if(widget->parent){
+        widget->string = widget->parent->string;
+        widget->id = widget->parent->id;
+    }
     return layout;
 }
 
@@ -568,8 +571,8 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         
     }
     if(widget_has_property(widget, WP_LERP_POSITION)){
-        lerp(&widget->pos.x, pos.x, 0.1f);
-        lerp(&widget->pos.y, pos.y, 0.1f);
+        lerp(&widget->pos.x, pos.x, 0.2f);
+        lerp(&widget->pos.y, pos.y, 0.2f);
         //widget->pos.y = pos.y;
     }else {
         widget->pos = pos;
@@ -603,17 +606,28 @@ widget_render_text(Widget* widget, Colour colour){
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
         bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
+        v4f border_colour;
         if(widget->id == ui->hot){
-            push_rectangle_outline(bbox, 1, 3, ui->theme.cursor);
+            border_colour = v4f_from_colour(ui->theme.cursor);
+            if(widget_has_property(widget, WP_LERP_COLOURS)){
+                lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
+                
+            }
         }else {
-            push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+            border_colour = v4f_from_colour(ui->theme.border);
+            if(widget_has_property(widget, WP_LERP_COLOURS)){
+                lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
+            }
         }
+        
+        push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
         widget->pos.x += 1;
         widget->pos.y -= 1;
     }
     f32 centre = widget->pos.x + widget->min.x/2.0f;
     f32 text_centre = get_text_width(widget->string)/2.0f;
     f32 text_x = centre - text_centre;
+    
     push_string(v2f(text_x, bbox.y), widget->string, colour);
 }
 
@@ -725,6 +739,7 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_COLOURS);
     auto result = update_widget(widget);
     return result.clicked;
 }

@@ -6,7 +6,9 @@ present_cursor(){
     widget_set_property(widget, WP_LERP_POSITION);
     
     auto render_hook = [](Widget* widget){
-        push_rectangle(v4f2(widget->pos, widget->min), 1, ui->theme.cursor);
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        push_rectangle(v4f2(pos, widget->min), 1, ui->theme.cursor);
     };
     
     widget->render_hook = render_hook;
@@ -33,8 +35,10 @@ present_string(Widget* widget, Colour colour){
         widget->pos.y -= widget->min.height;
         widget->pos.x -= widget->min.width/2.0f;
     }
-    
-    push_string(pos, widget->string, colour);
+    if(widget_has_property(widget, WP_LERP_COLOURS)){
+        lerp_rects(&widget->style.text_colour, v4f_from_colour(colour), 0.1f);
+    }
+    push_string(pos, widget->string, colour_from_v4f(widget->style.text_colour));
 }
 
 internal void
@@ -47,6 +51,7 @@ present_keyword(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
     if(ui->active == widget->id){
         present_cursor();
     }
@@ -70,6 +75,7 @@ present_literal(char* fmt, ...){
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
     if(ui->active == widget->id){
         present_cursor();
     }
@@ -93,6 +99,7 @@ present_function(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_LERP_COLOURS);
     widget_set_property(widget, WP_LERP_POSITION);
     if(ui->active == widget->id){
         present_cursor();
@@ -119,6 +126,7 @@ present_id(char* fmt, ...){
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
     
     if(ui->active == widget->id){
         present_cursor();
@@ -143,6 +151,7 @@ present_misc(char* fmt, ...){
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
     
     auto render_hook = [](Widget* widget){
         present_string(widget, ui->theme.text_misc);

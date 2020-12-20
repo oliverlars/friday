@@ -27,6 +27,7 @@ enum Widget_Property {
     WP_RENDER_BORDER,
     WP_RENDER_BACKGROUND,
     WP_LERP_POSITION,
+    WP_LERP_COLOURS,
     WP_CLICKABLE,
     WP_ROW,
     WP_COLUMN,
@@ -40,6 +41,12 @@ enum Widget_Property {
     WP_SPACING,
     WP_CUSTOM_DATA,
     WP_TEXT_EDIT,
+};
+
+struct Widget_Style {
+    v4f text_colour;
+    v4f border_colour;
+    f32 font_scale;
 };
 
 struct Widget {
@@ -62,7 +69,7 @@ struct Widget {
     f32 hot_transition;
     f32 active_transition;
     
-    f32 font_scale;
+    Widget_Style style;
     
     b32 checked;
     
@@ -122,6 +129,7 @@ struct UI_State {
     
     Widget* widget_table[MAX_WIDGETS];
     Pool widget_pool;
+    
     
     Panel* panel;
 };

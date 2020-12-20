@@ -252,6 +252,28 @@ lerp_colours(Colour a, Colour b, f32 amount){
 }
 
 internal Colour
+colour_from_v4f(v4f rgba){
+    Colour result = {};
+    result.a = rgba.a*255.0f;
+    result.b = rgba.b*255.0f;
+    result.g = rgba.g*255.0f;
+    result.r = rgba.r*255.0f;
+    return result;
+}
+
+internal v4f
+v4f_from_colour(Colour colour){
+    v4f result = {};
+    result.a = colour.a/255.0f;
+    result.b = colour.b/255.0f;
+    result.g = colour.g/255.0f;
+    result.r = colour.r/255.0f;
+    return result;
+}
+
+
+
+internal Colour
 add_colours(Colour a, Colour b){
     Colour result = {};
     result.a = a.a + b.a;

@@ -23,6 +23,9 @@ _arena_allocate(Arena *arena, u64 size)
     void *memory = 0;
     if(arena->alloc_position + size > arena->commit_position)
     {
+        if(arena->alloc_position > Megabytes(5)){
+            assert(0);
+        }
         u64 commit_size = size;
         commit_size += ARENA_COMMIT_SIZE-1;
         commit_size -= commit_size % ARENA_COMMIT_SIZE;

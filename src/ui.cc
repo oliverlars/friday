@@ -266,10 +266,7 @@ push_layout(Widget* widget){
         ui->layout_stack = layout;
     }
     layout->widget = widget;
-    if(widget->parent){
-        widget->string = widget->parent->string;
-        widget->id = widget->parent->id;
-    }
+    
     return layout;
 }
 
@@ -794,6 +791,7 @@ button_fixed(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_FIXED_SIZE);
     widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_COLOURS);
     auto result = update_widget(widget);
     return result.clicked;
 }

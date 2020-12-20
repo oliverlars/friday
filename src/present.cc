@@ -26,9 +26,7 @@ present_string(Widget* widget, Colour colour){
     bbox = inflate_rect(bbox, offset);
     f32 scale = text_scale_from_pixels(widget->string, widget->hot_transition*20.0f);
     v2f delta;
-    if(ui->hot == widget->id && has_left_clicked()){
-        ui->active = widget->id;
-    }
+    
     if(0 && widget->id == ui->active){ //NOTE(Oliver): this'll be fun later!
         widget->pos.x = platform->mouse_position.x;
         widget->pos.y = platform->mouse_position.y;
@@ -52,6 +50,7 @@ present_keyword(char* fmt, ...){
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
     if(ui->active == widget->id){
         present_cursor();
     }
@@ -76,6 +75,7 @@ present_literal(char* fmt, ...){
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
     if(ui->active == widget->id){
         present_cursor();
     }
@@ -100,6 +100,7 @@ present_function(char* fmt, ...){
     widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_POSITION);
     if(ui->active == widget->id){
         present_cursor();
@@ -127,6 +128,7 @@ present_id(char* fmt, ...){
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
     
     if(ui->active == widget->id){
         present_cursor();
@@ -152,6 +154,7 @@ present_misc(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
     
     auto render_hook = [](Widget* widget){
         present_string(widget, ui->theme.text_misc);
@@ -237,7 +240,6 @@ internal void
 present_as_python(){
     UI_COLUMN{
         UI_ROW {
-            xspacer();
             present_keyword("def");
             xspacer();
             present_id("big func");

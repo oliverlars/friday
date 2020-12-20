@@ -7,6 +7,7 @@
 #include "render.h"
 #include "ui.h"
 #include "present.h"
+//#include "graph.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -22,6 +23,7 @@
 #include "render.cc"
 #include "ui.cc"
 #include "present.cc"
+//#include "graph.cc"
 
 global Friday_Globals* globals = 0;
 

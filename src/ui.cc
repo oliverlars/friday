@@ -121,6 +121,20 @@ has_mouse_dragged(v2f* delta = 0) {
     return result;
 }
 
+
+internal b32
+has_input_character(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
 internal void
 load_theme_ayu(){
     
@@ -321,6 +335,9 @@ push_widget(String8 string){
     return widget;
 }
 
+
+internal void present_cursor();
+
 internal Widget_Update
 update_widget(Widget* widget){
     Widget_Update result = {};
@@ -328,13 +345,16 @@ update_widget(Widget* widget){
     Widget* last_widget = get_widget(widget->string);
     if(last_widget && widget_has_property(widget, WP_CLICKABLE)){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
+        bbox.y -= bbox.height;
         if(is_in_rect(platform->mouse_position, bbox)){
             if(has_left_clicked()){
+                ui->active = widget->id;
                 result.clicked = true;
+                
+                
             }
         }
     }
-    
     if(widget_has_property(widget, WP_CLICKABLE)){
         
     }
@@ -547,10 +567,10 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         layout_widgets(widget->first_child, pos);
         
     }
-    if(widget_has_property(widget, WP_RENDER_HOOK)){
+    if(widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.1f);
-        //lerp(&widget->pos.y, pos.y, 0.1f);
-        widget->pos.y = pos.y;
+        lerp(&widget->pos.y, pos.y, 0.1f);
+        //widget->pos.y = pos.y;
     }else {
         widget->pos = pos;
     }
@@ -574,15 +594,20 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
 
 internal void
 widget_render_text(Widget* widget, Colour colour){
-    v4f bbox = get_text_bbox(widget->pos, widget->string);
-    bbox = v4f2(widget->pos, widget->min);
+    v2f pos = widget->pos;
+    pos.y -= widget->min.height;
+    v4f bbox = get_text_bbox(pos, widget->string);
+    bbox = v4f2(pos, widget->min);
     if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
         push_rectangle(bbox, 1, ui->theme.sub_colour);
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
-        
         bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
-        push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+        if(widget->id == ui->hot){
+            push_rectangle_outline(bbox, 1, 3, ui->theme.cursor);
+        }else {
+            push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+        }
         widget->pos.x += 1;
         widget->pos.y -= 1;
     }
@@ -621,9 +646,11 @@ render_widgets(Widget* widget){
     if(widget_has_property(widget, WP_PADDING)){
         v4f bbox = v4f2(widget->pos, widget->min);
     }
-    widget->pos.y -= widget->min.height;
     
-    if(ui->hot == widget->id || is_in_rect(platform->mouse_position, v4f2(widget->pos, widget->min))){
+    v2f pos = widget->pos;
+    pos.y -= widget->min.height;
+    
+    if(ui->hot == widget->id || is_in_rect(platform->mouse_position, v4f2(pos, widget->min))){
         lerp(&widget->hot_transition, 1.0f, 0.1f);
         ui->hot = widget->id; 
     }else {
@@ -634,10 +661,14 @@ render_widgets(Widget* widget){
         widget_render_text(widget, ui->theme.text);
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
-        v4f bbox = v4f2(widget->pos, widget->min);
+        v4f bbox = v4f2(pos, widget->min);
         bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
-            push_rectangle_outline(bbox, 1, 3, ui->theme.text);
+            if(widget->id == ui->hot){
+                push_rectangle_outline(bbox, 1, 3, ui->theme.cursor);
+            }else{ 
+                push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+            }
             bbox.pos.x += 1;
             bbox.pos.y -= 1;
         }
@@ -866,7 +897,6 @@ internal void present_literal(char* fmt, ...);
 internal void present_function(char* fmt, ...);
 internal void present_id(char* fmt, ...);
 internal void present_misc(char* fmt, ...);
-internal void present_cursor();
 internal void present(int present_style);
 
 static int present_style;

@@ -26,6 +26,7 @@ enum Widget_Property {
     WP_RENDER_TRIANGLE,
     WP_RENDER_BORDER,
     WP_RENDER_BACKGROUND,
+    WP_LERP_POSITION,
     WP_CLICKABLE,
     WP_ROW,
     WP_COLUMN,
@@ -38,6 +39,7 @@ enum Widget_Property {
     WP_RENDER_HOOK,
     WP_SPACING,
     WP_CUSTOM_DATA,
+    WP_TEXT_EDIT,
 };
 
 struct Widget {

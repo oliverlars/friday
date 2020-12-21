@@ -49,6 +49,10 @@ struct Widget_Style {
     f32 font_scale;
 };
 
+struct Widget_State {
+    
+};
+
 struct Widget {
     UI_ID id;
     String8 string;
@@ -61,17 +65,16 @@ struct Widget {
     Widget* last_child;
     Widget* parent;
     
+    u64 properties[PROPERTIES_MAX/64 + 1];
+    
     v2f min;
     v2f max;
     v2f pos;
-    u64 properties[PROPERTIES_MAX/64 + 1];
-    
     f32 hot_transition;
     f32 active_transition;
+    b32 checked;
     
     Widget_Style style;
-    
-    b32 checked;
     
     void (*render_hook)(Widget* widget);
 };

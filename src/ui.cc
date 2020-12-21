@@ -178,6 +178,27 @@ load_theme_dots(){
     
 }
 
+internal void
+load_theme_dracula(){
+    
+    ui->theme.background.packed = 0x282A35ff;
+    ui->theme.text.packed = 0xF2F2F2ff;
+    
+    ui->theme.sub_colour.packed = 0x676e8aff;
+    ui->theme.border.packed = 0xE7E7E7ff;
+    
+    ui->theme.text_comment.packed = 0xffc2d94d;
+    ui->theme.text_literal.packed = 0x5FFA87ff;
+    ui->theme.text_function.packed = 0x90EAFAff;
+    ui->theme.text_type.packed = 0xFDB677ff;
+    ui->theme.text_misc.packed = 0x676E88ff;
+    
+    ui->theme.cursor.packed = 0xe08c17ff;
+    ui->theme.error.packed = 0xffcc3333;
+    
+    
+}
+
 #define HASH_INITIAL 2166136261
 
 internal void
@@ -193,8 +214,6 @@ generate_id(String8 label){
     int size = label.length;
     UI_ID id = 0;
     hash32(&id, label.text, size);
-    auto layout = ui->layout_stack;
-    hash32(&id, layout->widget->string.text, layout->widget->string.length);
     
     return id;
 }
@@ -381,11 +400,10 @@ update_widget(Widget* widget){
             if(has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;
-                
-                
             }
         }
     }
+    
     if(widget_has_property(widget, WP_CLICKABLE)){
         
     }
@@ -598,7 +616,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         layout_widgets(widget->first_child, pos);
         
     }
-    if(widget_has_property(widget, WP_LERP_POSITION)){
+    if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.2f);
         lerp(&widget->pos.y, pos.y, 0.2f);
         //widget->pos.y = pos.y;

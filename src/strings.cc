@@ -46,9 +46,9 @@ string_eq(String8 a, char* b){
     if(!a.text || !a.length) return false;
     if(!b || !(*b)) return false;
     int b_length = strlen(b);
-    int min_length = a.length > b_length ? b_length : a.length;
+    if(a.length != b_length) return false;
     
-    for(int i = 0; i < min_length; i++){
+    for(int i = 0; i < a.length; i++){
         if(a.text[i] != b[i]){
             return false;
         }
@@ -61,8 +61,8 @@ internal bool
 string_eq(String8 a, String8 b){
     if(!a.text || !a.length) return false;
     if(!b.text || !b.length) return false;
-    int min_length = a.length > b.length ? b.length : a.length;
-    for(int i = 0; i < min_length; i++){
+    if(a.length != b.length) return false;
+    for(int i = 0; i < a.length; i++){
         if(a.text[i] != b.text[i]){
             return false;
         }

@@ -171,7 +171,6 @@ internal void
 present_as_c(){
     UI_COLUMN{
         UI_ROW {
-            xspacer();
             present_keyword("void");
             xspacer();
             present_id("big func");
@@ -180,7 +179,7 @@ present_as_c(){
             present_misc("{");
         }
         UI_ROW {
-            xspacer(20);
+            xspacer(40);
             present_keyword("int");
             xspacer();
             present_id("test variable");
@@ -194,7 +193,6 @@ present_as_c(){
             present_literal("2048");
         }
         UI_ROW {
-            xspacer();
             present_misc("}");
         }
     }
@@ -204,7 +202,6 @@ internal void
 present_as_jai(){
     UI_COLUMN{
         UI_ROW {
-            xspacer();
             present_id("big func");
             xspacer();
             present_misc("::");
@@ -215,7 +212,6 @@ present_as_jai(){
         }
         UI_ROW {
             xspacer(40);
-            
             present_id("test variable");
             present_misc(":");
             xspacer();
@@ -230,7 +226,6 @@ present_as_jai(){
             present_literal("2048");
         }
         UI_ROW {
-            xspacer();
             present_misc("}");
         }
     }
@@ -249,7 +244,6 @@ present_as_python(){
         }
         UI_ROW {
             xspacer(40);
-            
             present_id("test variable");
             xspacer();
             present_misc("=");
@@ -264,12 +258,106 @@ present_as_python(){
 }
 
 internal void
-present(int present_style){
-    if(present_style == 0){
-        present_as_jai();
-    }else if(present_style == 1){
-        present_as_c();
-    }else if(present_style == 2){
-        present_as_python();
+present_as_rust() {
+    UI_COLUMN{
+        UI_ROW {
+            present_keyword("fn");
+            xspacer();
+            present_id("big func");
+            present_misc("()");
+            xspacer();
+            present_misc("{");
+        }
+        UI_ROW {
+            xspacer(40);
+            present_keyword("int");
+            xspacer();
+            present_id("test variable");
+            xspacer();
+            present_misc("=");
+            xspacer();
+            present_literal("1024");
+            xspacer();
+            present_misc("+");
+            xspacer();
+            present_literal("2048");
+        }
+        UI_ROW {
+            present_misc("}");
+        }
     }
+}
+
+internal void
+present_as_go() {
+    UI_COLUMN{
+        UI_ROW {
+            present_keyword("func");
+            xspacer();
+            present_id("big func");
+            present_misc("()");
+            xspacer();
+            present_misc("{");
+        }
+        UI_ROW {
+            xspacer(40);
+            present_keyword("int");
+            xspacer();
+            present_id("test variable");
+            xspacer();
+            present_misc("=");
+            xspacer();
+            present_literal("1024");
+            xspacer();
+            present_misc("+");
+            xspacer();
+            present_literal("2048");
+        }
+        UI_ROW {
+            present_misc("}");
+        }
+    }
+}
+
+internal void
+present_as_pascal() {
+    UI_COLUMN{
+        UI_ROW {
+            present_keyword("procedure");
+            xspacer();
+            present_id("big func");
+            present_misc("()");
+        }
+        UI_ROW {
+            present_keyword("begin");
+        }
+        UI_ROW {
+            xspacer(40);
+            present_id("test variable");
+            present_misc(":");
+            xspacer();
+            present_keyword("int");
+            xspacer();
+            present_misc("=");
+            xspacer();
+            present_literal("1024");
+            xspacer();
+            present_misc("+");
+            xspacer();
+            present_literal("2048");}
+        UI_ROW {
+            present_keyword("end");
+        }
+    }
+}
+
+internal void
+present(int present_style){
+    switch(present_style){
+        case 0: present_as_c();break;
+        case 1: present_as_jai();break;
+        case 2: present_as_python();break;
+        case 3: present_as_pascal();break;
+    }
+    
 }

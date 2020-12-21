@@ -216,27 +216,59 @@ widget_remove_property(Widget* widget, Widget_Property property){
 
 internal Widget*
 get_widget(String8 string){
+    if(string.length == 0) return nullptr;
+    
     auto id = generate_id(string);
-    auto hash = id & (MAX_WIDGETS-1);
-    auto widget = ui->widget_table[hash];
+    auto hash = id & (MAX_TABLE_WIDGETS-1);
+    Widget* widget = ui->widget_table[platform->frame][hash];
+    
     if(!widget){
-        widget = push_type_zero(&platform->permanent_arena, Widget);
-        ui->widget_table[hash] = widget;
-        return widget;
+        widget = push_type_zero(&platform->frame_arena, Widget);
+        ui->widget_table[platform->frame][hash] = widget;
+    }else{
+        
+        do {
+            if(string_eq(string, widget->string)){
+                break;
+            }
+            if(!widget->next_hash){
+                auto next_widget = push_type_zero(&platform->frame_arena, Widget);
+                widget->next_hash = next_widget;
+                ui->widget_table[platform->frame][hash] = next_widget;
+                widget = next_widget;
+                break;
+            }
+            
+            widget = widget->next_hash;
+        }while(widget);
     }
     
-    do {
-        if(id == widget->id){
-            break;
-        }
-        if(!widget->next_hash){
-            widget = push_type_zero(&platform->permanent_arena, Widget);
-            widget->next_hash = widget;
-            break;
+    if(ui->widget_table[!platform->frame]){
+        auto last_widget = ui->widget_table[!platform->frame][hash];
+        if(!last_widget){
+            return widget;
         }
         
-        widget = widget->next_hash;
-    }while(widget);
+        do {
+            if(string_eq(string, last_widget->string)){
+                break;
+            }
+            last_widget = last_widget->next_hash;
+        }while(last_widget);
+        
+        if(last_widget){
+            widget->checked = last_widget->checked;
+            widget->style = last_widget->style;
+            widget->min = last_widget->min;
+            widget->max = last_widget->max;
+            widget->pos = last_widget->pos;
+            widget->hot_transition = last_widget->hot_transition;
+            widget->active_transition = last_widget->active_transition;
+            widget->string = string;
+            widget->id = id;
+        }
+        
+    }
     
     return widget;
 }
@@ -249,10 +281,9 @@ make_widget(){
 
 internal Widget*
 make_widget(String8 string){
-    
     auto widget = get_widget(string);
-    widget->string = string;
     widget->id = generate_id(string);
+    widget->string = string;
     return widget;
 }
 
@@ -952,10 +983,11 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, true, "Properties") {
                 char* names[] = {"test", "dog", "piano"};
                 UI_COLUMN {
-                    
-                    UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
-                    UI_WIDTHFILL { if(button("Render as Jai")) present_style = 0;}
+                    label("Syntax Style");
+                    UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}
+                    UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
+                    UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
                     
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {
@@ -969,7 +1001,13 @@ render_panels(Panel* root, v4f rect){
             
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, true, "Code Editor") {
-                present(present_style);
+                UI_COLUMN{
+                    yspacer(40);
+                    UI_ROW{
+                        xspacer(40);
+                        present(present_style);
+                    }
+                }
             }
             
         }else if(root->type == PANEL_STATUS){

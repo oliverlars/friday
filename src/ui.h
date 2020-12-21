@@ -108,13 +108,9 @@ struct Panel {
 };
 
 #define MAX_WIDGETS 4096
+#define MAX_TABLE_WIDGETS 2*MAX_WIDGETS
 
 struct UI_State {
-    UI_ID hover_id;
-    UI_ID clicked_id;
-    
-    
-    bool widget_frame;
     
     Theme theme;
     
@@ -127,12 +123,11 @@ struct UI_State {
     
     Widget* root;
     
-    Widget* widget_table[MAX_WIDGETS];
-    Pool widget_pool;
-    
+    Widget** widget_table[2];
     
     Panel* panel;
 };
+
 
 typedef u64 UI_ID;
 

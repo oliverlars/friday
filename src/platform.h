@@ -90,6 +90,7 @@ struct Platform {
     b32 wait_for_events_to_update;
     b32 pump_events;
     
+    b32 frame;
     
     v2f mouse_position;
     u64 event_count;

@@ -21,15 +21,12 @@ internal void *
 _arena_allocate(Arena *arena, u64 size)
 {
     void *memory = 0;
-    if(arena->alloc_position + size > arena->commit_position)
-    {
-        if(arena->alloc_position > Megabytes(5)){
-            assert(0);
-        }
+    if(arena->alloc_position + size > arena->commit_position) {
         u64 commit_size = size;
         commit_size += ARENA_COMMIT_SIZE-1;
         commit_size -= commit_size % ARENA_COMMIT_SIZE;
-        platform->commit((u8 *)arena->base + arena->commit_position, commit_size);
+        platform->commit((u8*)arena->base + arena->commit_position, commit_size);
+        assert(arena->base);
         arena->commit_position += commit_size;
     }
     memory = (u8 *)arena->base + arena->alloc_position;
@@ -104,7 +101,7 @@ void pool_reset(Pool* pool){
         
         for(int i = 0; i < pool->active->size/pool->chunk_size; i++){
             void* pointer = &block->memory[i * pool->chunk_size];
-            Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+            Pool_Node* node = (Pool_Node*)pointer;
             node->next = pool->free_head;
             pool->free_head = node;
         }
@@ -126,7 +123,7 @@ pool_allocate(Pool* pool){
         
         Pool_Block* new_block = 0;
         
-        new_block = (Pool_Block*)calloc(1, sizeof(Pool_Block) + bytes_required);
+        new_block = (Pool_Block*)platform->heap_alloc(sizeof(Pool_Block) + bytes_required);
         assert(new_block);
         new_block->memory = (u8*)new_block + sizeof(Pool_Block);
         new_block->size = bytes_required;
@@ -143,7 +140,7 @@ pool_allocate(Pool* pool){
         //active->clear(chunk_size);
         for(int i = 0; i < pool->active->size/pool->chunk_size; i++){
             void* pointer = &pool->active->memory[i * pool->chunk_size];
-            Pool_Node* node = reinterpret_cast<Pool_Node*>(pointer);
+            Pool_Node* node = (Pool_Node*)pointer;
             node->next = pool->free_head;
             pool->free_head = node;
         }

@@ -39,6 +39,8 @@ internal void
 start_frame(){
     ui->root = nullptr;
     ui->layout_stack = nullptr;
+    ui->widget_table[platform->frame] = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
+    
     opengl_start_frame();
 }
 
@@ -89,6 +91,7 @@ UPDATE {
     FRAME
     {
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
+        
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
         
@@ -96,6 +99,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
+        
     }
     platform->refresh_screen();
 }

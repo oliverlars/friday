@@ -973,20 +973,21 @@ ui_panel_header(Panel* panel, char* fmt, ...){
         }
         
     }
-    
-    if(dropdown){
-        UI_WIDTHFILL {
-            xspacer(100);
-            if(button_fixed("properties")){
-                panel->type = PANEL_PROPERTIES;
-            }
-            if(button_fixed("code editor")){
-                panel->type = PANEL_EDITOR;
+    ID("%d", (int)panel) {
+        if(dropdown){
+            UI_WIDTHFILL {
+                xspacer(100);
+                
+                if(button_fixed("properties")){
+                    panel->type = PANEL_PROPERTIES;
+                }
+                if(button_fixed("code editor")){
+                    panel->type = PANEL_EDITOR;
+                }
             }
         }
     }
 }
-
 
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
@@ -1064,7 +1065,7 @@ render_panels(Panel* root, v4f rect){
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ui_panel_header(root, "Properties#%d", (int)root);
-                UI_COLUMN ID("properties%d", (int)root) {
+                UI_COLUMN ID("%d", (int)root) {
                     label("Syntax Style");
                     UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
@@ -1084,7 +1085,7 @@ render_panels(Panel* root, v4f rect){
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, "Code Editor#%d", (int)root) {
                 ui_panel_header(root, "Code Editor#%d", (int)root);
-                UI_COLUMN ID("Code Editor%d", (int)root){
+                UI_COLUMN ID("%d", (int)root) {
                     yspacer(40);
                     UI_ROW{
                         xspacer(40);

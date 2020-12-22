@@ -214,7 +214,8 @@ generate_id(String8 label){
     int size = label.length;
     UI_ID id = 0;
     hash32(&id, label.text, size);
-    
+    auto parent = ui->layout_stack->widget;
+    hash32(&id, parent->string.text, parent->string.length);
     return id;
 }
 
@@ -450,6 +451,7 @@ push_widget_row(){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_ROW);
     widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
 }
 
@@ -459,6 +461,7 @@ push_widget_column(){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_COLUMN);
     widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
 }
 
@@ -467,6 +470,7 @@ push_widget_widthfill(){
     auto widget = push_widget();
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_WIDTHFILL);
+    widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_SPACING);
     update_widget(widget);
 }
@@ -749,6 +753,7 @@ label(char* fmt, ...){
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
+    widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
 }
 
@@ -785,6 +790,7 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_LERP_POSITION);
     auto result = update_widget(widget);
     return result.clicked;
 }
@@ -894,34 +900,42 @@ fslider(f32 min, f32 max, f32* value){
 }
 
 internal void
-ui_window(v4f rect, bool title_bar, char* fmt, ...) {
+ui_window(v4f rect, char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     
     push_widget_window(rect, string);
-    b32 dropdown = false;
     push_widget_column();
-    if(title_bar){
-        UI_ROW {
-            label("%.*s", string.length, string.text);
-            UI_WIDTHFILL{
-                xspacer(20);
-                //button_fixed("V");
-                dropdown = arrow_dropdown("change type%.*s", string.length, string.text);
-            }
-            
+}
+
+internal void
+ui_panel_header(Panel* panel, char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    
+    b32 dropdown = false;
+    UI_ROW {
+        label("%.*s", string.length, string.text);
+        UI_WIDTHFILL{
+            xspacer(20);
+            dropdown = arrow_dropdown("change type%.*s", string.length, string.text);
         }
-        if(dropdown){
-            UI_WIDTHFILL {
-                xspacer(100);
-                if(button_fixed("properties")){
-                    ui->panel->first->first->type = PANEL_PROPERTIES;
-                }
-                if(button_fixed("code editor")){
-                    ui->panel->first->first->type = PANEL_EDITOR;
-                }
+        
+    }
+    
+    if(dropdown){
+        UI_WIDTHFILL {
+            xspacer(100);
+            if(button_fixed("properties")){
+                panel->type = PANEL_PROPERTIES;
+            }
+            if(button_fixed("code editor")){
+                panel->type = PANEL_EDITOR;
             }
         }
     }
@@ -1002,7 +1016,8 @@ render_panels(Panel* root, v4f rect){
         rect.height -= PADDING*2;
         
         if(root->type == PANEL_PROPERTIES){
-            UI_WINDOW(rect, true, "Properties#%d", (int)root) {
+            UI_WINDOW(rect, "Properties") {
+                ui_panel_header(root, "Properties#%d", (int)root);
                 char* names[] = {"test", "dog", "piano"};
                 UI_COLUMN {
                     label("Syntax Style");
@@ -1022,7 +1037,8 @@ render_panels(Panel* root, v4f rect){
             
             
         }else if(root->type == PANEL_EDITOR) {
-            UI_WINDOW(rect, true, "Code Editor#%d", (int)root) {
+            UI_WINDOW(rect, "Code Editor#%d", (int)root) {
+                ui_panel_header(root, "Code Editor#%d", (int)root);
                 UI_COLUMN{
                     yspacer(40);
                     UI_ROW{
@@ -1033,7 +1049,7 @@ render_panels(Panel* root, v4f rect){
             }
             
         }else if(root->type == PANEL_STATUS){
-            UI_WINDOW(rect, false, "Statu#s%d", (int)root) {
+            UI_WINDOW(rect, "Status#%d", (int)root) {
                 UI_ROW {
                     label("mouse position:"); 
                     label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);

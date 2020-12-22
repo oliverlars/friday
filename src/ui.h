@@ -139,7 +139,7 @@ typedef u64 UI_ID;
 
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
-#define UI_WINDOW(rect, titlebar, fmt, ...) defer_loop(ui_window(rect, titlebar, fmt, ##__VA_ARGS__), pop_widget_window()) 
+#define UI_WINDOW(rect, fmt, ...) defer_loop(ui_window(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 #define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())

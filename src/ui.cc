@@ -1064,7 +1064,7 @@ render_panels(Panel* root, v4f rect){
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ui_panel_header(root, "Properties#%d", (int)root);
-                UI_COLUMN ID(generate_id("properties%d", (int)root)) {
+                UI_COLUMN ID("properties%d", (int)root) {
                     label("Syntax Style");
                     UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
@@ -1084,7 +1084,7 @@ render_panels(Panel* root, v4f rect){
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, "Code Editor#%d", (int)root) {
                 ui_panel_header(root, "Code Editor#%d", (int)root);
-                UI_COLUMN{
+                UI_COLUMN ID("Code Editor%d", (int)root){
                     yspacer(40);
                     UI_ROW{
                         xspacer(40);

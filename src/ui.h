@@ -149,7 +149,7 @@ typedef u64 UI_ID;
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 #define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
-#define ID(id) defer_loop(push_id(id), pop_id())
+#define ID(fmt, ...) defer_loop(push_id(generate_id(fmt, ##__VA_ARGS__)), pop_id())
 
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)

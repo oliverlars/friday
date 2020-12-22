@@ -619,7 +619,6 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.2f);
         lerp(&widget->pos.y, pos.y, 0.2f);
-        //widget->pos.y = pos.y;
     }else {
         widget->pos = pos;
     }
@@ -920,6 +919,9 @@ ui_window(v4f rect, bool title_bar, char* fmt, ...) {
                 if(button_fixed("properties")){
                     ui->panel->first->first->type = PANEL_PROPERTIES;
                 }
+                if(button_fixed("code editor")){
+                    ui->panel->first->first->type = PANEL_EDITOR;
+                }
             }
         }
     }
@@ -991,14 +993,16 @@ render_panels(Panel* root, v4f rect){
             }break;
         }
     }else {
+        
         assert(!root->first && !root->second);
         
         rect.x += PADDING;
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
+        
         if(root->type == PANEL_PROPERTIES){
-            UI_WINDOW(rect, true, "Properties") {
+            UI_WINDOW(rect, true, "Properties#%d", (int)root) {
                 char* names[] = {"test", "dog", "piano"};
                 UI_COLUMN {
                     label("Syntax Style");
@@ -1018,7 +1022,7 @@ render_panels(Panel* root, v4f rect){
             
             
         }else if(root->type == PANEL_EDITOR) {
-            UI_WINDOW(rect, true, "Code Editor") {
+            UI_WINDOW(rect, true, "Code Editor#%d", (int)root) {
                 UI_COLUMN{
                     yspacer(40);
                     UI_ROW{
@@ -1029,7 +1033,7 @@ render_panels(Panel* root, v4f rect){
             }
             
         }else if(root->type == PANEL_STATUS){
-            UI_WINDOW(rect, false, "Status") {
+            UI_WINDOW(rect, false, "Statu#s%d", (int)root) {
                 UI_ROW {
                     label("mouse position:"); 
                     label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);

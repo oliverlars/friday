@@ -27,12 +27,6 @@ present_string(Widget* widget, Colour colour){
     f32 scale = text_scale_from_pixels(widget->string, widget->hot_transition*20.0f);
     v2f delta;
     
-    if(0 && widget->id == ui->active){ //NOTE(Oliver): this'll be fun later!
-        widget->pos.x = platform->mouse_position.x;
-        widget->pos.y = platform->mouse_position.y;
-        widget->pos.y -= widget->min.height;
-        widget->pos.x -= widget->min.width/2.0f;
-    }
     if(widget_has_property(widget, WP_LERP_COLOURS)){
         lerp_rects(&widget->style.text_colour, v4f_from_colour(colour), 0.1f);
     }

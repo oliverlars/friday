@@ -209,13 +209,59 @@ hash32(u64* hash, char* data, int size){
     }
 }
 
+internal void
+hash32(u64* hash, String8 string){
+    
+    while(string.length--){
+        *hash = (*hash ^ *string.text++) * 16777619;
+    }
+}
+
+internal void
+push_id(UI_ID id){
+    auto next_id = push_type_zero(&platform->frame_arena, ID_Node);
+    if(ui->id_stack){
+        hash32(&id, (char*)&ui->id_stack->id, sizeof(UI_ID));
+        next_id->prev = ui->id_stack;
+        ui->id_stack = next_id;
+    }else {
+        ui->id_stack = next_id;
+    }
+    next_id->id = id;
+    
+}
+
+internal void
+pop_id(){
+    if(ui->id_stack){
+        ui->id_stack = ui->id_stack->prev;
+    }
+}
+
 internal UI_ID
 generate_id(String8 label){
     int size = label.length;
     UI_ID id = 0;
-    hash32(&id, label.text, size);
-    auto parent = ui->layout_stack->widget;
-    hash32(&id, parent->string.text, parent->string.length);
+    hash32(&id, label);
+    if(ui->id_stack){
+        hash32(&id, (char*)&ui->id_stack->id, sizeof(UI_ID));
+    }
+    return id;
+}
+
+internal UI_ID
+generate_id(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    UI_ID id = 0;
+    
+    hash32(&id, string.text, string.length);
+    if(ui->id_stack){
+        hash32(&id, (char*)&ui->id_stack->id, sizeof(UI_ID));
+    }
     return id;
 }
 
@@ -1016,10 +1062,9 @@ render_panels(Panel* root, v4f rect){
         rect.height -= PADDING*2;
         
         if(root->type == PANEL_PROPERTIES){
-            UI_WINDOW(rect, "Properties") {
+            UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ui_panel_header(root, "Properties#%d", (int)root);
-                char* names[] = {"test", "dog", "piano"};
-                UI_COLUMN {
+                UI_COLUMN ID(generate_id("properties%d", (int)root)) {
                     label("Syntax Style");
                     UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}

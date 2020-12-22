@@ -113,6 +113,12 @@ struct Panel {
 #define MAX_WIDGETS 4096
 #define MAX_TABLE_WIDGETS 2*MAX_WIDGETS
 
+
+struct ID_Node {
+    UI_ID id;
+    ID_Node* prev;
+};
+
 struct UI_State {
     
     Theme theme;
@@ -120,6 +126,7 @@ struct UI_State {
     f32 round_amount;
     
     Layout* layout_stack;
+    ID_Node* id_stack;
     
     UI_ID hot;
     UI_ID active;
@@ -130,7 +137,6 @@ struct UI_State {
     
     Panel* panel;
     
-    String8_Cap editing_string;
 };
 
 
@@ -143,6 +149,7 @@ typedef u64 UI_ID;
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 #define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
+#define ID(id) defer_loop(push_id(id), pop_id())
 
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)

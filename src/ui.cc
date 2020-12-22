@@ -47,6 +47,29 @@ has_right_clicked(){
 }
 
 internal b32
+has_middle_clicked(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_PRESS && event->mouse_button == MOUSE_BUTTON_MIDDLE){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_middle_clicked(){
+    Platform_Event* event = 0;
+    b32 result = has_middle_clicked(&event);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
+
+internal b32
 has_mouse_moved(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
@@ -100,12 +123,12 @@ has_mouse_dragged(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_MOUSE_MOVE && event->mouse_button == MOUSE_BUTTON_LEFT){
+        if (event->type == PLATFORM_EVENT_MOUSE_DRAG){
             *event_out = event;
             result = 1;
         }
     }
-    return(result);
+    return result;
 }
 
 internal b32
@@ -132,6 +155,7 @@ has_input_character(Platform_Event **event_out){
             result = 1;
         }
     }
+    
     return(result);
 }
 
@@ -451,6 +475,18 @@ update_widget(Widget* widget){
         }
     }
     
+    if(widget_has_property(widget, WP_CONTAINER)){
+        v2f delta = {};
+        if(has_mouse_dragged(&delta)){
+            //process event
+            //get mouse delta
+            // add delta to pos
+            widget->pos.x += delta.x;
+            widget->pos.y += delta.y;
+        }
+    }
+    
+    
     if(widget_has_property(widget, WP_CLICKABLE)){
         
     }
@@ -551,7 +587,24 @@ push_widget_window(v4f rect, String8 string){
 internal void
 pop_widget_window(){
     while(ui->layout_stack) pop_layout();
-    
+}
+
+internal void
+push_widget_container(String8 string){
+    auto widget = push_widget(string);
+    auto layout = push_layout(widget);
+    widget_set_property(widget, WP_CONTAINER);
+    widget_set_property(widget, WP_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    update_widget(widget);
+    push_widget_padding(v2f(10, 10));
+}
+
+internal void
+pop_widget_container(){
+    pop_layout();
+    pop_layout();
+    pop_layout();
 }
 
 internal v2f layout_widgets(Widget* widget, v2f pos);
@@ -654,7 +707,16 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     if(widget_has_property(widget, WP_WINDOW)){
         pos = widget->pos;
         layout_widgets(widget->first_child, pos);
-        
+    }
+    
+    if(widget_has_property(widget, WP_CONTAINER)){
+        if(widget->pos.x == 0 && widget->pos.y == 0){
+            widget->pos = pos;
+        }
+        pos = widget->pos;
+        v2f size = layout_widgets(widget->first_child, pos);
+        widget->min = size;
+        //log("container size is now: %f %f", size.width, size.height);
     }
     
     if(widget_has_property(widget, WP_PADDING)){
@@ -663,7 +725,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         pos.x += (size.width - padding.width)/2.0f;
         pos.y -= (size.height - padding.height)/2.0f;
         widget->pos = pos;
-        layout_widgets(widget->first_child, pos);
+        widget->min = layout_widgets(widget->first_child, pos);
         
     }
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
@@ -768,7 +830,12 @@ render_widgets(Widget* widget){
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget_render_text(widget, ui->theme.text);
+    }else if(widget_has_property(widget, WP_RENDER_BORDER)){
+        v4f bbox = v4f2(widget->pos, widget->min);
+        bbox.y -= widget->min.height;
+        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
     }
+    
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(pos, widget->min);
         bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
@@ -957,6 +1024,17 @@ ui_window(v4f rect, char* fmt, ...) {
 }
 
 internal void
+ui_container(char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    push_widget_container(string);
+    push_widget_column();
+}
+
+internal void
 ui_panel_header(Panel* panel, char* fmt, ...){
     va_list args;
     va_start(args, fmt);
@@ -976,8 +1054,6 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     ID("%d", (int)panel) {
         if(dropdown){
             UI_WIDTHFILL {
-                xspacer(100);
-                
                 if(button_fixed("properties")){
                     panel->type = PANEL_PROPERTIES;
                 }
@@ -1078,22 +1154,18 @@ render_panels(Panel* root, v4f rect){
                         button("Run");
                     }
                 }
-                
             }
             
             
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, "Code Editor#%d", (int)root) {
-                ui_panel_header(root, "Code Editor#%d", (int)root);
-                UI_COLUMN ID("%d", (int)root) {
-                    yspacer(40);
-                    UI_ROW{
-                        xspacer(40);
+                ID("%d", (int)root) {
+                    ui_panel_header(root, "Code Editor#%d", (int)root);
+                    UI_CONTAINER("simple test"){
                         present(present_style);
                     }
                 }
             }
-            
         }else if(root->type == PANEL_STATUS){
             UI_WINDOW(rect, "Status#%d", (int)root) {
                 UI_ROW {

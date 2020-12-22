@@ -51,6 +51,15 @@ platform_mouse_move(v2f position, v2f delta){
 }
 
 internal Platform_Event
+platform_mouse_drag(v2f position, v2f delta){
+    Platform_Event event;
+    event.type = PLATFORM_EVENT_MOUSE_DRAG;
+    event.position = position;
+    event.delta = delta;
+    return event;
+}
+
+internal Platform_Event
 platform_mouse_press(Mouse_Button button, v2f position){
     Platform_Event event;
     event.type = PLATFORM_EVENT_MOUSE_PRESS;

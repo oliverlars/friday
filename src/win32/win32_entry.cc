@@ -67,6 +67,8 @@ win32_get_mouse_position(HWND window)
     return result;
 }
 
+static b32 middle_mouse_down = 0;
+
 internal LRESULT 
 win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     
@@ -102,14 +104,28 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     else if(message == WM_RBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
     }
+    else if(message == WM_MBUTTONDOWN){
+        platform_push_event(platform_mouse_press(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
+        middle_mouse_down = 1;
+    }else if(message == WM_MBUTTONUP){
+        platform_push_event(platform_mouse_release(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
+        middle_mouse_down = 0;
+    }
     else if(message == WM_MOUSEMOVE){
         s16 xpos = LOWORD(lparam);
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        platform_push_event(platform_mouse_move(global_platform.mouse_position,
-                                                v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                    global_platform.mouse_position.y - last_mouse.y)));
+        
+        if(middle_mouse_down){
+            platform_push_event(platform_mouse_drag(global_platform.mouse_position,
+                                                    v2f(global_platform.mouse_position.x - last_mouse.x,
+                                                        global_platform.mouse_position.y - last_mouse.y)));
+        }else {
+            platform_push_event(platform_mouse_move(global_platform.mouse_position,
+                                                    v2f(global_platform.mouse_position.x - last_mouse.x,
+                                                        global_platform.mouse_position.y - last_mouse.y)));
+        }
         if(!mouse_hover_active){
             mouse_hover_active = 1;
             TRACKMOUSEEVENT track_mouse_event = {};

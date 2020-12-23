@@ -40,7 +40,6 @@ start_frame(){
     ui->root = nullptr;
     ui->layout_stack = nullptr;
     ui->widget_table[platform->frame] = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
-    
     opengl_start_frame();
 }
 
@@ -70,6 +69,7 @@ PERMANENT_LOAD {
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
     ui->panel->split_ratio = 1.0f;
     ui->panel->type = PANEL_EDITOR;
+    //ui->widget_table[0] = (Widget**)push_size_zero(&platform->permanent_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
     
     split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);

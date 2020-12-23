@@ -100,6 +100,7 @@ enum Panel_Type {
     PANEL_EDITOR,
     PANEL_PROPERTIES,
     PANEL_STATUS,
+    PANEL_DEBUG,
 };
 
 struct Panel {

@@ -25,6 +25,7 @@ enum Widget_Property {
     WP_RENDER_TEXT,
     WP_RENDER_TRIANGLE,
     WP_RENDER_BORDER,
+    WP_RENDER_CORNERS,
     WP_RENDER_BACKGROUND,
     WP_LERP_POSITION,
     WP_LERP_COLOURS,
@@ -43,7 +44,8 @@ enum Widget_Property {
     WP_TEXT_EDIT,
     WP_CONTAINER,
     WP_DRAGGABLE,
-    WP_WRAP
+    WP_WRAP,
+    WP_SCROLLING,
 };
 
 struct Widget_Style {
@@ -75,7 +77,9 @@ struct Widget {
     v2f pos;
     f32 hot_transition;
     f32 active_transition;
+    
     b32 checked;
+    f32 scroll_amount;
     
     Widget_Style style;
     
@@ -121,6 +125,11 @@ struct ID_Node {
     ID_Node* prev;
 };
 
+struct Style_Node {
+    Widget_Style style;
+    Style_Node* prev;
+};
+
 struct UI_State {
     
     Theme theme;
@@ -129,6 +138,7 @@ struct UI_State {
     
     Layout* layout_stack;
     ID_Node* id_stack;
+    Style_Node* style_stack;
     
     UI_ID hot;
     UI_ID active;

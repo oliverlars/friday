@@ -121,7 +121,6 @@ platform_end_frame(){
     platform->current_time += 1.0f / platform->target_fps;
     
     memset(platform->events, 0, 8192);
-    platform->event_count = 0;
 }
 
 internal void

@@ -100,9 +100,12 @@ has_pressed_key(Platform_Event** event_out, Key key){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_KEY_PRESS && event->key == key){
-            *event_out = event;
-            result = 1;
+        
+        if (event->type == PLATFORM_EVENT_KEY_PRESS){
+            if(event->key == key){
+                *event_out = event;
+                result = 1;
+            }
         }
     }
     return(result);
@@ -112,6 +115,32 @@ internal b32
 has_pressed_key(Key key){
     Platform_Event *event = 0;
     b32 result = has_pressed_key(&event, key);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
+
+internal b32
+has_pressed_key_modified(Platform_Event** event_out, Key key, Key_Modifiers modifiers){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        
+        if (event->type == PLATFORM_EVENT_KEY_PRESS){
+            if(event->key == key && event->modifiers == modifiers){
+                *event_out = event;
+                result = 1;
+            }
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_pressed_key_modified(Key key, Key_Modifiers modifiers){
+    Platform_Event *event = 0;
+    b32 result = has_pressed_key_modified(&event, key, modifiers);
     if (result){
         platform_consume_event(event);
     }
@@ -141,6 +170,31 @@ internal b32
 has_mouse_dragged(v2f* delta = 0) {
     Platform_Event* event = 0;
     b32 result = has_mouse_dragged(&event, delta);
+    return result;
+}
+
+internal b32
+has_mouse_scrolled(Platform_Event **event_out, v2f* delta){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_SCROLL){
+            *event_out = event;
+            platform_consume_event(event);
+            if(delta){
+                delta->x += event->scroll.x;
+                delta->y += event->scroll.y;
+            }
+            result = 1;
+        }
+    }
+    return result;
+}
+
+internal b32
+has_mouse_scrolled(v2f* delta = 0) {
+    Platform_Event* event = 0;
+    b32 result = has_mouse_scrolled(&event, delta);
     return result;
 }
 
@@ -356,7 +410,6 @@ get_widget(String8 string){
             widget->active_transition = last_widget->active_transition;
             widget->string = string;
             widget->id = id;
-            
         }
         
     }
@@ -514,6 +567,18 @@ update_widget(Widget* widget){
             widget->pos.x += delta.x;
             widget->pos.y += delta.y;
         }
+        if(has_pressed_key_modified(KEY_F, KEY_MOD_CTRL)){
+            widget->style.font_scale += 0.1;
+        }else {
+            if(has_mouse_scrolled(&delta)){
+                widget->scroll_amount += delta.y;
+            }
+        }
+        
+    }
+    
+    if(widget_has_property(widget, WP_WINDOW)){
+        v2f delta = {};
         
     }
     
@@ -639,8 +704,10 @@ push_widget_container(String8 string){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_CONTAINER);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
-    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_RENDER_CORNERS);
     widget_set_property(widget, WP_DRAGGABLE);
+    widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_SCROLLING);
     update_widget(widget);
     push_widget_padding(v2f(10, 10));
 }
@@ -817,13 +884,6 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         widget->min.height += (size.height - padding.height); 
         
     }
-    if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
-        lerp(&widget->pos.x, pos.x, 0.2f);
-        lerp(&widget->pos.y, pos.y, 0.2f);
-    }else if(widget_has_property(widget, WP_CONTAINER)){
-    }else {
-        widget->pos = pos;
-    }
     
     
     if(widget_has_property(widget, WP_CONTAINER)){
@@ -831,9 +891,17 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
             widget->pos = pos;
         }
         pos = widget->pos;
+        pos.y += widget->scroll_amount;
         v2f size = layout_widgets(widget->first_child, pos);
         widget->min = size;
         //log("container size is now: %f %f", size.width, size.height);
+    }
+    
+    if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
+        lerp(&widget->pos.x, pos.x, 0.2f);
+        lerp(&widget->pos.y, pos.y, 0.2f);
+    }else {
+        widget->pos = pos;
     }
     
     if(widget_has_property(widget, WP_COLUMN)){
@@ -871,7 +939,6 @@ widget_render_text(Widget* widget, Colour colour){
             border_colour = v4f_from_colour(ui->theme.cursor);
             if(widget_has_property(widget, WP_LERP_COLOURS)){
                 lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-                
             }
         }else {
             border_colour = v4f_from_colour(ui->theme.border);
@@ -906,6 +973,28 @@ render_widgets(Widget* widget){
         push_rectangle_outline(bbox, 1, 3, ui->theme.text);
         
     }
+    
+    if(widget_has_property(widget, WP_CONTAINER) &&
+       widget_has_property(widget, WP_RENDER_CORNERS)){
+        v4f bbox = v4f2(widget->pos, widget->min);
+        //push_string(widget->pos, widget->string, ui->theme.text, 1.0f + widget->style.font_scale);
+        bbox.y -= widget->min.height;
+        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
+        v4f v = bbox;
+        v.width -= PADDING*2;
+        v.x += PADDING;
+        v.height += PADDING;
+        v.y -= PADDING/2.0f;
+        push_rectangle(v, 1,ui->theme.background);
+        
+        v4f h = bbox;
+        h.width += PADDING;
+        h.x -= PADDING/2.0f;
+        h.height -= PADDING*2;
+        h.y += PADDING;
+        push_rectangle(h, 1,ui->theme.background);
+    }
+    
     if(widget_has_property(widget, WP_CLIP)){
         RENDER_CLIP(v4f2(widget->pos, widget->min)){
             ForEachWidgetChild(widget){
@@ -934,13 +1023,7 @@ render_widgets(Widget* widget){
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget_render_text(widget, ui->theme.text);
-    }else if(widget_has_property(widget, WP_CONTAINER) &&
-             widget_has_property(widget, WP_RENDER_BORDER)){
-        v4f bbox = v4f2(widget->pos, widget->min);
-        bbox.y -= widget->min.height;
-        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
     }
-    
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(pos, widget->min);
         bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
@@ -1185,10 +1268,7 @@ dropdown(char* fmt, ...){
     
     UI_ROW {
         label("%.*s", string.length, string.text);
-        UI_WIDTHFILL{
-            xspacer(20);
-            result = arrow_dropdown("change type%.*s", string.length, string.text);
-        }
+        result = arrow_dropdown("change type%.*s", string.length, string.text);
     }
     return result;
 }
@@ -1289,8 +1369,10 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, "Code Editor#%d", (int)root) {
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor#%d", (int)root);
-                    UI_CONTAINER("simple test"){
-                        present(present_style);
+                    UI_CONTAINER("snippet"){
+                        if(dropdown("Snippet#%d", (int)root)){
+                            present(present_style);
+                        }
                     }
                 }
             }

@@ -30,7 +30,7 @@ present_string(Widget* widget, Colour colour){
     if(widget_has_property(widget, WP_LERP_COLOURS)){
         lerp_rects(&widget->style.text_colour, v4f_from_colour(colour), 0.1f);
     }
-    push_string(pos, widget->string, colour_from_v4f(widget->style.text_colour));
+    push_string(pos, widget->string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale + 1.0f);
 }
 
 internal void

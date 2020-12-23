@@ -148,6 +148,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     else if(message == WM_MOUSEWHEEL){
         s16 wheel_delta = HIWORD(wparam);
         platform_push_event(platform_mouse_scroll(v2f(0, (f32)wheel_delta), modifiers));
+        log("scroll amount: %f", (f32)wheel_delta);
     }
     else if(message == WM_MOUSEHWHEEL){
         s16 wheel_delta = HIWORD(wparam);
@@ -277,6 +278,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         }
         
         if(is_down){
+            //log("control was pressed");
             platform_push_event(platform_key_press(key_input, modifiers));
         }else {
             platform_push_event(platform_key_release(key_input, modifiers));
@@ -470,6 +472,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         win32_timer_begin_frame(&global_win32_timer);
         
         {
+            platform->event_count = 0;
             MSG message;
             
             if(global_platform.wait_for_events_to_update && !global_platform.pump_events){
@@ -511,7 +514,6 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             }
             
         }
-        log(" ");
         platform_end_frame();
         
         global_platform.frame = !global_platform.frame;

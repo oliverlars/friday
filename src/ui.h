@@ -43,6 +43,7 @@ enum Widget_Property {
     WP_TEXT_EDIT,
     WP_CONTAINER,
     WP_DRAGGABLE,
+    WP_WRAP
 };
 
 struct Widget_Style {
@@ -82,7 +83,6 @@ struct Widget {
 };
 
 struct Widget_Update {
-    
     b32 clicked;
 };
 
@@ -110,7 +110,6 @@ struct Panel {
     Panel* first; 
     Panel* second;
     Panel* parent;
-    
 };
 
 #define MAX_WIDGETS 4096
@@ -152,6 +151,7 @@ typedef u64 UI_ID;
 #define UI_CONTAINER(fmt, ...) defer_loop(ui_container(fmt, ##__VA_ARGS__), pop_widget_container()) 
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
+#define UI_WRAP defer_loop(push_widget_wrap(), pop_layout())
 #define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
 #define ID(fmt, ...) defer_loop(push_id(generate_id(fmt, ##__VA_ARGS__)), pop_id())
 

@@ -537,6 +537,10 @@ update_widget(Widget* widget){
         widget->min = widget->parent->min;
     }
     
+    if(widget_has_property(widget, WP_WRAP)){
+        widget->min = widget->parent->min;
+    }
+    
     if(widget_has_property(widget, WP_COLUMN)){
         widget->min = widget->parent->min;
     }
@@ -557,6 +561,16 @@ pop_layout(){
     if(!ui->layout_stack) return;
     
     ui->layout_stack = ui->layout_stack->prev;
+}
+
+internal void
+push_widget_wrap(){
+    auto widget = push_widget();
+    auto layout = push_layout(widget);
+    widget_set_property(widget, WP_WRAP);
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_POSITION);
+    update_widget(widget);
 }
 
 internal void
@@ -650,25 +664,67 @@ layout_row(Widget* widget, v2f pos){
     
     v2f size = {};
     v2f start_pos = pos;
-    v2f next_pos = {};
+    v2f next_size = {};
     ForEachWidgetSibling(widget){
         if(widget_has_property(it, WP_WIDTHFILL)){
             it->min.x = it->parent->min.x - (pos.x - start_pos.x);
         }
-        v2f next_pos = layout_widgets(it, pos);
-        if(next_pos.x >= it->parent->pos.x + it->parent->min.width){
-            pos.y -= next_pos.height;
+        v2f next_size = layout_widgets(it, pos);
+        if(next_size.x >= it->parent->pos.x + it->parent->min.width){
+            pos.y -= next_size.height;
             pos.x = start_pos.x;
-            next_pos = layout_widgets(it, pos);
+            next_size = layout_widgets(it, pos);
         }
         if(widget_has_property(it, WP_SPACING)){
             pos.x += PADDING;
             size.width += PADDING;
         }
-        pos.x += next_pos.width;
+        pos.x += next_size.width;
         
-        size.width += next_pos.width;
-        size.height = max(size.height, next_pos.height);
+        size.width += next_size.width;
+        size.height = max(size.height, next_size.height);
+    }
+    
+    return size;
+}
+
+internal v2f
+layout_wrap(Widget* widget, v2f pos){
+    
+    v2f size = {};
+    v2f start_pos = pos;
+    v2f next_size = {};
+    f32 width = widget->parent->min.width;
+    f32 end = start_pos.x + width;
+    ForEachWidgetSibling(widget){
+        if(widget_has_property(it, WP_WIDTHFILL)){
+            it->min.x = it->parent->min.x - (pos.x - start_pos.x);
+        }
+        
+        v2f next_size = layout_widgets(it, pos);
+        if(pos.x + next_size.x >= end){
+            if(widget_has_property(it, WP_SPACING)){
+                pos.y -= PADDING;
+                size.height += PADDING;
+            }
+            pos.y -= next_size.height;
+            pos.x = start_pos.x;
+            next_size = layout_widgets(it, pos);
+            size.height += next_size.height;
+            
+        }else {
+            
+        }
+        
+        if(widget_has_property(it, WP_SPACING)){
+            pos.x += PADDING;
+            size.width += PADDING;
+        }
+        
+        pos.x += next_size.width;
+        
+        size.height = max(size.height, next_size.height);
+        size.width += next_size.width;
     }
     
     return size;
@@ -680,16 +736,16 @@ layout_column(Widget* widget, v2f pos){
     v2f size = {};
     
     ForEachWidgetSibling(widget){
-        v2f next_pos = layout_widgets(it, pos);
-        pos.y -= next_pos.height;
+        v2f next_size = layout_widgets(it, pos);
+        pos.y -= next_size.height;
         if(widget_has_property(it, WP_SPACING)){
             pos.y -= PADDING;
             size.height += PADDING;
         }
         
-        size.height += next_pos.height;
+        size.height += next_size.height;
         
-        size.width = max(size.width, next_pos.width);
+        size.width = max(size.width, next_size.width);
     }
     
     return size;
@@ -704,7 +760,7 @@ layout_widthfill(Widget* widget, v2f pos){
     int number_of_children = 0;
     v2f start_pos = pos;
     ForEachWidgetSibling(widget) {
-        //v2f next_pos = layout_widgets(it, pos);
+        //v2f next_size = layout_widgets(it, pos);
         if(widget_has_property(it, WP_SPACING)){
             total_width += PADDING;
         }
@@ -727,17 +783,17 @@ layout_widthfill(Widget* widget, v2f pos){
         if(!widget_has_property(it, WP_FIXED_SIZE)){
             it->min.width += width;
         }
-        v2f next_pos = layout_widgets(it, pos);
+        v2f next_size = layout_widgets(it, pos);
         
         if(widget_has_property(widget, WP_SPACING)){
             pos.x += PADDING;
             size.width += PADDING;
         }
         
-        pos.x += next_pos.width;
+        pos.x += next_size.width;
         
-        size.width += next_pos.width;
-        size.height = max(size.height, next_pos.height);
+        size.width += next_size.width;
+        size.height = max(size.height, next_size.height);
     }
     
     return size;
@@ -784,6 +840,10 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);
+    }
+    
+    if(widget_has_property(widget, WP_WRAP)){
+        return layout_wrap(widget->first_child, pos);
     }
     
     if(widget_has_property(widget, WP_ROW)){
@@ -1099,9 +1159,10 @@ ui_panel_header(Panel* panel, char* fmt, ...){
         }
         
     }
+    
     ID("%d", (int)panel) {
         if(dropdown){
-            UI_WIDTHFILL {
+            UI_WRAP {
                 if(button_fixed("properties")){
                     panel->type = PANEL_PROPERTIES;
                 }

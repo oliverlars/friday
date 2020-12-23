@@ -149,17 +149,18 @@ has_pressed_key_modified(Key key, Key_Modifiers modifiers){
 
 
 internal b32
-has_mouse_dragged(Platform_Event **event_out, v2f* delta){
+has_mouse_dragged(Platform_Event **event_out, Mouse_Button button, v2f* delta){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_MOUSE_DRAG){
+        if (event->type == PLATFORM_EVENT_MOUSE_DRAG && button == event->mouse_button){
             *event_out = event;
             platform_consume_event(event);
             if(delta){
                 delta->x += event->delta.x;
                 delta->y += event->delta.y;
             }
+            
             result = 1;
         }
     }
@@ -167,9 +168,9 @@ has_mouse_dragged(Platform_Event **event_out, v2f* delta){
 }
 
 internal b32
-has_mouse_dragged(v2f* delta = 0) {
+has_mouse_dragged(Mouse_Button button, v2f* delta = 0) {
     Platform_Event* event = 0;
-    b32 result = has_mouse_dragged(&event, delta);
+    b32 result = has_mouse_dragged(&event, button, delta);
     return result;
 }
 
@@ -564,7 +565,8 @@ update_widget(Widget* widget){
                 result.size = bbox.size;
             }
             v2f delta;
-            if(has_mouse_dragged(&delta)){
+            Mouse_Button button;
+            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
                 log("we dragged");
                 result.dragged = true;
                 result.delta = delta;
@@ -575,10 +577,10 @@ update_widget(Widget* widget){
         
     }
     
-#if 0    
+#if 1    
     if(widget_has_property(widget, WP_CONTAINER)){
         v2f delta = {};
-        if(has_mouse_dragged(&delta)){
+        if(has_mouse_dragged(MOUSE_BUTTON_MIDDLE, &delta)){
             widget->pos.x += delta.x;
             widget->pos.y += delta.y;
         }
@@ -787,7 +789,7 @@ layout_wrap(Widget* widget, v2f pos){
         }
         
         v2f next_size = layout_widgets(it, pos);
-        if(pos.x + next_size.x >= end){
+        if(pos.x + next_size.width >= end){
             if(widget_has_property(it, WP_SPACING)){
                 pos.y -= PADDING;
                 size.height += PADDING;
@@ -923,6 +925,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     }else {
         widget->pos = pos;
     }
+    widget->pos = pos;
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);
@@ -1396,9 +1399,9 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
-                    local_persist f32 value = 0.0f;
-                    UI_WIDTHFILL { fslider(-5.0f, 5.0f, &value, "slider"); }
-                    
+                    local_persist f32 value = 0.6f;
+                    UI_WIDTHFILL { fslider(0.0f, 1.0f, &value, "slider"); }
+                    update_panel_split(root->parent, value);
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {
                         button("Compile");

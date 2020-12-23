@@ -74,7 +74,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     LRESULT result = 0;
     
     local_persist b32 mouse_hover_active = 0;
-    local_persist b32 mmd = 0;
+    local_persist b32 mouse_buttons_pressed[3] = {};
     
     Key_Modifiers modifiers = {};
     if(GetKeyState(VK_CONTROL) & 0x8000){
@@ -94,40 +94,44 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     }
     else if(message == WM_LBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
+        mouse_buttons_pressed[0] = 1;
     }
     else if(message == WM_LBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
+        mouse_buttons_pressed[0] = 0;
     }
     else if(message == WM_RBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
+        mouse_buttons_pressed[2] = 1;
     }
     else if(message == WM_RBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
+        mouse_buttons_pressed[2] = 0;
     }
     else if(message == WM_MBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        mmd = 1;
+        mouse_buttons_pressed[1] = 1;
     }else if(message == WM_MBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        mmd = 0;
+        mouse_buttons_pressed[1] = 0;
     }
     else if(message == WM_MOUSEMOVE){
         s16 xpos = LOWORD(lparam);
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        if(mmd){
-            
-            platform_push_event(platform_mouse_drag(global_platform.mouse_position,
-                                                    v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                        global_platform.mouse_position.y - last_mouse.y)));
-            log("%d", mmd);
-            
-        }else {
-            platform_push_event(platform_mouse_move(global_platform.mouse_position,
-                                                    v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                        global_platform.mouse_position.y - last_mouse.y)));
+        for(int i = 0; i < 3; i++){
+            if(mouse_buttons_pressed[i]){
+                platform_push_event(platform_mouse_drag((Mouse_Button)i,
+                                                        v2f(global_platform.mouse_position.x - last_mouse.x,
+                                                            global_platform.mouse_position.y - last_mouse.y)));
+            }
         }
+        
+        platform_push_event(platform_mouse_move(global_platform.mouse_position,
+                                                v2f(global_platform.mouse_position.x - last_mouse.x,
+                                                    global_platform.mouse_position.y - last_mouse.y)));
+        
         if(!mouse_hover_active){
             mouse_hover_active = 1;
             TRACKMOUSEEVENT track_mouse_event = {};

@@ -80,6 +80,7 @@ struct Widget {
     
     b32 checked;
     f32 scroll_amount;
+    f32 value;
     
     Widget_Style style;
     
@@ -88,6 +89,11 @@ struct Widget {
 
 struct Widget_Update {
     b32 clicked;
+    b32 dragged;
+    v2f delta;
+    v2f clicked_position;
+    v2f pos;
+    v2f size;
 };
 
 struct Layout {

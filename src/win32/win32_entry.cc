@@ -116,8 +116,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        log("move");
-        if(1 && mmd){
+        if(mmd){
             
             platform_push_event(platform_mouse_drag(global_platform.mouse_position,
                                                     v2f(global_platform.mouse_position.x - last_mouse.x,

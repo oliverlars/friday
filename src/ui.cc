@@ -408,6 +408,7 @@ get_widget(String8 string){
             widget->pos = last_widget->pos;
             widget->hot_transition = last_widget->hot_transition;
             widget->active_transition = last_widget->active_transition;
+            widget->value = last_widget->value;
             widget->string = string;
             widget->id = id;
         }
@@ -551,16 +552,30 @@ update_widget(Widget* widget){
     if(last_widget && (widget_has_property(widget, WP_CLICKABLE))){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height;
+        if(string_eq(widget->string, "slider")){
+            log("help");
+        }
         if(is_in_rect(platform->mouse_position, bbox)){
             if(has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;
+                result.clicked_position = platform->mouse_position;
+                result.pos = bbox.pos;
+                result.size = bbox.size;
             }
-            
+            v2f delta;
+            if(has_mouse_dragged(&delta)){
+                log("we dragged");
+                result.dragged = true;
+                result.delta = delta;
+                result.pos = bbox.pos;
+                result.size = bbox.size;
+            }
         }
         
     }
     
+#if 0    
     if(widget_has_property(widget, WP_CONTAINER)){
         v2f delta = {};
         if(has_mouse_dragged(&delta)){
@@ -576,10 +591,15 @@ update_widget(Widget* widget){
         }
         
     }
+#endif
     
     if(widget_has_property(widget, WP_WINDOW)){
         v2f delta = {};
         
+    }
+    
+    if(widget_has_property(widget, WP_RENDER_HOOK)){
+        widget->min = get_text_bbox({}, widget->string).size;
     }
     
     if(widget_has_property(widget, WP_CLICKABLE)){
@@ -1084,8 +1104,7 @@ button(char* fmt, ...){
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
-    Widget* widget;
-    widget = push_widget(string);
+    Widget* widget = push_widget(string);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
@@ -1172,33 +1191,55 @@ yspacer(f32 space = 10.0f){
 }
 
 internal void
-fslider(f32 min, f32 max, f32* value){
+fslider(f32 min, f32 max, f32* value, char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    auto widget = push_widget(string);
     
-    auto widget = push_widget();
     widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_CUSTOM_DATA);
     widget_set_property(widget, WP_RENDER_HOOK);
-    
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_LERP_POSITION);
     
     auto render_hook = [](Widget* widget) {
-        v4f bbox = get_text_bbox(widget->pos, widget->string);
-        bbox = v4f2(widget->pos, widget->min);
-        push_rectangle(bbox, 1, ui->theme.sub_colour);
-        push_rectangle(bbox, 1, ui->theme.text_function);
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
+        
+        {
+            v4f pc = bbox;
+            pc.width *= (widget->value);
+            push_rectangle(pc, 1, ui->theme.sub_colour);
+        }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             push_rectangle_outline(bbox, 1, 3, ui->theme.border);
-            widget->pos.x += 1;
-            widget->pos.y -= 1;
+            pos.x += 1;
+            pos.y -= 1;
         }
-        f32 centre = widget->pos.x + widget->min.x/2.0f;
-        f32 text_centre = get_text_width(widget->string)/2.0f;
+        f32 centre = pos.x + widget->min.x/2.0f;
+        String8 string = make_stringf(&platform->frame_arena, "%f", widget->value);
+        f32 text_centre = get_text_width(string)/2.0f;
         f32 text_x = centre - text_centre;
-        push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
+        push_string(v2f(text_x, bbox.y), string, ui->theme.text);
     };
     
     widget->render_hook = render_hook;
-    widget->string = make_stringf(&platform->frame_arena, "%f", *value);
-    update_widget(widget);
+    widget->value = (*value - min)/(max - min);
+    auto result = update_widget(widget);
+    if(result.clicked){
+        f32 x = (result.clicked_position.x - result.pos.x)/result.size.width;
+        *value = min + x*(max-min);
+        widget->value = (*value - min)/(max - min);
+    }
+    if(result.dragged){
+        f32 x = result.delta.x/result.size.width;
+        *value += x*(max-min);
+        widget->value = (*value - min)/(max - min);
+        clampf(value, min, max);
+    }
 }
 
 internal void
@@ -1355,6 +1396,8 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
+                    local_persist f32 value = 0.0f;
+                    UI_WIDTHFILL { fslider(-5.0f, 5.0f, &value, "slider"); }
                     
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {

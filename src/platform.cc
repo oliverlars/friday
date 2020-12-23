@@ -113,16 +113,15 @@ platform_consume_event(Platform_Event* event){
 internal void
 platform_begin_frame(){
     platform->pump_events = 0;
+    
 }
 
 internal void
 platform_end_frame(){
     platform->current_time += 1.0f / platform->target_fps;
     
-    Platform_Event *event = 0;
-    for (;platform_get_next_event(&event);){
-        platform_consume_event(event);
-    }
+    memset(platform->events, 0, 8192);
+    platform->event_count = 0;
 }
 
 internal void

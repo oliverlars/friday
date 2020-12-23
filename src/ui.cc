@@ -94,6 +94,7 @@ has_mouse_moved(v2f* delta = 0) {
     }
     return result;
 }
+
 internal b32
 has_pressed_key(Platform_Event** event_out, Key key){
     b32 result = 0;
@@ -119,12 +120,17 @@ has_pressed_key(Key key){
 
 
 internal b32
-has_mouse_dragged(Platform_Event **event_out){
+has_mouse_dragged(Platform_Event **event_out, v2f* delta){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
         if (event->type == PLATFORM_EVENT_MOUSE_DRAG){
             *event_out = event;
+            platform_consume_event(event);
+            if(delta){
+                delta->x += event->delta.x;
+                delta->y += event->delta.y;
+            }
             result = 1;
         }
     }
@@ -134,13 +140,7 @@ has_mouse_dragged(Platform_Event **event_out){
 internal b32
 has_mouse_dragged(v2f* delta = 0) {
     Platform_Event* event = 0;
-    b32 result = has_mouse_dragged(&event);
-    if(result){
-        platform_consume_event(event);
-        if(delta){
-            *delta = event->delta;
-        }
-    }
+    b32 result = has_mouse_dragged(&event, delta);
     return result;
 }
 
@@ -356,6 +356,7 @@ get_widget(String8 string){
             widget->active_transition = last_widget->active_transition;
             widget->string = string;
             widget->id = id;
+            
         }
         
     }
@@ -494,8 +495,7 @@ update_widget(Widget* widget){
     Widget_Update result = {};
     
     Widget* last_widget = get_widget(widget->string);
-    if(last_widget && (widget_has_property(widget, WP_CLICKABLE)
-                       || widget_has_property(widget, WP_DRAGGABLE))){
+    if(last_widget && (widget_has_property(widget, WP_CLICKABLE))){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height;
         if(is_in_rect(platform->mouse_position, bbox)){
@@ -503,21 +503,19 @@ update_widget(Widget* widget){
                 ui->active = widget->id;
                 result.clicked = true;
             }
-            if(has_mouse_dragged()){
-                ui->active = widget->id;
-            }
+            
         }
         
     }
     
-    if(ui->active == widget->id && widget_has_property(widget, WP_CONTAINER)){
+    if(widget_has_property(widget, WP_CONTAINER)){
         v2f delta = {};
         if(has_mouse_dragged(&delta)){
             widget->pos.x += delta.x;
             widget->pos.y += delta.y;
         }
+        
     }
-    
     
     if(widget_has_property(widget, WP_CLICKABLE)){
         
@@ -854,7 +852,6 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         return layout_widthfill(widget->first_child, pos);
     }
     
-    
     return widget->min;
 }
 
@@ -887,6 +884,7 @@ widget_render_text(Widget* widget, Colour colour){
         widget->pos.x += 1;
         widget->pos.y -= 1;
     }
+    
     f32 centre = widget->pos.x + widget->min.x/2.0f;
     f32 text_centre = get_text_width(widget->string)/2.0f;
     f32 text_x = centre - text_centre;

@@ -95,7 +95,7 @@ struct Platform {
     
     v2f mouse_position;
     u64 event_count;
-    Platform_Event events[4096];
+    Platform_Event events[8192];
     
     f32* sample;
     u32 sample_count;

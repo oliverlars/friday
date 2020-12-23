@@ -67,7 +67,6 @@ win32_get_mouse_position(HWND window)
     return result;
 }
 
-static b32 middle_mouse_down = 0;
 
 internal LRESULT 
 win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
@@ -75,6 +74,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     LRESULT result = 0;
     
     local_persist b32 mouse_hover_active = 0;
+    local_persist b32 mmd = 0;
     
     Key_Modifiers modifiers = {};
     if(GetKeyState(VK_CONTROL) & 0x8000){
@@ -106,21 +106,24 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     }
     else if(message == WM_MBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        middle_mouse_down = 1;
+        mmd = 1;
     }else if(message == WM_MBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        middle_mouse_down = 0;
+        mmd = 0;
     }
     else if(message == WM_MOUSEMOVE){
         s16 xpos = LOWORD(lparam);
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        
-        if(middle_mouse_down){
+        log("move");
+        if(1 && mmd){
+            
             platform_push_event(platform_mouse_drag(global_platform.mouse_position,
                                                     v2f(global_platform.mouse_position.x - last_mouse.x,
                                                         global_platform.mouse_position.y - last_mouse.y)));
+            log("%d", mmd);
+            
         }else {
             platform_push_event(platform_mouse_move(global_platform.mouse_position,
                                                     v2f(global_platform.mouse_position.x - last_mouse.x,
@@ -393,7 +396,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         }
     }
     
-    f32 refresh_rate = 60.f;
+    f32 refresh_rate = 120.f;
     {
         DEVMODEA device_mode = {0};
         if(EnumDisplaySettingsA(0, ENUM_CURRENT_SETTINGS, &device_mode))
@@ -508,15 +511,15 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             }
             
         }
+        log(" ");
+        platform_end_frame();
         
-        {
-            platform_end_frame();
-        }
         global_platform.frame = !global_platform.frame;
         
         win32_code_update(&win32_app_code);
         
         win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
+        
         
     }
     

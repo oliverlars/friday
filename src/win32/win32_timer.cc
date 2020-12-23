@@ -29,11 +29,11 @@ win32_timer_end_frame(Win32_Timer* timer, f64 milliseconds_per_frame){
     s64 desired_counts = (s64)(desired_seconds_per_frame * timer->counts_per_second.QuadPart);
     s64 counts_to_wait = desired_counts - elapsed_counts;
     
+    
     LARGE_INTEGER start_wait;
     LARGE_INTEGER end_wait;
     
     QueryPerformanceCounter(&start_wait);
-    
     while(counts_to_wait > 0){
         if(timer->sleep_is_granular){
             DWORD milliseconds_to_sleep = (DWORD)(1000.0 * ((f64)(counts_to_wait) / timer->counts_per_second.QuadPart));

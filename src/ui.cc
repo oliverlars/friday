@@ -24,6 +24,13 @@ has_left_clicked(){
 }
 
 internal b32
+has_left_clicked_dont_consume(){
+    Platform_Event* event = 0;
+    b32 result = has_left_clicked(&event);
+    return(result);
+}
+
+internal b32
 has_right_clicked(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
@@ -420,36 +427,6 @@ get_widget(String8 string){
 }
 
 internal Widget*
-_get_widget(String8 string){
-    
-    auto id = generate_id(string);
-    auto hash = id & (MAX_TABLE_WIDGETS-1);
-    Widget* widget = ui->widget_table[0][hash];
-    
-    if(!widget){
-        widget = push_type_zero(&platform->permanent_arena, Widget);
-        ui->widget_table[0][hash] = widget;
-    }
-    
-    do {
-        if(string_eq(string, widget->string)){
-            break;
-        }
-        if(!widget->next_hash){
-            auto next_widget = push_type_zero(&platform->permanent_arena, Widget);
-            widget->next_hash = next_widget;
-            ui->widget_table[0][hash] = next_widget;
-            widget = next_widget;
-            break;
-        }
-        
-        widget = widget->next_hash;
-    }while(widget);
-    
-    return widget;
-}
-
-internal Widget*
 make_widget(){
     auto widget = push_type_zero(&platform->frame_arena, Widget);
     return widget;
@@ -550,13 +527,18 @@ update_widget(Widget* widget){
     Widget_Update result = {};
     
     Widget* last_widget = get_widget(widget->string);
-    if(last_widget && (widget_has_property(widget, WP_CLICKABLE))){
-        v4f bbox = v4f2(last_widget->pos, last_widget->min);
-        bbox.y -= bbox.height;
-        if(string_eq(widget->string, "slider")){
-            log("help");
+    
+    // NOTE(Oliver): gotta stop special casing for the widgets
+    if(widget_has_property(widget, WP_WINDOW)){
+        if(has_left_clicked_dont_consume()){
+            ui->active = widget->id;
         }
-        if(is_in_rect(platform->mouse_position, bbox)){
+    }
+    else if(last_widget && widget_has_property(widget, WP_CLICKABLE)){
+        v4f bbox = v4f2(last_widget->pos, last_widget->min);
+        bbox.y -= bbox.height; //we draw widgets from top left not bottom left
+        if(is_in_rect(platform->mouse_position, bbox) || ui->active == widget->id){
+            v2f delta;
             if(has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;
@@ -564,20 +546,16 @@ update_widget(Widget* widget){
                 result.pos = bbox.pos;
                 result.size = bbox.size;
             }
-            v2f delta;
-            Mouse_Button button;
-            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-                log("we dragged");
+            else if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+                ui->active = widget->id;
                 result.dragged = true;
                 result.delta = delta;
                 result.pos = bbox.pos;
                 result.size = bbox.size;
             }
         }
-        
     }
     
-#if 1    
     if(widget_has_property(widget, WP_CONTAINER)){
         v2f delta = {};
         if(has_mouse_dragged(MOUSE_BUTTON_MIDDLE, &delta)){
@@ -593,19 +571,9 @@ update_widget(Widget* widget){
         }
         
     }
-#endif
-    
-    if(widget_has_property(widget, WP_WINDOW)){
-        v2f delta = {};
-        
-    }
     
     if(widget_has_property(widget, WP_RENDER_HOOK)){
         widget->min = get_text_bbox({}, widget->string).size;
-    }
-    
-    if(widget_has_property(widget, WP_CLICKABLE)){
-        
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
@@ -702,11 +670,17 @@ push_widget_padding(v2f padding){
 internal void
 push_widget_window(v4f rect, String8 string){
     auto widget = push_widget();
-    widget->string = string;
     auto layout = push_layout(widget);
+    
+    // NOTE(Oliver): i must be able to just call
+    // push_widget(string)???????????
+    widget->id = generate_id(string);
+    widget->string = string;
+    
     widget_set_property(widget, WP_WINDOW);
     widget_set_property(widget, WP_CLIP);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_CLICKABLE);
     
     widget->min = rect.size;
     widget->pos = rect.pos;
@@ -993,6 +967,7 @@ render_widgets(Widget* widget){
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
             push_rectangle(bbox, 3, ui->theme.background);
         }
+        bbox = inflate_rect(bbox, 1.5);
         push_rectangle_outline(bbox, 1, 3, ui->theme.text);
         
     }

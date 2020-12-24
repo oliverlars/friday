@@ -209,7 +209,7 @@ inflate_rect(v4f a, f32 amount){
     v4f result = a;
     result.x -= amount;
     result.width += amount*2;
-    result.y += amount;
+    result.y -= amount;
     result.height += amount*2;
     return result;
 }

@@ -538,8 +538,8 @@ update_widget(Widget* widget){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         if(is_in_rect(platform->mouse_position, bbox) || ui->active == widget->id){
-            v2f delta;
-            if(has_left_clicked()){
+            v2f delta = {};
+            if( !widget_has_property(widget, WP_CONTAINER) && has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;
                 result.clicked_position = platform->mouse_position;
@@ -554,22 +554,6 @@ update_widget(Widget* widget){
                 result.size = bbox.size;
             }
         }
-    }
-    
-    if(widget_has_property(widget, WP_CONTAINER)){
-        v2f delta = {};
-        if(has_mouse_dragged(MOUSE_BUTTON_MIDDLE, &delta)){
-            widget->pos.x += delta.x;
-            widget->pos.y += delta.y;
-        }
-        if(has_pressed_key_modified(KEY_F, KEY_MOD_CTRL)){
-            widget->style.font_scale += 0.1;
-        }else {
-            if(has_mouse_scrolled(&delta)){
-                widget->scroll_amount += delta.y;
-            }
-        }
-        
     }
     
     if(widget_has_property(widget, WP_RENDER_HOOK)){
@@ -704,8 +688,13 @@ push_widget_container(String8 string){
     widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_SCROLLING);
-    update_widget(widget);
+    widget_set_property(widget, WP_CLICKABLE);
+    auto result = update_widget(widget);
     push_widget_padding(v2f(10, 10));
+    if(result.dragged){
+        widget->pos.x += result.delta.x;
+        widget->pos.y += result.delta.y;
+    }
 }
 
 internal void

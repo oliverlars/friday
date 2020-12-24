@@ -605,8 +605,10 @@ update_widget(Widget* widget){
         }
         
         if(has_pressed_key(KEY_BACKSPACE)){
-            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            if(ui->cursor_pos){
+                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                ui->cursor_pos--;
+            }
         }
         
         if(has_pressed_key(KEY_END)){
@@ -1549,7 +1551,9 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
                     local_persist v4f rect  = {};
-                    local_persist String8 text_string  = make_string("cool beans");
+                    local_persist String8 text_string  = make_string("cool beans 1");
+                    local_persist String8 text_string2  = make_string("cool beans 2");
+                    local_persist String8 text_string3  = make_string("cool beans 3");
                     yspacer(20);
                     
                     UI_WIDTHFILL{
@@ -1562,6 +1566,8 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL {
                         text_box(&text_string);
                     }
+                    text_box(&text_string2);
+                    text_box(&text_string3);
                     
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {

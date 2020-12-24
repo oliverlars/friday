@@ -559,6 +559,33 @@ update_widget(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_TEXT_EDIT)){
+        
+        if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
+            if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+                while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+                    ui->cursor_pos--;
+                }
+            }else {
+                while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                      ui->cursor_pos >= 0){
+                    ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+                }
+            }
+        }
+        
+        if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
+            if(ui->editing_string.text[ui->cursor_pos] == ' '){
+                while(ui->editing_string.text[ui->cursor_pos] == ' '){
+                    ui->cursor_pos++;
+                }
+            }else{
+                while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
+                      ui->cursor_pos <= ui->editing_string.length){
+                    ui->cursor_pos++;
+                }
+            }
+        }
+        
         if(has_pressed_key(KEY_LEFT)){
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
         }
@@ -566,10 +593,14 @@ update_widget(Widget* widget){
             ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
         }
         if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
-            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
-                  ui->cursor_pos >= 0){
-                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+                ui->cursor_pos--;
+            }else {
+                while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                      ui->cursor_pos >= 0){
+                    pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                    ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+                }
             }
         }
         
@@ -577,9 +608,15 @@ update_widget(Widget* widget){
             pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
         }
+        
         if(has_pressed_key(KEY_END)){
             ui->cursor_pos = ui->editing_string.length;
         }
+        
+        if(has_pressed_key(KEY_HOME)){
+            ui->cursor_pos = 0;
+        }
+        
         Platform_Event* event = 0;
         for (;platform_get_next_event(&event);){
             if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){

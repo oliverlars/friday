@@ -752,7 +752,7 @@ init_shaders(){
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}else {\n"
-            "return;\n"
+            "discard;\n"
             "}\n"
             "}\n";
         
@@ -832,7 +832,7 @@ init_shaders(){
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}else {\n"
-            "return;\n"
+            "discard;\n"
             "}\n"
             "}\n";
         
@@ -912,7 +912,7 @@ init_shaders(){
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}else {\n"
-            "return;\n"
+            "discard;\n"
             "}\n"
             "}\n";
         
@@ -1035,7 +1035,7 @@ init_shaders(){
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "colour = vec4(frag_colour.rgb, alpha);\n"
             "}else {\n"
-            "return;\n"
+            "discard;\n"
             "}\n"
             "}\n";
         

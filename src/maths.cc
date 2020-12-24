@@ -152,6 +152,19 @@ clampf(f32* value, f32 min, f32 max){
     if(*value > max) *value = max;
 }
 
+internal int
+clampi(int value, int min, int max){
+    if(value < min) return min;
+    if(value > max) return max;
+    return value;
+}
+
+internal void
+clampi(int* value, int min, int max){
+    if(*value < min) *value = min;
+    if(*value > max) *value = max;
+}
+
 internal f32
 lerp(f32 source, f32 target, f32 value){
     return (target - source)*value;

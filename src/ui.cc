@@ -559,7 +559,7 @@ update_widget(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_TEXT_EDIT)){
-        
+        clampi(&ui->cursor_pos, 0, ui->editing_string.length);
         if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
             if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
                 while(ui->editing_string.text[ui->cursor_pos-1] == ' '){

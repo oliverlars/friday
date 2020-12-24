@@ -1170,6 +1170,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
     
     auto render_hook = [](Widget* widget) {
         v2f pos = widget->pos;
@@ -1182,12 +1183,26 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
             push_rectangle(pc, 1, ui->theme.sub_colour);
         }
         if(widget_has_property(widget, WP_RENDER_BORDER)){
-            push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
+            v4f border_colour;
+            if(widget->id == ui->hot){
+                border_colour = v4f_from_colour(ui->theme.cursor);
+                if(widget_has_property(widget, WP_LERP_COLOURS)){
+                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
+                }
+            }else {
+                border_colour = v4f_from_colour(ui->theme.border);
+                if(widget_has_property(widget, WP_LERP_COLOURS)){
+                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
+                }
+            }
+            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
+            
             pos.x += 1;
             pos.y -= 1;
         }
         f32 centre = pos.x + widget->min.x/2.0f;
-        String8 string = make_stringf(&platform->frame_arena, "%f", widget->value);
+        String8 string = make_stringf(&platform->frame_arena, "%.2f", widget->value);
         f32 text_centre = get_text_width(string)/2.0f;
         f32 text_x = centre - text_centre;
         push_string(v2f(text_x, bbox.y), string, ui->theme.text);
@@ -1204,8 +1219,8 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     if(result.dragged){
         f32 x = result.delta.x/result.size.width;
         *value += x*(max-min);
-        widget->value = (*value - min)/(max - min);
         clampf(value, min, max);
+        widget->value = (*value - min)/(max - min);
     }
 }
 
@@ -1363,9 +1378,16 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
-                    local_persist f32 value = 0.6f;
-                    UI_WIDTHFILL { fslider(0.0f, 1.0f, &value, "slider"); }
-                    update_panel_split(root->parent, value);
+                    local_persist v4f rect  = {};
+                    yspacer(20);
+                    
+                    UI_WIDTHFILL{
+                        fslider(0, 1, &rect.r, "R");
+                        fslider(0, 1, &rect.g, "G");
+                        fslider(0, 1, &rect.b, "B");
+                        fslider(0, 1, &rect.a, "A");
+                    }
+                    
                     yspacer(20);
                     UI_ROW UI_WIDTHFILL {
                         button("Compile");

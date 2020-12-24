@@ -7,17 +7,6 @@ make_string(char* string){
     return result;
 }
 
-internal char*
-cstr_to_string(Arena* arena, String8 string){
-    char* result = (char*)push_size(arena, string.length+1);
-    result[string.length] = 0;
-    for(int i = 0; i < string.length; i++){
-        result[i] = string.text[i];
-    }
-    
-    return result;
-}
-
 internal String8
 make_stringfv(Arena *arena, char *format, va_list args)
 {
@@ -39,6 +28,46 @@ make_stringf(Arena *arena, char *fmt, ...)
     String8 result = make_stringfv(arena, fmt, args);
     va_end(args);
     return(result);
+}
+
+internal String8
+copy_string(Arena* arena, String8 string){
+    return make_stringf(arena, "%.*s", string.length, string.text);
+}
+
+internal String8
+cstr_to_string(Arena* arena, char* string){
+    return make_stringf(arena, "%s", string);
+}
+
+internal char*
+make_cstr(Arena* arena, char* string){
+    int length = strlen(string);
+    char* buffer = (char*)push_size_zero(arena, length);
+    memcpy(buffer, string, length);
+    return buffer;
+}
+
+internal void
+insert_in_string(String8* string, char* insertable, u64 index){
+    if(!insertable) return;
+    int length = strlen(insertable);
+    for(int i = string->length-1 + length; i > index; i--){
+        string->text[i] = string->text[i-length];
+    }
+    for(int i = index; i < index+length; i++){
+        string->text[index] = *insertable++;
+    }
+    string->length += length;
+}
+
+internal void
+pop_from_string(String8* string, u64 index){
+    if(string->length == 0) return;
+    for(int i = index; i < string->length; i++){
+        string->text[i-1] = string->text[i];
+    }
+    string->length--;
 }
 
 internal bool

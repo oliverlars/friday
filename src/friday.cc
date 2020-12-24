@@ -71,6 +71,10 @@ PERMANENT_LOAD {
     ui->panel->type = PANEL_EDITOR;
     //ui->widget_table[0] = (Widget**)push_size_zero(&platform->permanent_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
     
+    ui->editing_string.text = (char*)push_size_zero(&platform->permanent_arena, 8192); //big boi string
+    ui->editing_string.length = 0;
+    ui->editing_string.capacity = 8192;
+    
     split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
 }

@@ -85,8 +85,8 @@ load_sdf_font(char* filename){
     expect_token(&l, "=");
     
     {
-        String8 filename = make_stringf(&platform->permanent_arena, "../fonts/%s", 
-                                        cstr_to_string(&platform->permanent_arena, read_token(&l)));
+        String8  token = read_token(&l);
+        String8 filename = make_stringf(&platform->permanent_arena, "../fonts/%.*s", token.length, token.text);
         font.bitmap = make_bitmap(filename);
     }
     

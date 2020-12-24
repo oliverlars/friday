@@ -539,7 +539,7 @@ update_widget(Widget* widget){
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         if(is_in_rect(platform->mouse_position, bbox) || ui->active == widget->id){
             v2f delta = {};
-            if( !widget_has_property(widget, WP_CONTAINER) && has_left_clicked()){
+            if(!widget_has_property(widget, WP_CONTAINER) && has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;
                 result.clicked_position = platform->mouse_position;
@@ -552,6 +552,36 @@ update_widget(Widget* widget){
                 result.delta = delta;
                 result.pos = bbox.pos;
                 result.size = bbox.size;
+            }
+        }
+    }
+    
+    if(widget_has_property(widget, WP_TEXT_EDIT)){
+        if(has_pressed_key(KEY_LEFT)){
+            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+        }
+        if(has_pressed_key(KEY_RIGHT)){
+            ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
+        }
+        if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
+            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+        
+        if(has_pressed_key(KEY_BACKSPACE)){
+            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+        }
+        Platform_Event* event = 0;
+        for (;platform_get_next_event(&event);){
+            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+                insert_in_string(&ui->editing_string.string,
+                                 &(char)event->character,
+                                 ui->cursor_pos++);
+                platform_consume_event(event);
             }
         }
     }
@@ -1296,6 +1326,73 @@ dropdown(char* fmt, ...){
     return result;
 }
 
+internal void
+text_box(String8* string){
+    auto widget = push_widget(*string);
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_TEXT_EDIT);
+    
+    auto render_hook = [](Widget* widget) {
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
+        
+        if(widget_has_property(widget, WP_RENDER_BORDER)){
+            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
+            v4f border_colour;
+            if(widget->id == ui->hot){
+                border_colour = v4f_from_colour(ui->theme.cursor);
+                if(widget_has_property(widget, WP_LERP_COLOURS)){
+                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
+                }
+            }else {
+                border_colour = v4f_from_colour(ui->theme.border);
+                if(widget_has_property(widget, WP_LERP_COLOURS)){
+                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
+                }
+            }
+            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
+            
+            pos.x += 1;
+            pos.y -= 1;
+        }
+        
+        if(ui->active == widget->id){
+            String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
+            f32 centre = pos.x + widget->min.x/2.0f;
+            f32 text_centre = get_text_width(s)/2.0f;
+            f32 text_x = centre - text_centre;
+            push_string(v2f(text_x, bbox.y), s, ui->theme.text);
+            
+            v2f cursor = {};
+            cursor.x = text_x + get_text_width_n(s, ui->cursor_pos);
+            cursor.y = bbox.y;
+            push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+        }else {
+            f32 centre = pos.x + widget->min.x/2.0f;
+            f32 text_centre = get_text_width(widget->string)/2.0f;
+            f32 text_x = centre - text_centre;
+            push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
+        }
+    };
+    
+    widget->render_hook = render_hook;
+    
+    auto result = update_widget(widget);
+    if(result.clicked){
+        memcpy(ui->editing_string.text, string->text, string->length);
+        ui->editing_string.length = string->length;
+        ui->cursor_pos = string->length;
+    }else {
+        
+    }
+}
+
 internal void 
 split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
     if(!panel) return;
@@ -1379,6 +1476,7 @@ render_panels(Panel* root, v4f rect){
                     UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                     UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
                     local_persist v4f rect  = {};
+                    local_persist String8 text_string  = make_string("cool beans");
                     yspacer(20);
                     
                     UI_WIDTHFILL{
@@ -1386,6 +1484,10 @@ render_panels(Panel* root, v4f rect){
                         fslider(0, 1, &rect.g, "G");
                         fslider(0, 1, &rect.b, "B");
                         fslider(0, 1, &rect.a, "A");
+                    }
+                    
+                    UI_WIDTHFILL {
+                        text_box(&text_string);
                     }
                     
                     yspacer(20);

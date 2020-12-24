@@ -155,6 +155,18 @@ struct UI_State {
     
     Panel* panel;
     
+    struct {
+        int capacity;
+        
+        union{
+            String8 string;
+            struct{
+                int length;
+                char* text;
+            };
+        };
+    } editing_string;
+    int cursor_pos;
 };
 
 

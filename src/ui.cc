@@ -529,7 +529,8 @@ update_widget(Widget* widget){
     Widget* last_widget = get_widget(widget->string);
     
     // NOTE(Oliver): gotta stop special casing for the widgets
-    if(widget_has_property(widget, WP_WINDOW)){
+    if(widget_has_property(widget, WP_WINDOW) ||
+       widget_has_property(widget, WP_MANUAL_LAYOUT)){
         if(has_left_clicked_dont_consume()){
             ui->active = widget->id;
         }
@@ -547,6 +548,7 @@ update_widget(Widget* widget){
                 result.size = bbox.size;
             }
             else if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+                log("potato");
                 ui->active = widget->id;
                 result.dragged = true;
                 result.delta = delta;
@@ -574,6 +576,9 @@ update_widget(Widget* widget){
         if(has_pressed_key(KEY_BACKSPACE)){
             pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+        }
+        if(has_pressed_key(KEY_END)){
+            ui->cursor_pos = ui->editing_string.length;
         }
         Platform_Event* event = 0;
         for (;platform_get_next_event(&event);){
@@ -883,6 +888,10 @@ internal v2f
 layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     if(!widget) return {};
     
+    if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
+        return {};
+    }
+    
     if(widget_has_property(widget, WP_WINDOW)){
         pos = widget->pos;
         layout_widgets(widget->first_child, pos);
@@ -915,8 +924,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.2f);
         lerp(&widget->pos.y, pos.y, 0.2f);
-    }else {
-        widget->pos = pos;
+    }else if(!widget_has_property(widget, WP_CONTAINER)){
     }
     widget->pos = pos;
     
@@ -1311,6 +1319,39 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     }
 }
 
+internal void
+update_panel_split(Panel* parent, f32 split_ratio){
+    parent->first->split_ratio = split_ratio;
+    parent->second->split_ratio = 1.0f - split_ratio;
+}
+
+internal void
+ui_panel_resize_widgets(Panel* panel, v4f rect, char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    rect = inflate_rect(rect, 10);
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_DRAGGABLE);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_MANUAL_LAYOUT);
+    
+    
+    widget->pos = rect.pos;
+    widget->min = rect.size;
+    
+    auto result = update_widget(widget);
+    
+    if(result.dragged){
+        log("potato");
+        f32 delta = result.delta.x;
+        f32 divisor = rect.width/panel->split_ratio;
+        update_panel_split(panel->parent, platform->mouse_position.x/platform->window_size.x);
+    }
+}
+
 internal b32
 dropdown(char* fmt, ...){
     b32 result = 0;
@@ -1415,12 +1456,6 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     panel->second->split_type = split_type;
 }
 
-internal void
-update_panel_split(Panel* parent, f32 split_ratio){
-    parent->first->split_ratio = split_ratio;
-    parent->second->split_ratio = 1.0f - split_ratio;
-}
-
 internal void present_keyword(char* fmt, ...);
 internal void present_literal(char* fmt, ...);
 internal void present_function(char* fmt, ...);
@@ -1465,10 +1500,11 @@ render_panels(Panel* root, v4f rect){
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
-        
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ui_panel_header(root, "Properties#%d", (int)root);
+                ui_panel_resize_widgets(root, rect, "splitter");
+                
                 UI_COLUMN ID("%d", (int)root) {
                     label("Syntax Style");
                     UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}

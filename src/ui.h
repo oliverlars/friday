@@ -46,6 +46,7 @@ enum Widget_Property {
     WP_DRAGGABLE,
     WP_WRAP,
     WP_SCROLLING,
+    WP_MANUAL_LAYOUT,
 };
 
 struct Widget_Style {

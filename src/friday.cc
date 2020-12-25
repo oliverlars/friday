@@ -7,7 +7,7 @@
 #include "render.h"
 #include "ui.h"
 #include "present.h"
-//#include "graph.h"
+#include "graph.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -23,7 +23,7 @@
 #include "render.cc"
 #include "ui.cc"
 #include "present.cc"
-//#include "graph.cc"
+#include "graph.cc"
 
 global Friday_Globals* globals = 0;
 
@@ -32,7 +32,7 @@ initialise_globals(){
     globals = (Friday_Globals*)platform->globals;
     renderer = globals->renderer;
     ui = globals->ui;
-    
+    editor = globals->editor;
 }
 
 internal void
@@ -59,6 +59,8 @@ PERMANENT_LOAD {
     globals = (Friday_Globals*)platform->globals;
     globals->renderer = push_type_zero(&platform->permanent_arena, Renderer_State);
     globals->ui = push_type_zero(&platform->permanent_arena, UI_State);
+    globals->editor = push_type_zero(&platform->permanent_arena, Editor_State);
+    
     load_all_opengl_procs();
     globals->renderer->font = load_sdf_font("../fonts/friday_default.fnt");
     initialise_globals();
@@ -66,10 +68,11 @@ PERMANENT_LOAD {
     init_shaders();
     load_theme_dots();
     
+    editor->ast_pool = make_pool(sizeof(Ast_Node));
+    
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
     ui->panel->split_ratio = 1.0f;
     ui->panel->type = PANEL_EDITOR;
-    //ui->widget_table[0] = (Widget**)push_size_zero(&platform->permanent_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
     
     ui->editing_string.text = (char*)push_size_zero(&platform->permanent_arena, 8192); //big boi string
     ui->editing_string.length = 0;
@@ -77,6 +80,18 @@ PERMANENT_LOAD {
     
     split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
+    
+    
+    auto pool = &editor->ast_pool;
+    auto global_scope = make_scope_node(pool, "global scope"); 
+    global_scope->scope.statements = make_function_node(pool, "entry");
+    
+    global_scope->scope.statements->function.scope = make_scope_node(pool, "function_scope");
+    auto function_scope = global_scope->scope.statements->function.scope;
+    
+    function_scope->scope.statements = make_declaration_node(pool, "test");
+    
+    editor->program = global_scope;
 }
 
 HOT_LOAD {

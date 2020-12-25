@@ -548,7 +548,6 @@ update_widget(Widget* widget){
                 result.size = bbox.size;
             }
             else if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-                log("potato");
                 ui->active = widget->id;
                 result.dragged = true;
                 result.delta = delta;
@@ -964,8 +963,8 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         lerp(&widget->pos.x, pos.x, 0.2f);
         lerp(&widget->pos.y, pos.y, 0.2f);
     }else if(!widget_has_property(widget, WP_CONTAINER)){
+        widget->pos = pos;
     }
-    widget->pos = pos;
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);
@@ -1495,14 +1494,9 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     panel->second->split_type = split_type;
 }
 
-internal void present_keyword(char* fmt, ...);
-internal void present_literal(char* fmt, ...);
-internal void present_function(char* fmt, ...);
-internal void present_id(char* fmt, ...);
-internal void present_misc(char* fmt, ...);
-internal void present(int present_style);
-
 static int present_style;
+internal void present_graph(Ast_Node* node, int present_style);
+static f32 font_scale = 1.0f;
 
 internal void
 render_panels(Panel* root, v4f rect){
@@ -1562,7 +1556,8 @@ render_panels(Panel* root, v4f rect){
                         fslider(0, 1, &rect.b, "B");
                         fslider(0, 1, &rect.a, "A");
                     }
-                    
+                    UI_WIDTHFILL fslider(0, 2, &font_scale, "font scale");
+                    log("%d", font_scale);
                     UI_WIDTHFILL {
                         text_box(&text_string);
                     }
@@ -1584,7 +1579,7 @@ render_panels(Panel* root, v4f rect){
                     ui_panel_header(root, "Code Editor#%d", (int)root);
                     UI_CONTAINER("snippet"){
                         if(dropdown("Snippet#%d", (int)root)){
-                            present(present_style);
+                            present_graph(editor->program, present_style);
                         }
                     }
                 }

@@ -142,9 +142,8 @@ load_sdf_font(char* filename){
     }
     
     font.size = size;
-    assert(font.size == 55);
     font.line_height = line_height;
-    font.scale = 20.0f/(f32)font.size;
+    font.scale = 22.0f/(f32)font.size;
     font.padding = padding;
     return font;
 }

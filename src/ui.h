@@ -137,6 +137,11 @@ struct Style_Node {
     Style_Node* prev;
 };
 
+enum Text_Edit_State {
+    TEXT_EDIT_BASE,
+    TEXT_EDIT_EDITING,
+    TEXT_EDIT_DONE,
+};
 struct UI_State {
     
     Theme theme;
@@ -156,6 +161,8 @@ struct UI_State {
     
     Panel* panel;
     
+    
+    Text_Edit_State text_edit_state;
     struct {
         int capacity;
         
@@ -167,6 +174,7 @@ struct UI_State {
             };
         };
     } editing_string;
+    
     int cursor_pos;
 };
 
@@ -181,8 +189,11 @@ typedef u64 UI_ID;
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
 #define UI_WRAP defer_loop(push_widget_wrap(), pop_layout())
+#define UI_STYLE(style) defer_loop(push_style(style), pop_style())
 #define UI_PAD(p) defer_loop(push_widget_padding(p), pop_layout())
 #define ID(fmt, ...) defer_loop(push_id(generate_id(fmt, ##__VA_ARGS__)), pop_id())
+
+
 
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)

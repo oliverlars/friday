@@ -6,6 +6,7 @@
 #include "opengl.h"
 #include "render.h"
 #include "ui.h"
+#include "widgets.h"
 #include "present.h"
 #include "graph.h"
 #include "friday.h"
@@ -22,6 +23,7 @@
 
 #include "render.cc"
 #include "ui.cc"
+#include "widgets.cc"
 #include "present.cc"
 #include "graph.cc"
 

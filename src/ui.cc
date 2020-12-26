@@ -351,6 +351,41 @@ generate_id(char* fmt, ...){
     return id;
 }
 
+internal void
+push_style(Widget_Style style){
+    
+    auto next_style = push_type_zero(&platform->frame_arena, Style_Node);
+    
+    if(ui->style_stack){
+        next_style->prev = ui->style_stack;
+        ui->style_stack = next_style;
+    }else {
+        ui->style_stack = next_style;
+    }
+    
+    next_style->style = style;
+}
+
+
+internal void
+push_default_style(){
+    
+    Widget_Style style = {};
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour(ui->theme.text);
+    style.font_scale = 1.0f;
+    push_style(style);
+}
+
+
+internal void
+pop_style(){
+    if(ui->style_stack){
+        ui->style_stack = ui->style_stack->prev;
+    }
+}
+
+
 internal bool
 widget_has_property(Widget* widget, Widget_Property property){
     return !!(widget->properties[property / 64] & (1ll << (property % 64)));
@@ -522,6 +557,79 @@ push_widget(String8 string){
 
 internal void present_cursor();
 
+internal void
+ui_edit_text(){
+    clampi(&ui->cursor_pos, 0, ui->editing_string.length);
+    if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+            while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+                ui->cursor_pos--;
+            }
+        }else {
+            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos] == ' '){
+            while(ui->editing_string.text[ui->cursor_pos] == ' '){
+                ui->cursor_pos++;
+            }
+        }else{
+            while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
+                  ui->cursor_pos <= ui->editing_string.length){
+                ui->cursor_pos++;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_LEFT)){
+        ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+    }
+    if(has_pressed_key(KEY_RIGHT)){
+        ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
+    }
+    if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+            ui->cursor_pos--;
+        }else {
+            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_BACKSPACE)){
+        if(ui->cursor_pos){
+            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+            ui->cursor_pos--;
+        }
+    }
+    
+    if(has_pressed_key(KEY_END)){
+        ui->cursor_pos = ui->editing_string.length;
+    }
+    
+    if(has_pressed_key(KEY_HOME)){
+        ui->cursor_pos = 0;
+    }
+    
+    Platform_Event* event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            insert_in_string(&ui->editing_string.string,
+                             &(char)event->character,
+                             ui->cursor_pos++);
+            platform_consume_event(event);
+        }
+    }
+}
+
 internal Widget_Update
 update_widget(Widget* widget){
     Widget_Update result = {};
@@ -556,76 +664,11 @@ update_widget(Widget* widget){
             }
         }
     }
-    
     if(widget_has_property(widget, WP_TEXT_EDIT)){
-        clampi(&ui->cursor_pos, 0, ui->editing_string.length);
-        if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
-            if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-                while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-                    ui->cursor_pos--;
-                }
-            }else {
-                while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
-                      ui->cursor_pos >= 0){
-                    ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-                }
-            }
-        }
-        
-        if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
-            if(ui->editing_string.text[ui->cursor_pos] == ' '){
-                while(ui->editing_string.text[ui->cursor_pos] == ' '){
-                    ui->cursor_pos++;
-                }
-            }else{
-                while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
-                      ui->cursor_pos <= ui->editing_string.length){
-                    ui->cursor_pos++;
-                }
-            }
-        }
-        
-        if(has_pressed_key(KEY_LEFT)){
-            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-        }
-        if(has_pressed_key(KEY_RIGHT)){
-            ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
-        }
-        if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
-            if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-                ui->cursor_pos--;
-            }else {
-                while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
-                      ui->cursor_pos >= 0){
-                    pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-                    ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-                }
-            }
-        }
-        
-        if(has_pressed_key(KEY_BACKSPACE)){
-            if(ui->cursor_pos){
-                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-                ui->cursor_pos--;
-            }
-        }
-        
-        if(has_pressed_key(KEY_END)){
-            ui->cursor_pos = ui->editing_string.length;
-        }
-        
-        if(has_pressed_key(KEY_HOME)){
-            ui->cursor_pos = 0;
-        }
-        
-        Platform_Event* event = 0;
-        for (;platform_get_next_event(&event);){
-            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-                insert_in_string(&ui->editing_string.string,
-                                 &(char)event->character,
-                                 ui->cursor_pos++);
-                platform_consume_event(event);
-            }
+        ui_edit_text();
+    }else if(ui->active == widget->id){
+        if(ui->text_edit_state == TEXT_EDIT_EDITING){
+            ui->text_edit_state = TEXT_EDIT_DONE;
         }
     }
     
@@ -634,7 +677,7 @@ update_widget(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
-        widget->min = get_text_bbox({}, widget->string).size;
+        widget->min = get_text_bbox({}, widget->string, widget->style.font_scale).size;
     }
     
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
@@ -662,6 +705,8 @@ update_widget(Widget* widget){
     if(widget_has_property(widget, WP_FIXED_SIZE)){
         widget->max = widget->min;
     }
+    
+    widget->style = ui->style_stack->style;
     
     return result;
 }
@@ -728,11 +773,12 @@ internal void
 push_widget_window(v4f rect, String8 string){
     auto widget = push_widget();
     auto layout = push_layout(widget);
-    
     // NOTE(Oliver): i must be able to just call
     // push_widget(string)???????????
     widget->id = generate_id(string);
     widget->string = string;
+    
+    push_default_style();
     
     widget_set_property(widget, WP_WINDOW);
     widget_set_property(widget, WP_CLIP);
@@ -749,6 +795,7 @@ push_widget_window(v4f rect, String8 string){
 internal void
 pop_widget_window(){
     while(ui->layout_stack) pop_layout();
+    pop_style();
 }
 
 internal void
@@ -763,6 +810,7 @@ push_widget_container(String8 string){
     widget_set_property(widget, WP_SCROLLING);
     widget_set_property(widget, WP_CLICKABLE);
     auto result = update_widget(widget);
+    widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
     if(result.dragged){
         widget->pos.x += result.delta.x;
@@ -793,11 +841,7 @@ layout_row(Widget* widget, v2f pos){
             it->min.x = it->parent->min.x - (pos.x - start_pos.x);
         }
         v2f next_size = layout_widgets(it, pos);
-        if(next_size.x >= it->parent->pos.x + it->parent->min.width){
-            pos.y -= next_size.height;
-            pos.x = start_pos.x;
-            next_size = layout_widgets(it, pos);
-        }
+        
         if(widget_has_property(it, WP_SPACING)){
             pos.x += PADDING;
             size.width += PADDING;
@@ -922,6 +966,22 @@ layout_widthfill(Widget* widget, v2f pos){
     return size;
 }
 
+internal void
+layout_container(Widget* widget,  v2f pos){
+    
+    if(widget->pos.x == 0 && widget->pos.y == 0){
+        widget->pos = pos;
+    }
+    pos = widget->pos;
+    v2f size = layout_widgets(widget->first_child, pos);
+    
+}
+
+internal void
+layout_window(Widget* widget,  v2f pos){
+    
+}
+
 internal v2f
 layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     if(!widget) return {};
@@ -931,8 +991,11 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     }
     
     if(widget_has_property(widget, WP_WINDOW)){
+        
         pos = widget->pos;
         layout_widgets(widget->first_child, pos);
+        
+        //layout_window(widget, pos);
     }
     
     if(widget_has_property(widget, WP_PADDING)){
@@ -947,7 +1010,6 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         
     }
     
-    
     if(widget_has_property(widget, WP_CONTAINER)){
         if(widget->pos.x == 0 && widget->pos.y == 0){
             widget->pos = pos;
@@ -955,9 +1017,10 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         pos = widget->pos;
         pos.y += widget->scroll_amount;
         v2f size = layout_widgets(widget->first_child, pos);
-        widget->min = size;
-        //log("container size is now: %f %f", size.width, size.height);
+        
+        //log("container size is now: %f %f", size.
     }
+    
     
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.2f);
@@ -965,6 +1028,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     }else if(!widget_has_property(widget, WP_CONTAINER)){
         widget->pos = pos;
     }
+    widget->pos = pos;
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);
@@ -1056,6 +1120,11 @@ render_widgets(Widget* widget){
         h.height -= PADDING*2;
         h.y += PADDING;
         push_rectangle(h, 1,ui->theme.background);
+        RENDER_CLIP(v4f2(bbox.pos, widget->min)){
+            ForEachWidgetChild(widget){
+                render_widgets(it);
+            }
+        }
     }
     
     if(widget_has_property(widget, WP_CLIP)){
@@ -1110,254 +1179,6 @@ render_widgets(Widget* widget){
 }
 
 internal void
-label(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_LERP_POSITION);
-    update_widget(widget);
-}
-
-internal b32
-arrow_dropdown(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_RENDER_TRIANGLE);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_FIXED_SIZE);
-    widget_set_property(widget, WP_SPACING);
-    auto result = update_widget(widget);
-    if(result.clicked){
-        widget->checked = !widget->checked;
-    }
-    return widget->checked;
-}
-
-internal b32
-button(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    Widget* widget = push_widget(string);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_LERP_COLOURS);
-    widget_set_property(widget, WP_LERP_POSITION);
-    auto result = update_widget(widget);
-    return result.clicked;
-}
-
-internal b32
-check(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    Widget* widget;
-    widget = push_widget(string);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_SPACING);
-    auto result = update_widget(widget);
-    if(result.clicked){
-        widget->checked = !widget->checked;
-    }
-    return widget->checked;
-}
-
-internal b32
-check(b32* checked, char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    Widget* widget;
-    widget = push_widget(string);
-    widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_SPACING);
-    auto result = update_widget(widget);
-    if(result.clicked){
-        *checked = !*checked;
-    }
-    return *checked;
-}
-
-internal b32
-button_fixed(char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_RENDER_BACKGROUND);
-    widget_set_property(widget, WP_FIXED_SIZE);
-    widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_LERP_COLOURS);
-    auto result = update_widget(widget);
-    return result.clicked;
-}
-
-internal void
-xspacer(f32 space = 10.0f){
-    
-    auto widget = push_widget();
-    widget->min = v2f(space, 0);
-    widget->pos = v2f(0,0);
-    widget_set_property(widget, WP_SPACING);
-    update_widget(widget);
-}
-
-internal void
-yspacer(f32 space = 10.0f){
-    
-    auto widget = push_widget();
-    widget->min = v2f(0, space);
-    widget_set_property(widget, WP_SPACING);
-    update_widget(widget);
-}
-
-internal void
-fslider(f32 min, f32 max, f32* value, char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    auto widget = push_widget(string);
-    
-    widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_LERP_POSITION);
-    widget_set_property(widget, WP_LERP_COLOURS);
-    
-    auto render_hook = [](Widget* widget) {
-        v2f pos = widget->pos;
-        pos.y -= widget->min.height;
-        v4f bbox = v4f2(pos, widget->min);
-        
-        {
-            v4f pc = bbox;
-            pc.width *= (widget->value);
-            push_rectangle(pc, 1, ui->theme.sub_colour);
-        }
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
-            v4f border_colour;
-            if(widget->id == ui->hot){
-                border_colour = v4f_from_colour(ui->theme.cursor);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-                }
-            }else {
-                border_colour = v4f_from_colour(ui->theme.border);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
-                }
-            }
-            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
-            
-            pos.x += 1;
-            pos.y -= 1;
-        }
-        f32 centre = pos.x + widget->min.x/2.0f;
-        String8 string = make_stringf(&platform->frame_arena, "%.2f", widget->value);
-        f32 text_centre = get_text_width(string)/2.0f;
-        f32 text_x = centre - text_centre;
-        push_string(v2f(text_x, bbox.y), string, ui->theme.text);
-    };
-    
-    widget->render_hook = render_hook;
-    widget->value = (*value - min)/(max - min);
-    auto result = update_widget(widget);
-    if(result.clicked){
-        f32 x = (result.clicked_position.x - result.pos.x)/result.size.width;
-        *value = min + x*(max-min);
-        widget->value = (*value - min)/(max - min);
-    }
-    if(result.dragged){
-        f32 x = result.delta.x/result.size.width;
-        *value += x*(max-min);
-        clampf(value, min, max);
-        widget->value = (*value - min)/(max - min);
-    }
-}
-
-internal void
-ui_window(v4f rect, char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    push_widget_window(rect, string);
-    push_widget_column();
-}
-
-internal void
-ui_container(char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    push_widget_container(string);
-    push_widget_column();
-}
-
-internal void
-ui_panel_header(Panel* panel, char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    
-    b32 dropdown = false;
-    UI_ROW {
-        label("%.*s", string.length, string.text);
-        UI_WIDTHFILL{
-            xspacer(20);
-            dropdown = arrow_dropdown("change type%.*s", string.length, string.text);
-        }
-        
-    }
-    
-    ID("%d", (int)panel) {
-        if(dropdown){
-            UI_WRAP {
-                if(button_fixed("properties")){
-                    panel->type = PANEL_PROPERTIES;
-                }
-                if(button_fixed("code editor")){
-                    panel->type = PANEL_EDITOR;
-                }
-                if(button_fixed("debug info")){
-                    panel->type = PANEL_DEBUG;
-                }
-            }
-        }
-    }
-}
-
-internal void
 update_panel_split(Panel* parent, f32 split_ratio){
     parent->first->split_ratio = split_ratio;
     parent->second->split_ratio = 1.0f - split_ratio;
@@ -1387,88 +1208,6 @@ ui_panel_resize_widgets(Panel* panel, v4f rect, char* fmt, ...){
         f32 delta = result.delta.x;
         f32 divisor = rect.width/panel->split_ratio;
         update_panel_split(panel->parent, platform->mouse_position.x/platform->window_size.x);
-    }
-}
-
-internal b32
-dropdown(char* fmt, ...){
-    b32 result = 0;
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    UI_ROW {
-        label("%.*s", string.length, string.text);
-        result = arrow_dropdown("change type%.*s", string.length, string.text);
-    }
-    return result;
-}
-
-internal void
-text_box(String8* string){
-    auto widget = push_widget(*string);
-    widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_RENDER_HOOK);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_LERP_POSITION);
-    widget_set_property(widget, WP_LERP_COLOURS);
-    widget_set_property(widget, WP_TEXT_EDIT);
-    
-    auto render_hook = [](Widget* widget) {
-        v2f pos = widget->pos;
-        pos.y -= widget->min.height;
-        v4f bbox = v4f2(pos, widget->min);
-        
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
-            v4f border_colour;
-            if(widget->id == ui->hot){
-                border_colour = v4f_from_colour(ui->theme.cursor);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-                }
-            }else {
-                border_colour = v4f_from_colour(ui->theme.border);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
-                }
-            }
-            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
-            
-            pos.x += 1;
-            pos.y -= 1;
-        }
-        
-        if(ui->active == widget->id){
-            String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
-            f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(s)/2.0f;
-            f32 text_x = centre - text_centre;
-            push_string(v2f(text_x, bbox.y), s, ui->theme.text);
-            
-            v2f cursor = {};
-            cursor.x = text_x + get_text_width_n(s, ui->cursor_pos);
-            cursor.y = bbox.y;
-            push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
-        }else {
-            f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(widget->string)/2.0f;
-            f32 text_x = centre - text_centre;
-            push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
-        }
-    };
-    
-    widget->render_hook = render_hook;
-    
-    auto result = update_widget(widget);
-    if(result.clicked){
-        memcpy(ui->editing_string.text, string->text, string->length);
-        ui->editing_string.length = string->length;
-        ui->cursor_pos = string->length;
-    }else {
-        
     }
 }
 

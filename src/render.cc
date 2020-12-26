@@ -142,7 +142,7 @@ load_sdf_font(char* filename){
     }
     
     font.size = size;
-    font.line_height = line_height;
+    font.line_height = line_height*1.2f;
     font.scale = 22.0f/(f32)font.size;
     font.padding = padding;
     return font;
@@ -1025,7 +1025,7 @@ init_shaders(){
             "uniform vec4 clip_range;\n"
             
             "float width = 0.5;\n"
-            "const float edge = 0.1;\n"
+            "const float edge = 0.15;\n"
             
             "void main(){\n"
             "float distance = 1.0 - texture(atlas, frag_uv).a;\n"

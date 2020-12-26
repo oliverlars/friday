@@ -421,7 +421,6 @@ get_widget(String8 string){
             if(!widget->next_hash){
                 auto next_widget = push_type_zero(&platform->frame_arena, Widget);
                 widget->next_hash = next_widget;
-                ui->widget_table[platform->frame][hash] = next_widget;
                 widget = next_widget;
                 break;
             }
@@ -1029,7 +1028,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     }else if(!widget_has_property(widget, WP_CONTAINER)){
         widget->pos = pos;
     }
-    widget->pos = pos;
+    //widget->pos = pos;
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos);

@@ -593,6 +593,7 @@ ui_edit_text(){
     }
     if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
         if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
             while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
@@ -632,9 +633,9 @@ ui_edit_text(){
 internal Widget_Update
 update_widget(Widget* widget){
     Widget_Update result = {};
+    UI_ID last_active = ui->active;
     
     Widget* last_widget = get_widget(widget->string);
-    
     // NOTE(Oliver): gotta stop special casing for the widgets
     if(widget_has_property(widget, WP_WINDOW) ||
        widget_has_property(widget, WP_MANUAL_LAYOUT)){
@@ -662,6 +663,7 @@ update_widget(Widget* widget){
                 result.size = bbox.size;
             }
         }
+        result.was_active = (last_active == widget->id) && (last_active != ui->active);
     }
     widget->style = ui->style_stack->style;
     

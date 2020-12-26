@@ -27,6 +27,7 @@ present_string(Colour colour, String8 string){
     widget_set_property(widget, WP_CLICKABLE);
     widget->style.text_colour = v4f_from_colour(colour);
     auto render_hook = [](Widget* widget ){
+        
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
@@ -73,6 +74,7 @@ present_editable_string(Colour colour, String8* string){
         if(ui->active == widget->id){
             ui->text_edit_state = TEXT_EDIT_EDITING;
             String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
+            
             push_string(bbox.pos, s, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
             v2f cursor = {};
             cursor.x = pos.x + get_text_width_n(s, ui->cursor_pos);
@@ -99,18 +101,62 @@ present_editable_string(Colour colour, String8* string){
     };
     widget->style = style;
     
+    if(ui->active == widget->id){
+        v2f size = get_text_size(ui->editing_string.string, widget->style.font_scale);
+        widget->min = size;
+    }else {
+        v2f size = get_text_size(widget->string, widget->style.font_scale);
+        widget->min = size;
+    }
     
-    v2f size = get_text_size(widget->string, widget->style.font_scale);
-    widget->min = size;
     if(result.clicked){
         memcpy(ui->editing_string.text, string->text, string->length);
         ui->editing_string.length = string->length;
         ui->cursor_pos = string->length;
-    }else if(ui->text_edit_state == TEXT_EDIT_DONE){
-        *string = copy_string(&platform->permanent_arena, ui->editing_string.string);
-        ui->text_edit_state = TEXT_EDIT_BASE;
     }
+    if(result.was_active){
+        String8 string_new = make_stringf(&platform->permanent_arena, "%.*s", ui->editing_string.length,
+                                          ui->editing_string.text);
+        *string = string_new;
+    }
+}
+
+internal b32
+check_dropdown(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
     
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_LERP_POSITION);
+    
+    auto render_hook = [](Widget* widget){
+        
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
+        
+        if(widget->checked){
+            push_string(pos, make_string("+"), colour_from_v4f(widget->style.text_colour));
+        }else{
+            push_string(pos, make_string("-"), colour_from_v4f(widget->style.text_colour));
+        }
+        
+        
+    };
+    
+    auto result = update_widget(widget);
+    widget->min = get_text_size("+");
+    if(result.clicked){
+        widget->checked = !widget->checked;
+    }
+    widget->render_hook = render_hook;
+    
+    return widget->checked;
 }
 
 internal void
@@ -130,8 +176,9 @@ present_function(Ast_Node* node, int present_style){
     auto function = &node->function;
     auto parameters = function->parameters;
     auto name = node->name;
-    if(arrow_dropdown("%.*s#dropdown", name.length, name.text)){
-        return;
+    b32 render_body = true;
+    if(check_dropdown("%.*s#dropdown", name.length, name.text)){
+        render_body = false;
     }
     
     UI_COLUMN{
@@ -149,13 +196,23 @@ present_function(Ast_Node* node, int present_style){
                         }
                         present_string(ui->theme.text_misc, make_string(")"));
                         present_space();
-                        present_string(ui->theme.text_misc, make_string("{"));
+                        if(render_body)
+                            present_string(ui->theme.text_misc, make_string("{"));
+                        else {
+                            present_string(ui->theme.text_misc, make_string("{"));
+                            present_string(ui->theme.text_misc, make_string("..."));
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
                     }
-                    UI_ROW {
-                        present_graph(function->scope, present_style);
-                    }
-                    UI_ROW {
-                        present_string(ui->theme.text_misc, make_string("}"));
+                    
+                    if(render_body){
+                        
+                        UI_ROW {
+                            present_graph(function->scope, present_style);
+                        }
+                        UI_ROW {
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
                     }
                     
                 }
@@ -178,13 +235,23 @@ present_function(Ast_Node* node, int present_style){
                         present_string(ui->theme.text_misc, make_string("->"));
                         present_space();
                         present_graph(function->return_type, present_style);
-                        present_string(ui->theme.text_misc, make_string("{"));
+                        if(render_body){
+                            present_string(ui->theme.text_misc, make_string("{"));
+                        }else {
+                            present_string(ui->theme.text_misc, make_string("{"));
+                            present_string(ui->theme.text_misc, make_string("..."));
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
                     }
-                    UI_ROW {
-                        present_graph(function->scope, present_style);
-                    }
-                    UI_ROW {
-                        present_string(ui->theme.text_misc, make_string("}"));
+                    
+                    if(render_body){
+                        
+                        UI_ROW {
+                            present_graph(function->scope, present_style);
+                        }
+                        UI_ROW {
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
                     }
                     
                 }
@@ -205,11 +272,14 @@ present_function(Ast_Node* node, int present_style){
                                 ID("%d", (int)parameters) present_string(ui->theme.text_misc, make_string(","));
                             }
                         }
-                        present_string(ui->theme.text_misc, make_string("):"));
+                        present_string(ui->theme.text_misc, make_string(")"));
+                        present_string(ui->theme.text_misc, make_string(":"));
                         present_graph(function->return_type, present_style);
                     }
                     UI_ROW {
-                        present_graph(function->scope, present_style);
+                        if(render_body){
+                            present_graph(function->scope, present_style);
+                        }
                     }
                     
                 }
@@ -230,14 +300,17 @@ present_function(Ast_Node* node, int present_style){
                                 ID("%d", (int)parameters) present_string(ui->theme.text_misc, make_string(","));
                             }
                         }
-                        present_string(ui->theme.text_misc, make_string("):"));
+                        present_string(ui->theme.text_misc, make_string(")"));
+                        present_string(ui->theme.text_misc, make_string(":"));
                         present_graph(function->return_type, present_style);
                     }
                     UI_ROW {
                         present_string(ui->theme.text_type, make_string("begin"));
                     }
                     UI_ROW {
-                        present_graph(function->scope, present_style);
+                        if(render_body){
+                            present_graph(function->scope, present_style);
+                        }
                     }
                     UI_ROW {
                         present_string(ui->theme.text_type, make_string("end"));

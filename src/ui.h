@@ -96,6 +96,8 @@ struct Widget_Update {
     v2f clicked_position;
     v2f pos;
     v2f size;
+    
+    b32 was_active;
 };
 
 struct Layout {

@@ -815,6 +815,7 @@ push_widget_container(String8 string){
     if(result.dragged){
         widget->pos.x += result.delta.x;
         widget->pos.y += result.delta.y;
+        widget->dont_lerp_children = true;
     }
 }
 
@@ -825,13 +826,13 @@ pop_widget_container(){
     pop_layout();
 }
 
-internal v2f layout_widgets(Widget* widget, v2f pos);
+internal v2f layout_widgets(Widget* widget, v2f pos =  v2f(0,0), b32 dont_lerp_children = false);
 
 #define PADDING 10
 #define V2PADDING v2f(PADDING, PADDING)
 
 internal v2f
-layout_row(Widget* widget, v2f pos){
+layout_row(Widget* widget, v2f pos, b32 dont_lerp_children){
     
     v2f size = {};
     v2f start_pos = pos;
@@ -840,7 +841,7 @@ layout_row(Widget* widget, v2f pos){
         if(widget_has_property(it, WP_WIDTHFILL)){
             it->min.x = it->parent->min.x - (pos.x - start_pos.x);
         }
-        v2f next_size = layout_widgets(it, pos);
+        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
         
         if(widget_has_property(it, WP_SPACING)){
             pos.x += PADDING;
@@ -856,7 +857,7 @@ layout_row(Widget* widget, v2f pos){
 }
 
 internal v2f
-layout_wrap(Widget* widget, v2f pos){
+layout_wrap(Widget* widget, v2f pos, b32 dont_lerp_children){
     
     v2f size = {};
     v2f start_pos = pos;
@@ -868,7 +869,7 @@ layout_wrap(Widget* widget, v2f pos){
             it->min.x = it->parent->min.x - (pos.x - start_pos.x);
         }
         
-        v2f next_size = layout_widgets(it, pos);
+        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
         if(pos.x + next_size.width >= end){
             if(widget_has_property(it, WP_SPACING)){
                 pos.y -= PADDING;
@@ -876,7 +877,7 @@ layout_wrap(Widget* widget, v2f pos){
             }
             pos.y -= next_size.height;
             pos.x = start_pos.x;
-            next_size = layout_widgets(it, pos);
+            next_size = layout_widgets(it, pos, dont_lerp_children);
             size.height += next_size.height;
             
         }else {
@@ -898,12 +899,12 @@ layout_wrap(Widget* widget, v2f pos){
 }
 
 internal v2f
-layout_column(Widget* widget, v2f pos){
+layout_column(Widget* widget, v2f pos, b32 dont_lerp_children){
     
     v2f size = {};
     
     ForEachWidgetSibling(widget){
-        v2f next_size = layout_widgets(it, pos);
+        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
         pos.y -= next_size.height;
         if(widget_has_property(it, WP_SPACING)){
             pos.y -= PADDING;
@@ -919,7 +920,7 @@ layout_column(Widget* widget, v2f pos){
 }
 
 internal v2f
-layout_widthfill(Widget* widget, v2f pos){
+layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
     
     v2f size = {};
     
@@ -950,7 +951,7 @@ layout_widthfill(Widget* widget, v2f pos){
         if(!widget_has_property(it, WP_FIXED_SIZE)){
             it->min.width += width;
         }
-        v2f next_size = layout_widgets(it, pos);
+        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
         
         if(widget_has_property(widget, WP_SPACING)){
             pos.x += PADDING;
@@ -967,7 +968,7 @@ layout_widthfill(Widget* widget, v2f pos){
 }
 
 internal void
-layout_container(Widget* widget,  v2f pos){
+layout_container(Widget* widget,  v2f pos, b32 dont_lerp_children){
     
     if(widget->pos.x == 0 && widget->pos.y == 0){
         widget->pos = pos;
@@ -983,7 +984,7 @@ layout_window(Widget* widget,  v2f pos){
 }
 
 internal v2f
-layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
+layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     if(!widget) return {};
     
     if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
@@ -1004,7 +1005,7 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         pos.x += (size.width - padding.width)/2.0f;
         pos.y -= (size.height - padding.height)/2.0f;
         widget->pos = pos;
-        widget->min = layout_widgets(widget->first_child, pos);
+        widget->min = layout_widgets(widget->first_child, pos, dont_lerp_children);
         widget->min.width += (size.width - padding.width); 
         widget->min.height += (size.height - padding.height); 
         
@@ -1016,8 +1017,8 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
         }
         pos = widget->pos;
         pos.y += widget->scroll_amount;
-        v2f size = layout_widgets(widget->first_child, pos);
-        
+        v2f size = layout_widgets(widget->first_child, pos, widget->dont_lerp_children);
+        widget->dont_lerp_children = false;
         //log("container size is now: %f %f", size.
     }
     
@@ -1028,22 +1029,23 @@ layout_widgets(Widget* widget, v2f pos = v2f(0,0)){
     }else if(!widget_has_property(widget, WP_CONTAINER)){
         widget->pos = pos;
     }
-    //widget->pos = pos;
+    if(dont_lerp_children)  widget->pos = pos;
+    
     
     if(widget_has_property(widget, WP_COLUMN)){
-        return layout_column(widget->first_child, pos);
+        return layout_column(widget->first_child, pos, dont_lerp_children);
     }
     
     if(widget_has_property(widget, WP_WRAP)){
-        return layout_wrap(widget->first_child, pos);
+        return layout_wrap(widget->first_child, pos, dont_lerp_children);
     }
     
     if(widget_has_property(widget, WP_ROW)){
-        return layout_row(widget->first_child, pos);
+        return layout_row(widget->first_child, pos, dont_lerp_children);
     }
     
     if(widget_has_property(widget, WP_WIDTHFILL)){
-        return layout_widthfill(widget->first_child, pos);
+        return layout_widthfill(widget->first_child, pos, dont_lerp_children);
     }
     
     return widget->min;

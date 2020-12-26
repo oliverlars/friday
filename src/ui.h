@@ -82,6 +82,7 @@ struct Widget {
     b32 checked;
     f32 scroll_amount;
     f32 value;
+    b32 dont_lerp_children;
     
     Widget_Style style;
     

@@ -130,7 +130,7 @@ present_function(Ast_Node* node, int present_style){
     auto function = &node->function;
     auto parameters = function->parameters;
     auto name = node->name;
-    if(!arrow_dropdown("%.*s#dropdown", name.length, name.text)){
+    if(arrow_dropdown("%.*s#dropdown", name.length, name.text)){
         return;
     }
     

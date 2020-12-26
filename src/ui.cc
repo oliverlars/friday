@@ -1328,6 +1328,7 @@ render_panels(Panel* root, v4f rect){
                 UI_ROW {
                     label("mouse position:"); 
                     label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
+                    log("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
                 }
             }
         }else if(root->type == PANEL_DEBUG){

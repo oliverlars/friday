@@ -14,7 +14,6 @@ make_node(Pool* pool, Ast_Type type){
 internal Ast_Node*
 make_node(Pool* pool, Ast_Type type, char* name){
     Ast_Node* result = (Ast_Node*)pool_allocate(pool);
-    u8* backing = (u8*)result + sizeof(Ast_Node);
     result->name = make_string(name);
     result->type = type;
     result->next = nullptr;
@@ -23,15 +22,15 @@ make_node(Pool* pool, Ast_Type type, char* name){
 }
 
 internal Ast_Node*
-make_scope_node(Pool* pool, char* name){
-    Ast_Node* result = make_node(pool, AST_SCOPE, name);
+make_scope_node(Pool* pool){
+    Ast_Node* result = make_node(pool, AST_SCOPE);
     return result;
 }
 
 
 internal Ast_Node*
-make_type_usage_node(Pool* pool, char* name){
-    Ast_Node* result = make_node(pool, AST_TYPE_USAGE, name);
+make_type_usage_node(Pool* pool){
+    Ast_Node* result = make_node(pool, AST_TYPE_USAGE);
     result->type_usage.type_reference = _u16;
     result->type_usage.number_of_pointers = 0;
     return result;
@@ -40,8 +39,8 @@ make_type_usage_node(Pool* pool, char* name){
 internal Ast_Node*
 make_function_node(Pool* pool, char* name){
     Ast_Node* result = make_node(pool, AST_FUNCTION, name);
-    result->function.scope = make_scope_node(pool, "scope");
-    result->function.return_type = make_type_usage_node(pool, name);
+    result->function.scope = make_scope_node(pool);
+    result->function.return_type = make_type_usage_node(pool);
     return result;
 }
 
@@ -88,7 +87,7 @@ make_declaration_node(Pool* pool, char* name){
 
 internal Ast_Node*
 make_literal_node(Pool* pool, int value){
-    Ast_Node* result = make_node(pool, AST_LITERAL, "literal");
+    Ast_Node* result = make_node(pool, AST_LITERAL);
     result->literal.lit_type = LIT_INTEGER;
     result->literal._int = value;
     return result;
@@ -99,27 +98,27 @@ make_loop_node(Pool* pool, char* name){
     Ast_Node* result = make_node(pool, AST_LOOP, name);
     result->loop.min = make_literal_node(pool, 0);
     result->loop.max = make_literal_node(pool, 10);
-    result->loop.scope = make_scope_node(pool, name);
+    result->loop.scope = make_scope_node(pool);
     return result;
 }
 
 internal Ast_Node*
-make_binary_node(Pool* pool, char* name){
-    Ast_Node* result = make_node(pool, AST_BINARY, name);
+make_binary_node(Pool* pool){
+    Ast_Node* result = make_node(pool, AST_BINARY);
     
     return result;
 }
 
 internal Ast_Node*
-make_conditional_node(Pool* pool, char* name){
-    Ast_Node* result = make_node(pool, AST_CONDITIONAL, name);
-    result->conditional.condition = make_binary_node(pool, "expr");
+make_conditional_node(Pool* pool){
+    Ast_Node* result = make_node(pool, AST_CONDITIONAL);
+    result->conditional.condition = make_binary_node(pool);
     auto bin = result->conditional.condition;
     bin->binary.left = make_literal_node(pool, 20);
     bin->binary.right = make_literal_node(pool, 9);
     bin->binary.op_type = OP_GTE;
     
-    result->conditional.scope = make_scope_node(pool, name);
+    result->conditional.scope = make_scope_node(pool);
     result->conditional._else_if = nullptr;
     result->conditional._else = nullptr;
     

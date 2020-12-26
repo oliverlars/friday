@@ -85,13 +85,24 @@ PERMANENT_LOAD {
     
     
     auto pool = &editor->ast_pool;
-    auto global_scope = make_scope_node(pool, "global scope"); 
-    global_scope->scope.statements = make_function_node(pool, "entry");
+    auto global_scope = make_scope_node(pool); 
     
-    global_scope->scope.statements->function.scope = make_scope_node(pool, "function_scope");
-    auto function_scope = global_scope->scope.statements->function.scope;
+    {
+        global_scope->scope.statements = make_function_node(pool, "entry");
+        
+        global_scope->scope.statements->function.scope = make_scope_node(pool);
+        auto function_scope = global_scope->scope.statements->function.scope;
+        
+        function_scope->scope.statements = make_declaration_node(pool, "test");
+    }
     
-    function_scope->scope.statements = make_declaration_node(pool, "test");
+    {
+        global_scope->scope.statements->next = make_function_node(pool, "add");
+        
+        global_scope->scope.statements->next->function.scope = make_scope_node(pool);
+        auto function_scope = global_scope->scope.statements->next->function.scope;
+        function_scope->scope.statements = make_declaration_node(pool, "Hey Friday!");
+    }
     
     editor->program = global_scope;
 }

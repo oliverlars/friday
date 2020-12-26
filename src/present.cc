@@ -35,16 +35,18 @@ present_string(Colour colour, String8 string){
         
     };
     
+    
+    widget->render_hook = render_hook;
+    auto result = update_widget(widget);
+    
+    
     Widget_Style style = {
         v4f_from_colour(colour),
         v4f_from_colour(ui->theme.text),
         font_scale,
     };
-    push_style(style);
+    widget->style = style;
     
-    
-    widget->render_hook = render_hook;
-    auto result = update_widget(widget);
     v2f size = get_text_size(widget->string, widget->style.font_scale);
     widget->min = size;
     
@@ -87,11 +89,17 @@ present_editable_string(Colour colour, String8* string){
     
     widget->render_hook = render_hook;
     
-    push_default_style();
-    
-    ui->style_stack->style.font_scale = font_scale;
     
     auto result = update_widget(widget);
+    
+    Widget_Style style = {
+        v4f_from_colour(colour),
+        v4f_from_colour(ui->theme.text),
+        font_scale,
+    };
+    widget->style = style;
+    
+    
     v2f size = get_text_size(widget->string, widget->style.font_scale);
     widget->min = size;
     if(result.clicked){

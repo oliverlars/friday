@@ -664,6 +664,8 @@ update_widget(Widget* widget){
             }
         }
     }
+    widget->style = ui->style_stack->style;
+    
     if(widget_has_property(widget, WP_TEXT_EDIT)){
         ui_edit_text();
     }else if(ui->active == widget->id){
@@ -675,7 +677,6 @@ update_widget(Widget* widget){
     if(widget_has_property(widget, WP_RENDER_HOOK)){
         widget->min = get_text_bbox({}, widget->string).size;
     }
-    widget->style = ui->style_stack->style;
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget->min = get_text_bbox({}, widget->string, widget->style.font_scale).size;

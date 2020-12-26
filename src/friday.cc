@@ -100,8 +100,10 @@ PERMANENT_LOAD {
         global_scope->scope.statements->next = make_function_node(pool, "add");
         
         global_scope->scope.statements->next->function.scope = make_scope_node(pool);
-        auto function_scope = global_scope->scope.statements->next->function.scope;
-        function_scope->scope.statements = make_declaration_node(pool, "Hey Friday!");
+        auto function = &global_scope->scope.statements->next->function;
+        function->parameters = make_declaration_node(pool, "a");
+        function->parameters->next = make_declaration_node(pool, "b");
+        function->scope->scope.statements = make_declaration_node(pool, "Hey Friday!");
     }
     
     editor->program = global_scope;

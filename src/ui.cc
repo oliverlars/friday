@@ -675,6 +675,7 @@ update_widget(Widget* widget){
     if(widget_has_property(widget, WP_RENDER_HOOK)){
         widget->min = get_text_bbox({}, widget->string).size;
     }
+    widget->style = ui->style_stack->style;
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget->min = get_text_bbox({}, widget->string, widget->style.font_scale).size;
@@ -706,7 +707,6 @@ update_widget(Widget* widget){
         widget->max = widget->min;
     }
     
-    widget->style = ui->style_stack->style;
     
     return result;
 }
@@ -1120,11 +1120,13 @@ render_widgets(Widget* widget){
         h.height -= PADDING*2;
         h.y += PADDING;
         push_rectangle(h, 1,ui->theme.background);
+        
         RENDER_CLIP(v4f2(bbox.pos, widget->min)){
             ForEachWidgetChild(widget){
                 render_widgets(it);
             }
         }
+        
     }
     
     if(widget_has_property(widget, WP_CLIP)){
@@ -1328,7 +1330,6 @@ render_panels(Panel* root, v4f rect){
                 UI_ROW {
                     label("mouse position:"); 
                     label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
-                    log("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
                 }
             }
         }else if(root->type == PANEL_DEBUG){

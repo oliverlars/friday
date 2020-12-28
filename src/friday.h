@@ -14,4 +14,5 @@ struct Friday_Globals {
     Renderer_State* renderer;
     UI_State* ui;
     Editor_State* editor;
+    Presenter_State* presenter;
 };

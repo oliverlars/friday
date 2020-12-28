@@ -69,6 +69,9 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                 if(button_fixed("debug info")){
                     panel->type = PANEL_DEBUG;
                 }
+                if(button_fixed("console")){
+                    panel->type = PANEL_CONSOLE;
+                }
             }
         }
     }

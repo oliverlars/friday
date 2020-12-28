@@ -1,8 +1,120 @@
 
+internal void
+advance_cursor(Cursor_Direction dir){
+    auto line = cursor.at;
+    
+    while(line->prev_sibling){
+        line = line->prev_sibling;
+    }
+    int pos = 0;
+    switch(dir){
+        case CURSOR_UP:{
+            cursor.at = line->parent->next_sibling;
+        }break;
+        case CURSOR_DOWN:{
+            cursor.at = line->child->next_sibling;
+        }break;
+        case CURSOR_LEFT:{
+            cursor.at = cursor.at->prev_sibling;
+            pos = cursor.at->string.length;
+        }break;
+        case CURSOR_RIGHT:{
+            cursor.at = cursor.at->next_sibling;
+        }break;
+    }
+    ui->active = cursor.at->id;
+    memcpy(ui->editing_string.text, cursor.at->string.text, cursor.at->string.length);
+    ui->editing_string.length = cursor.at->string.length;
+    ui->cursor_pos = pos;
+}
+
+internal Present_Node*
+get_present_node(String8 string, UI_ID id){
+    
+    auto hash = id & (MAX_TABLE_WIDGETS - 1);
+    if(!presenter->last_table) return nullptr;
+    auto node = presenter->last_table[hash];
+    
+    if(!node){
+        return nullptr;
+    }else {
+        do {
+            if(string_eq(string, node->string)){
+                return node;
+            }
+            node = node->next_hash;
+        }while(node);
+    }
+    
+    return nullptr;
+}
+
+internal void
+place_node_in_table(Present_Node* new_node){
+    
+    auto hash = new_node->id & (MAX_TABLE_WIDGETS - 1);
+    auto node = presenter->table[hash];
+    
+    if(!node){
+        presenter->table[hash] = new_node;
+    }else {
+        do {
+            if(string_eq(new_node->string, node->string)){
+                assert("this shouldn't happen...");
+            }
+            if(!node->next_hash){
+                node->next_hash = new_node;
+            }
+            node = node->next_hash;
+        }while(node);
+    }
+}
+
+internal Present_Node*
+push_present_node(String8 string, UI_ID id){
+    assert(presenter->line);
+    auto next = push_type_zero(&platform->frame_arena, Present_Node);
+    next->string = string;
+    next->id = id;
+    place_node_in_table(next);
+    
+    auto sibling = presenter->line;
+    while(sibling->next_sibling){
+        sibling = sibling->next_sibling;
+    }
+    
+    sibling->next_sibling = next;
+    next->prev_sibling = sibling;
+    
+    return next;
+}
+
+internal Present_Node*
+push_present_line(){
+    auto next = push_type_zero(&platform->frame_arena, Present_Node);
+    if(!presenter->lines){
+        presenter->lines = next;
+        presenter->line = next;
+    }else {
+        auto node = presenter->lines;
+        while(node->child){
+            node = node->child;
+        }
+        node->child = next;
+        next->parent = node;
+        presenter->line = next;
+    }
+    return next;
+}
+
 
 internal void
 present_cursor(){
+    
     auto widget = push_widget(make_string("cursor"));
+    u64 custom_hash = 0;
+    hash32(&custom_hash, widget->string);
+    widget->id = custom_hash;
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     
@@ -14,8 +126,9 @@ present_cursor(){
     
     widget->render_hook = render_hook;
     v2f size = get_text_size(widget->string);
-    widget->min = v2f(2, size.height);
     update_widget(widget);
+    widget->min = v2f(2, size.height);
+    
 }
 
 internal void
@@ -26,6 +139,7 @@ present_string(Colour colour, String8 string){
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
     widget->style.text_colour = v4f_from_colour(colour);
+    
     auto render_hook = [](Widget* widget ){
         
         v2f pos = widget->pos;
@@ -51,6 +165,7 @@ present_string(Colour colour, String8 string){
     v2f size = get_text_size(widget->string, widget->style.font_scale);
     widget->min = size;
     
+    
 }
 
 internal void
@@ -60,19 +175,117 @@ present_space() {
 }
 
 internal void
+edit_text(Widget* widget){
+    clampi(&ui->cursor_pos, 0, ui->editing_string.length);
+    auto last_widget = get_last_widget(widget->id, widget->string);
+    
+    if(has_pressed_key(KEY_UP)){
+        advance_cursor(CURSOR_UP);
+    }
+    if(has_pressed_key(KEY_DOWN)){
+        advance_cursor(CURSOR_DOWN);
+    }
+    
+    if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+            while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+                ui->cursor_pos--;
+            }
+        }else {
+            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos] == ' '){
+            while(ui->editing_string.text[ui->cursor_pos] == ' '){
+                ui->cursor_pos++;
+            }
+        }else{
+            while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
+                  ui->cursor_pos <= ui->editing_string.length){
+                ui->cursor_pos++;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_LEFT)){
+        if(ui->cursor_pos == 0){
+            
+            advance_cursor(CURSOR_LEFT);
+        }else {
+            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+        }
+    }
+    if(has_pressed_key(KEY_RIGHT)){
+        if(ui->cursor_pos == ui->editing_string.length){
+            advance_cursor(CURSOR_RIGHT);
+        }else{
+            ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
+        }
+    }
+    if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
+        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+            ui->cursor_pos--;
+        }else {
+            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_BACKSPACE)){
+        if(ui->cursor_pos){
+            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+            ui->cursor_pos--;
+        }
+    }
+    
+    if(has_pressed_key(KEY_END)){
+        ui->cursor_pos = ui->editing_string.length;
+    }
+    
+    if(has_pressed_key(KEY_HOME)){
+        ui->cursor_pos = 0;
+    }
+    
+    Platform_Event* event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            insert_in_string(&ui->editing_string.string,
+                             &(char)event->character,
+                             ui->cursor_pos++);
+            platform_consume_event(event);
+        }
+    }
+}
+
+internal void
 present_editable_string(Colour colour, String8* string){
+    
+    
     auto widget = push_widget(*string);
+    push_present_node(*string, widget->id);
+    
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
+    //widget_set_property(widget, WP_TEXT_EDIT);
     widget->style.text_colour = v4f_from_colour(colour);
+    
+    
     auto render_hook = [](Widget* widget ){
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
         if(ui->active == widget->id){
-            ui->text_edit_state = TEXT_EDIT_EDITING;
             String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
             
             push_string(bbox.pos, s, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
@@ -93,6 +306,14 @@ present_editable_string(Colour colour, String8* string){
     
     
     auto result = update_widget(widget);
+    
+    // NOTE(Oliver): custom text edit
+    {
+        if(widget->id == ui->active){
+            cursor.at = get_present_node(widget->string, widget->id);
+            edit_text(widget);
+        }
+    }
     
     Widget_Style style = {
         v4f_from_colour(colour),
@@ -164,7 +385,9 @@ present_scope(Ast_Node* node, int present_style){
     auto statement = node->scope.statements;
     UI_COLUMN {
         for(; statement; statement = statement->next){
+            push_present_line();
             UI_ROW{
+                present_space();
                 present_graph(statement, present_style);
             }
         }
@@ -180,8 +403,8 @@ present_function(Ast_Node* node, int present_style){
     if(check_dropdown("%.*s#dropdown", name.length, name.text)){
         render_body = false;
     }
-    
-    UI_COLUMN{
+    UI_COLUMN {
+        push_present_line();
         switch(present_style){
             case 0: {
                 ID("%d", (int)node) {
@@ -207,12 +430,8 @@ present_function(Ast_Node* node, int present_style){
                     
                     if(render_body){
                         
-                        UI_ROW {
-                            present_graph(function->scope, present_style);
-                        }
-                        UI_ROW {
-                            present_string(ui->theme.text_misc, make_string("}"));
-                        }
+                        present_graph(function->scope, present_style);
+                        present_string(ui->theme.text_misc, make_string("}"));
                     }
                     
                 }
@@ -223,6 +442,9 @@ present_function(Ast_Node* node, int present_style){
                 ID("%d", (int)node) {
                     UI_ROW  {
                         present_editable_string(ui->theme.text_function, &node->name);
+                        present_space();
+                        present_string(ui->theme.text_misc, make_string("::"));
+                        present_space();
                         present_string(ui->theme.text_misc, make_string("("));
                         for(;parameters; parameters = parameters->next){
                             present_graph(parameters, present_style);
@@ -246,12 +468,8 @@ present_function(Ast_Node* node, int present_style){
                     
                     if(render_body){
                         
-                        UI_ROW {
-                            present_graph(function->scope, present_style);
-                        }
-                        UI_ROW {
-                            present_string(ui->theme.text_misc, make_string("}"));
-                        }
+                        present_graph(function->scope, present_style);
+                        present_string(ui->theme.text_misc, make_string("}"));
                     }
                     
                 }
@@ -276,10 +494,8 @@ present_function(Ast_Node* node, int present_style){
                         present_string(ui->theme.text_misc, make_string(":"));
                         present_graph(function->return_type, present_style);
                     }
-                    UI_ROW {
-                        if(render_body){
-                            present_graph(function->scope, present_style);
-                        }
+                    if(render_body){
+                        present_graph(function->scope, present_style);
                     }
                     
                 }
@@ -304,84 +520,70 @@ present_function(Ast_Node* node, int present_style){
                         present_string(ui->theme.text_misc, make_string(":"));
                         present_graph(function->return_type, present_style);
                     }
-                    UI_ROW {
-                        present_string(ui->theme.text_type, make_string("begin"));
+                    present_string(ui->theme.text_type, make_string("begin"));
+                    
+                    if(render_body){
+                        present_graph(function->scope, present_style);
                     }
-                    UI_ROW {
-                        if(render_body){
-                            present_graph(function->scope, present_style);
-                        }
-                    }
-                    UI_ROW {
-                        present_string(ui->theme.text_type, make_string("end"));
-                    }
+                    present_string(ui->theme.text_type, make_string("end"));
                 }
                 
             }break;
         }
     }
 }
+
 internal void
 present_declaration(Ast_Node* node, int present_style){
     auto decl = &node->declaration;
-    
     switch(present_style){
         case 0:{
             
-            UI_ROW {
-                present_graph(decl->type_usage, present_style);
+            present_graph(decl->type_usage, present_style);
+            present_space();
+            present_editable_string(ui->theme.text, &node->name);
+            if(decl->is_initialised){
                 present_space();
-                present_editable_string(ui->theme.text, &node->name);
-                if(decl->is_initialised){
-                    present_space();
-                    present_string(ui->theme.text_misc, make_string("="));
-                    present_graph(decl->expression, present_style);
-                }
+                present_string(ui->theme.text_misc, make_string("="));
+                present_graph(decl->expression, present_style);
             }
             
         }break;
         case 1:{
             
-            UI_ROW {
-                present_editable_string(ui->theme.text, &node->name);
-                present_string(ui->theme.text_misc, make_string(":"));
+            present_editable_string(ui->theme.text, &node->name);
+            present_string(ui->theme.text_misc, make_string(":"));
+            present_space();
+            present_graph(decl->type_usage, present_style);
+            if(decl->is_initialised){
                 present_space();
-                present_graph(decl->type_usage, present_style);
-                if(decl->is_initialised){
-                    present_space();
-                    present_string(ui->theme.text_misc, make_string("="));
-                    present_graph(decl->expression, present_style);
-                }
+                present_string(ui->theme.text_misc, make_string("="));
+                present_graph(decl->expression, present_style);
             }
             
         }break;
         case 2:{
             
-            UI_ROW {
-                present_editable_string(ui->theme.text, &node->name);
-                present_string(ui->theme.text_misc, make_string(":"));
+            present_editable_string(ui->theme.text, &node->name);
+            present_string(ui->theme.text_misc, make_string(":"));
+            present_space();
+            present_graph(decl->type_usage, present_style);
+            if(decl->is_initialised){
                 present_space();
-                present_graph(decl->type_usage, present_style);
-                if(decl->is_initialised){
-                    present_space();
-                    present_string(ui->theme.text_misc, make_string("="));
-                    present_graph(decl->expression, present_style);
-                }
+                present_string(ui->theme.text_misc, make_string("="));
+                present_graph(decl->expression, present_style);
             }
             
         }break;
         case 3:{
-            
-            UI_ROW {
-                present_editable_string(ui->theme.text, &node->name);
-                present_string(ui->theme.text_misc, make_string(":"));
+            present_editable_string(ui->theme.text, &node->name);
+            present_string(ui->theme.text_misc, make_string(":"));
+            present_space();
+            present_graph(decl->type_usage, present_style);
+            if(decl->is_initialised){
                 present_space();
-                present_graph(decl->type_usage, present_style);
-                if(decl->is_initialised){
-                    present_space();
-                    present_string(ui->theme.text_misc, make_string("="));
-                    present_graph(decl->expression, present_style);
-                }
+                present_string(ui->theme.text_misc, make_string("="));
+                present_graph(decl->expression, present_style);
             }
             
         }break;
@@ -414,7 +616,7 @@ present_graph(Ast_Node* node, int present_style){
         case AST_TYPE_USAGE:{
         }break;
         case AST_DECLARATION:{
-            ID("%d", (int)node) present_declaration(node, present_style);
+            ID("%d", (int)node) UI_ROW present_declaration(node, present_style);
         }break;
         case AST_IDENTIFIER:{
         }break;

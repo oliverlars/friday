@@ -26,6 +26,7 @@ enum Widget_Property {
     WP_RENDER_TRIANGLE,
     WP_RENDER_BORDER,
     WP_RENDER_CORNERS,
+    WP_RENDER_DOUBLE_BORDER,
     WP_RENDER_BACKGROUND,
     WP_LERP_POSITION,
     WP_LERP_COLOURS,
@@ -115,13 +116,14 @@ enum Panel_Type {
     PANEL_PROPERTIES,
     PANEL_STATUS,
     PANEL_DEBUG,
+    PANEL_CONSOLE,
 };
 
 struct Panel {
     Panel_Split_Type split_type;
     Panel_Type type;
     f32 split_ratio;
-    Panel* first; 
+    Panel* first;
     Panel* second;
     Panel* parent;
 };
@@ -140,11 +142,6 @@ struct Style_Node {
     Style_Node* prev;
 };
 
-enum Text_Edit_State {
-    TEXT_EDIT_BASE,
-    TEXT_EDIT_EDITING,
-    TEXT_EDIT_DONE,
-};
 struct UI_State {
     
     Theme theme;
@@ -165,7 +162,6 @@ struct UI_State {
     Panel* panel;
     
     
-    Text_Edit_State text_edit_state;
     struct {
         int capacity;
         

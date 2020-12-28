@@ -7,8 +7,9 @@
 #include "render.h"
 #include "ui.h"
 #include "widgets.h"
-#include "present.h"
 #include "graph.h"
+#include "present.h"
+#include "editor.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -35,6 +36,7 @@ initialise_globals(){
     renderer = globals->renderer;
     ui = globals->ui;
     editor = globals->editor;
+    presenter = globals->presenter;
 }
 
 internal void
@@ -42,11 +44,17 @@ start_frame(){
     ui->root = nullptr;
     ui->layout_stack = nullptr;
     ui->widget_table[platform->frame] = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
+    presenter->last_table = presenter->table;
+    presenter->table = (Present_Node**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Present_Node*));
+    presenter->last_lines = presenter->lines;
+    presenter->lines = 0;
+    presenter->line = 0;
     opengl_start_frame();
 }
 
 internal void
 end_frame(){
+    
     opengl_end_frame();
 }
 
@@ -62,6 +70,7 @@ PERMANENT_LOAD {
     globals->renderer = push_type_zero(&platform->permanent_arena, Renderer_State);
     globals->ui = push_type_zero(&platform->permanent_arena, UI_State);
     globals->editor = push_type_zero(&platform->permanent_arena, Editor_State);
+    globals->presenter = push_type_zero(&platform->permanent_arena, Presenter_State);
     
     load_all_opengl_procs();
     globals->renderer->font = load_sdf_font("../fonts/friday_default.fnt");
@@ -98,6 +107,7 @@ PERMANENT_LOAD {
     
     {
         global_scope->scope.statements->next = make_function_node(pool, "add");
+        global_scope->scope.statements->next->prev = global_scope->scope.statements;
         
         global_scope->scope.statements->next->function.scope = make_scope_node(pool);
         auto function = &global_scope->scope.statements->next->function;
@@ -125,13 +135,18 @@ UPDATE {
     FRAME
     {
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
-        
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);
+        }
+        
+        //NOTE(Oliver): handle input for presenter
+        // put this somewhere else
+        {
+            
         }
         
     }

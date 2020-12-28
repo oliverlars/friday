@@ -402,6 +402,23 @@ widget_remove_property(Widget* widget, Widget_Property property){
 }
 
 internal Widget*
+get_last_widget(UI_ID id, String8 string){
+    auto hash = id & (MAX_TABLE_WIDGETS-1);
+    auto last_table = ui->widget_table[!platform->frame];
+    
+    if(last_table){
+        auto widget = last_table[hash];
+        if(widget){
+            do {
+                if(string_eq(string, widget->string)) return widget;
+                widget = widget->next_hash;
+            }while(widget);
+        }
+    }
+    return nullptr;
+}
+
+internal Widget*
 get_widget(String8 string){
     if(string.length == 0) return nullptr;
     
@@ -474,12 +491,27 @@ make_widget(String8 string){
     return widget;
 }
 
+internal b32
+widget_properties_are_equal(Widget* a, Widget* b){
+    if(!a || !b) return false;
+    for(int i = 0; i < PROPERTIES_MAX/64 +1; i++){
+        if(a->properties[i] != b->properties[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
 internal Layout*
 push_layout(Widget* widget){
+    
     auto layout = push_type_zero(&platform->frame_arena, Layout);
     if(!ui->layout_stack){
         ui->layout_stack = layout;
     }else {
+        if(widget_properties_are_equal(widget, ui->layout_stack->widget)){
+            return ui->layout_stack;
+        }
         layout->prev = ui->layout_stack;
         ui->layout_stack = layout;
     }
@@ -557,8 +589,10 @@ push_widget(String8 string){
 internal void present_cursor();
 
 internal void
-ui_edit_text(){
+ui_edit_text(Widget* widget){
     clampi(&ui->cursor_pos, 0, ui->editing_string.length);
+    auto last_widget = get_last_widget(widget->id, widget->string);
+    
     if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
         if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
             while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
@@ -667,12 +701,8 @@ update_widget(Widget* widget){
     }
     widget->style = ui->style_stack->style;
     
-    if(widget_has_property(widget, WP_TEXT_EDIT)){
-        ui_edit_text();
-    }else if(ui->active == widget->id){
-        if(ui->text_edit_state == TEXT_EDIT_EDITING){
-            ui->text_edit_state = TEXT_EDIT_DONE;
-        }
+    if(ui->active == widget->id && widget_has_property(widget, WP_TEXT_EDIT)){
+        ui_edit_text(widget);
     }
     
     if(widget_has_property(widget, WP_RENDER_HOOK)){
@@ -806,7 +836,7 @@ push_widget_container(String8 string){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_CONTAINER);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
-    widget_set_property(widget, WP_RENDER_CORNERS);
+    widget_set_property(widget, WP_RENDER_DOUBLE_BORDER);
     widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_SCROLLING);
@@ -1016,6 +1046,10 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     if(widget_has_property(widget, WP_CONTAINER)){
         if(widget->pos.x == 0 && widget->pos.y == 0){
             widget->pos = pos;
+        }else if(pos.y <= widget->pos.y){
+            // HACK(Oliver): this is to make sure it doesn't overlap with parent widgets,
+            // but we may want this to happen when scrolling, for example
+            widget->pos.y = pos.y;
         }
         pos = widget->pos;
         pos.y += widget->scroll_amount;
@@ -1353,6 +1387,13 @@ render_panels(Panel* root, v4f rect){
                     if(dropdown("secrets")){
                         
                     }
+                }
+            }
+        }else if(root->type == PANEL_CONSOLE){
+            UI_WINDOW(rect, "Console#%d", (int)root){
+                ID("%d", (int)root) {
+                    ui_panel_header(root, "Console");
+                    
                 }
             }
         }

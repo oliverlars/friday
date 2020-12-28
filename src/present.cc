@@ -35,11 +35,21 @@ advance_cursor(Cursor_Direction dir){
             pos = cursor.at->string.length;
         }break;
     }
+    
+    {
+        memcpy(cursor.string->text, ui->editing_string.text, ui->editing_string.length);
+        cursor.string->length = ui->editing_string.length;
+    }
+    {
+        memcpy(ui->editing_string.text, cursor.at->string.text, cursor.at->string.length);
+        ui->editing_string.length = cursor.at->string.length;
+        ui->cursor_pos = pos;
+    }
+    
+    auto prev_active = ui->active;
+    
     ui->active = cursor.at->id;
     
-    memcpy(ui->editing_string.text, cursor.at->string.text, cursor.at->string.length);
-    ui->editing_string.length = cursor.at->string.length;
-    ui->cursor_pos = pos;
 }
 
 internal Present_Node*
@@ -304,7 +314,7 @@ present_editable_string(Colour colour, String8* string){
             
             push_string(bbox.pos, s, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
             v2f cursor = {};
-            cursor.x = pos.x + get_text_width_n(s, ui->cursor_pos);
+            cursor.x = pos.x + get_text_width_n(s, ui->cursor_pos, widget->style.font_scale);
             cursor.y = bbox.y;
             push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
         }else {
@@ -319,15 +329,20 @@ present_editable_string(Colour colour, String8* string){
     widget->render_hook = render_hook;
     
     
-    auto result = update_widget(widget);
-    
     // NOTE(Oliver): custom text edit
     {
+        auto prev_active = ui->active;
         if(widget->id == ui->active){
+            
             cursor.at = get_present_node(widget->string, widget->id);
+            cursor.string = string;
+            
             edit_text(widget);
+            
         }
     }
+    
+    auto result = update_widget(widget);
     
     Widget_Style style = {
         v4f_from_colour(colour),
@@ -349,11 +364,7 @@ present_editable_string(Colour colour, String8* string){
         ui->editing_string.length = string->length;
         ui->cursor_pos = string->length;
     }
-    if(result.was_active){
-        String8 string_new = make_stringf(&platform->permanent_arena, "%.*s", ui->editing_string.length,
-                                          ui->editing_string.text);
-        *string = string_new;
-    }
+    
 }
 
 internal b32

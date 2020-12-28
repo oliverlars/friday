@@ -92,6 +92,7 @@ PERMANENT_LOAD {
     split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
     
+    editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     
     auto pool = &editor->ast_pool;
     auto global_scope = make_scope_node(pool); 

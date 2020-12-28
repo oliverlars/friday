@@ -31,6 +31,30 @@ make_stringf(Arena *arena, char *fmt, ...)
 }
 
 internal String8
+make_stringfv(Pool* pool, char *format, va_list args)
+{
+    va_list args2;
+    va_copy(args2, args);
+    u32 needed_bytes = vsnprintf(0, 0, format, args) + 1;
+    assert(needed_bytes < pool->chunk_size);
+    String8 result = {0};
+    result.text = (char*)pool_allocate(pool);
+    result.length = vsnprintf((char*)result.text, needed_bytes, format, args2);
+    result.text[result.length] = 0;
+    return(result);
+}
+
+internal String8
+make_stringf(Pool* pool, char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    String8 result = make_stringfv(pool, fmt, args);
+    va_end(args);
+    return(result);
+}
+
+internal String8
 copy_string(Arena* arena, String8 string){
     return make_stringf(arena, "%.*s", string.length, string.text);
 }

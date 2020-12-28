@@ -6,6 +6,8 @@ struct Editor_State {
     Pool ast_pool;
     
     Ast_Node* program;
+    
+    Pool string_pool;
 };
 
 Editor_State* editor;

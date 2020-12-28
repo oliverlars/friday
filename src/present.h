@@ -32,7 +32,7 @@ struct Presenter_State {
 
 struct Cursor {
     Present_Node* at;
-    b32 before;
+    String8* string;
 };
 
 global Cursor cursor;

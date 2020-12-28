@@ -11,10 +11,15 @@ make_node(Pool* pool, Ast_Type type){
     return result;
 }
 
+internal void
+remove_graph_name(String8 string){
+    pool_clear(&editor->string_pool, string.text);
+}
+
 internal Ast_Node*
 make_node(Pool* pool, Ast_Type type, char* name){
     Ast_Node* result = (Ast_Node*)pool_allocate(pool);
-    result->name = make_string(name);
+    result->name = make_stringf(&editor->string_pool, "%s", name);
     result->type = type;
     result->next = nullptr;
     result->prev = nullptr;

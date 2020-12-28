@@ -1,28 +1,42 @@
 
 internal void
 advance_cursor(Cursor_Direction dir){
+    auto initial = cursor.at;
     auto line = cursor.at;
-    
     while(line->prev_sibling){
         line = line->prev_sibling;
     }
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
-            cursor.at = line->parent->next_sibling;
+            auto parent = line->parent;
+            cursor.at = parent ? parent->next_sibling : initial;
         }break;
         case CURSOR_DOWN:{
-            cursor.at = line->child->next_sibling;
+            auto child = line->child;
+            cursor.at = child ? child->next_sibling : initial;
+            
         }break;
         case CURSOR_LEFT:{
             cursor.at = cursor.at->prev_sibling;
+            
+            if(!cursor.at || !cursor.at->prev_sibling){
+                line = line->parent;
+                cursor.at = line ? line->next_sibling : initial;
+            }
             pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
             cursor.at = cursor.at->next_sibling;
+            if(!cursor.at){
+                line = line->child;
+                cursor.at = line ? line->next_sibling : initial;
+            }
+            pos = cursor.at->string.length;
         }break;
     }
     ui->active = cursor.at->id;
+    
     memcpy(ui->editing_string.text, cursor.at->string.text, cursor.at->string.length);
     ui->editing_string.length = cursor.at->string.length;
     ui->cursor_pos = pos;
@@ -385,8 +399,8 @@ present_scope(Ast_Node* node, int present_style){
     auto statement = node->scope.statements;
     UI_COLUMN {
         for(; statement; statement = statement->next){
-            push_present_line();
             UI_ROW{
+                push_present_line();
                 present_space();
                 present_graph(statement, present_style);
             }
@@ -404,10 +418,10 @@ present_function(Ast_Node* node, int present_style){
         render_body = false;
     }
     UI_COLUMN {
-        push_present_line();
         switch(present_style){
             case 0: {
                 ID("%d", (int)node) {
+                    
                     UI_ROW  {
                         present_editable_string(ui->theme.text_function, &node->name);
                         present_string(ui->theme.text_misc, make_string("("));
@@ -429,7 +443,6 @@ present_function(Ast_Node* node, int present_style){
                     }
                     
                     if(render_body){
-                        
                         present_graph(function->scope, present_style);
                         present_string(ui->theme.text_misc, make_string("}"));
                     }
@@ -538,7 +551,6 @@ present_declaration(Ast_Node* node, int present_style){
     auto decl = &node->declaration;
     switch(present_style){
         case 0:{
-            
             present_graph(decl->type_usage, present_style);
             present_space();
             present_editable_string(ui->theme.text, &node->name);
@@ -632,5 +644,6 @@ present_graph(Ast_Node* node, int present_style){
         case AST_TOKEN:{
         }break;
     }
+    
 }
 

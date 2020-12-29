@@ -7,6 +7,11 @@ enum Cursor_Direction {
     CURSOR_RIGHT,
 };
 
+enum Present_Mode {
+    PRESENT_EDIT,
+    PRESENT_CREATE,
+};
+
 // NOTE(Oliver): this helps us traverse the editable strings easier
 struct Present_Node {
     Present_Node* next_hash;
@@ -29,6 +34,8 @@ struct Presenter_State {
     
     Present_Node** table;
     Present_Node** last_table;
+    
+    Present_Mode mode;
 };
 
 struct Cursor {

@@ -93,7 +93,6 @@ make_struct_node(Pool* pool, char* name){
 internal Ast_Node*
 make_declaration_node(Pool* pool, char* name){
     Ast_Node* result = make_node(pool, AST_DECLARATION, name);
-    //result->declaration.type_usage = make_type_usage_node(pool, name);
     return result;
 }
 

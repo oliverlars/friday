@@ -201,8 +201,15 @@ present_space() {
 
 internal void
 edit_text(Widget* widget){
+    if(presenter->mode == PRESENT_CREATE) return;
     clampi(&ui->cursor_pos, 0, ui->editing_string.length);
     auto last_widget = get_last_widget(widget->id, widget->string);
+    
+    if(has_pressed_key(KEY_ENTER)){
+        if(cursor.at->node->type != AST_DUMMY){
+            presenter->mode = PRESENT_CREATE;
+        }
+    }
     
     if(has_pressed_key(KEY_UP)){
         advance_cursor(CURSOR_UP);

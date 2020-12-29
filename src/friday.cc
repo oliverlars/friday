@@ -152,8 +152,18 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
-        {
-            
+        
+        if(presenter->mode == PRESENT_CREATE){
+            if(has_pressed_key(KEY_D)){
+                auto node= make_declaration_node(&editor->ast_pool, "temp");
+                insert_node_at(node, cursor.at->node);
+                presenter->mode = PRESENT_EDIT;
+            }
+            if(has_pressed_key(KEY_F)){
+                auto node= make_function_node(&editor->ast_pool, "temp");
+                insert_node_at(node, cursor.at->node);
+                presenter->mode = PRESENT_EDIT;
+            }
         }
         
     }

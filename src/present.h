@@ -18,6 +18,7 @@ struct Present_Node {
     
     String8 string;
     UI_ID id;
+    Ast_Node* node;
 };
 
 struct Presenter_State {

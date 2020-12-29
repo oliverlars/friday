@@ -95,11 +95,12 @@ place_node_in_table(Present_Node* new_node){
 }
 
 internal Present_Node*
-push_present_node(String8 string, UI_ID id){
+push_present_node(String8 string, UI_ID id, Ast_Node* node){
     assert(presenter->line);
     auto next = push_type_zero(&platform->frame_arena, Present_Node);
     next->string = string;
     next->id = id;
+    next->node = node;
     place_node_in_table(next);
     
     auto sibling = presenter->line;
@@ -268,6 +269,9 @@ edit_text(Widget* widget){
         if(ui->cursor_pos){
             pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos--;
+        }else {
+            remove_node_at(cursor.at->node);
+            advance_cursor(CURSOR_LEFT);
         }
     }
     
@@ -291,11 +295,11 @@ edit_text(Widget* widget){
 }
 
 internal void
-present_editable_string(Colour colour, String8* string){
+present_editable_string(Colour colour, Ast_Node* node){
     
-    
+    auto string = &node->name;
     auto widget = push_widget(*string);
-    push_present_node(*string, widget->id);
+    push_present_node(*string, widget->id, node);
     
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
@@ -327,7 +331,6 @@ present_editable_string(Colour colour, String8* string){
     };
     
     widget->render_hook = render_hook;
-    
     
     // NOTE(Oliver): custom text edit
     {
@@ -409,6 +412,7 @@ internal void
 present_scope(Ast_Node* node, int present_style){
     auto statement = node->scope.statements;
     UI_COLUMN {
+        statement = statement->next;
         for(; statement; statement = statement->next){
             UI_ROW{
                 push_present_line();
@@ -434,8 +438,9 @@ present_function(Ast_Node* node, int present_style){
                 ID("%d", (int)node) {
                     
                     UI_ROW  {
-                        present_editable_string(ui->theme.text_function, &node->name);
+                        present_editable_string(ui->theme.text_function, node);
                         present_string(ui->theme.text_misc, make_string("("));
+                        parameters = parameters->next;
                         for(;parameters; parameters = parameters->next){
                             present_graph(parameters, present_style);
                             if(parameters->next){
@@ -465,11 +470,12 @@ present_function(Ast_Node* node, int present_style){
                 
                 ID("%d", (int)node) {
                     UI_ROW  {
-                        present_editable_string(ui->theme.text_function, &node->name);
+                        present_editable_string(ui->theme.text_function, node);
                         present_space();
                         present_string(ui->theme.text_misc, make_string("::"));
                         present_space();
                         present_string(ui->theme.text_misc, make_string("("));
+                        parameters = parameters->next;
                         for(;parameters; parameters = parameters->next){
                             present_graph(parameters, present_style);
                             if(parameters->next){
@@ -505,13 +511,17 @@ present_function(Ast_Node* node, int present_style){
                     UI_ROW  {
                         present_string(ui->theme.text_type, make_string("def"));
                         present_space();
-                        present_editable_string(ui->theme.text_function, &node->name);
+                        present_editable_string(ui->theme.text_function, node);
                         present_space();
                         present_string(ui->theme.text_misc, make_string("("));
+                        parameters = parameters->next;
                         for(;parameters; parameters = parameters->next){
                             present_graph(parameters, present_style);
                             if(parameters->next){
-                                ID("%d", (int)parameters) present_string(ui->theme.text_misc, make_string(","));
+                                ID("%d", (int)parameters) {
+                                    present_string(ui->theme.text_misc, make_string(","));
+                                    present_space();
+                                }
                             }
                         }
                         present_string(ui->theme.text_misc, make_string(")"));
@@ -531,7 +541,7 @@ present_function(Ast_Node* node, int present_style){
                     UI_ROW  {
                         present_string(ui->theme.text_type, make_string("procedure"));
                         present_space();
-                        present_editable_string(ui->theme.text_function, &node->name);
+                        present_editable_string(ui->theme.text_function, node);
                         present_space();
                         present_string(ui->theme.text_misc, make_string("("));
                         for(;parameters; parameters = parameters->next){
@@ -564,7 +574,7 @@ present_declaration(Ast_Node* node, int present_style){
         case 0:{
             present_graph(decl->type_usage, present_style);
             present_space();
-            present_editable_string(ui->theme.text, &node->name);
+            present_editable_string(ui->theme.text, node);
             if(decl->is_initialised){
                 present_space();
                 present_string(ui->theme.text_misc, make_string("="));
@@ -574,7 +584,7 @@ present_declaration(Ast_Node* node, int present_style){
         }break;
         case 1:{
             
-            present_editable_string(ui->theme.text, &node->name);
+            present_editable_string(ui->theme.text, node);
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_graph(decl->type_usage, present_style);
@@ -587,7 +597,7 @@ present_declaration(Ast_Node* node, int present_style){
         }break;
         case 2:{
             
-            present_editable_string(ui->theme.text, &node->name);
+            present_editable_string(ui->theme.text, node);
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_graph(decl->type_usage, present_style);
@@ -599,7 +609,7 @@ present_declaration(Ast_Node* node, int present_style){
             
         }break;
         case 3:{
-            present_editable_string(ui->theme.text, &node->name);
+            present_editable_string(ui->theme.text, node);
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_graph(decl->type_usage, present_style);

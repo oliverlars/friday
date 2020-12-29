@@ -16,6 +16,7 @@ enum Ast_Type {
     AST_LOOP,
     AST_CALL,
     AST_TOKEN,
+    AST_DUMMY,
 };
 
 enum Operator_Type {
@@ -130,3 +131,5 @@ struct Ast_Node {
         } token;
     };
 };
+
+internal void remove_node_at(Ast_Node* at);

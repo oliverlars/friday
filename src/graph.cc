@@ -11,6 +11,11 @@ make_node(Pool* pool, Ast_Type type){
     return result;
 }
 
+internal Ast_Node*
+make_dummy_node(Pool* pool){
+    return make_node(pool, AST_DUMMY);
+}
+
 internal void
 remove_graph_name(String8 string){
     pool_clear(&editor->string_pool, string.text);
@@ -29,6 +34,7 @@ make_node(Pool* pool, Ast_Type type, char* name){
 internal Ast_Node*
 make_scope_node(Pool* pool){
     Ast_Node* result = make_node(pool, AST_SCOPE);
+    result->scope.statements = make_dummy_node(pool);
     return result;
 }
 
@@ -45,7 +51,8 @@ internal Ast_Node*
 make_function_node(Pool* pool, char* name){
     Ast_Node* result = make_node(pool, AST_FUNCTION, name);
     result->function.scope = make_scope_node(pool);
-    result->function.return_type = make_type_usage_node(pool);
+    result->function.parameters = make_dummy_node(pool);
+    result->function.return_type = make_dummy_node(pool);
     return result;
 }
 
@@ -166,4 +173,5 @@ remove_node_at(Ast_Node* at){
     }else {
         
     }
+    
 }

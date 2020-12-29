@@ -98,23 +98,29 @@ PERMANENT_LOAD {
     auto global_scope = make_scope_node(pool); 
     
     {
-        global_scope->scope.statements = make_function_node(pool, "entry");
+        global_scope->scope.statements->next = make_function_node(pool, "entry");
         
-        global_scope->scope.statements->function.scope = make_scope_node(pool);
-        auto function_scope = global_scope->scope.statements->function.scope;
+        auto function_scope = global_scope->scope.statements->next->function.scope;
         
-        function_scope->scope.statements = make_declaration_node(pool, "test");
+        function_scope->scope.statements->next = make_declaration_node(pool, "test");
+        function_scope->scope.statements->next->prev = function_scope->scope.statements;
     }
     
     {
-        global_scope->scope.statements->next = make_function_node(pool, "add");
-        global_scope->scope.statements->next->prev = global_scope->scope.statements;
+        global_scope->scope.statements->next->next = make_function_node(pool, "add");
+        global_scope->scope.statements->next->next->prev = global_scope->scope.statements;
         
-        global_scope->scope.statements->next->function.scope = make_scope_node(pool);
-        auto function = &global_scope->scope.statements->next->function;
-        function->parameters = make_declaration_node(pool, "a");
-        function->parameters->next = make_declaration_node(pool, "b");
-        function->scope->scope.statements = make_declaration_node(pool, "Hey Friday!");
+        auto function = &global_scope->scope.statements->next->next->function;
+        function->parameters->next = make_declaration_node(pool, "a");
+        function->parameters->next->prev = function->parameters;
+        function->parameters->next->next = make_declaration_node(pool, "b");
+        function->parameters->next->next->prev = function->parameters->next;
+        
+        function->parameters->next->next->next = make_declaration_node(pool, "arg 3");
+        function->parameters->next->next->next->prev = function->parameters->next->next;
+        
+        function->scope->scope.statements->next = make_declaration_node(pool, "Hey Friday!");
+        function->scope->scope.statements->next->prev = function->scope->scope.statements;
     }
     
     editor->program = global_scope;

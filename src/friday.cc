@@ -43,12 +43,17 @@ internal void
 start_frame(){
     ui->root = nullptr;
     ui->layout_stack = nullptr;
-    ui->widget_table[platform->frame] = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
+    
+    ui->last_widget_table = ui->widget_table;
+    ui->widget_table = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
+    
+    // TODO(Oliver): tidy this up
     presenter->last_table = presenter->table;
     presenter->table = (Present_Node**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Present_Node*));
     presenter->last_lines = presenter->lines;
     presenter->lines = 0;
     presenter->line = 0;
+    
     opengl_start_frame();
 }
 
@@ -96,6 +101,8 @@ PERMANENT_LOAD {
     
     auto pool = &editor->ast_pool;
     auto global_scope = make_scope_node(pool); 
+    
+    _s64 = make_declaration_node(pool, "s64");
     
     {
         global_scope->scope.statements->next = make_function_node(pool, "entry");

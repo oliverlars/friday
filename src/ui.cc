@@ -404,7 +404,7 @@ widget_remove_property(Widget* widget, Widget_Property property){
 internal Widget*
 get_last_widget(UI_ID id, String8 string){
     auto hash = id & (MAX_TABLE_WIDGETS-1);
-    auto last_table = ui->widget_table[!platform->frame];
+    auto last_table = ui->last_widget_table;
     
     if(last_table){
         auto widget = last_table[hash];
@@ -424,11 +424,11 @@ get_widget(String8 string){
     
     auto id = generate_id(string);
     auto hash = id & (MAX_TABLE_WIDGETS-1);
-    Widget* widget = ui->widget_table[platform->frame][hash];
+    Widget* widget = ui->widget_table[hash];
     
     if(!widget){
         widget = push_type_zero(&platform->frame_arena, Widget);
-        ui->widget_table[platform->frame][hash] = widget;
+        ui->widget_table[hash] = widget;
     }else{
         
         do {
@@ -446,8 +446,8 @@ get_widget(String8 string){
         }while(widget);
     }
     
-    if(ui->widget_table[!platform->frame]){
-        auto last_widget = ui->widget_table[!platform->frame][hash];
+    if(ui->last_widget_table){
+        auto last_widget = ui->last_widget_table[hash];
         if(!last_widget){
             return widget;
         }

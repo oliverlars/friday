@@ -449,10 +449,9 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.permanent_arena = make_arena();
     }
     
-    Arena frame_arenas[] = { make_arena(), make_arena()};
+    Arena frame_arenas[] = { make_arena(), make_arena() };
+    global_platform.frame_arena = frame_arenas[0];
     
-    global_platform.frame = 0; //NOTE(Oliver): for double buffering the frame arena
-    global_platform.frame_arena = frame_arenas[global_platform.frame];
     
     {
         global_device_context = GetDC(hwnd);
@@ -468,9 +467,12 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     ShowWindow(hwnd, n_show_cmd);
     UpdateWindow(hwnd);
     
+    
+    b32 frame = 0;
+    
     while(!global_platform.quit){
-        global_platform.frame_arena = frame_arenas[global_platform.frame];
-        arena_clear(&frame_arenas[global_platform.frame]);
+        global_platform.frame_arena = frame_arenas[frame];
+        arena_clear(&frame_arenas[frame]);
         
         win32_timer_begin_frame(&global_win32_timer);
         
@@ -518,8 +520,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             
         }
         platform_end_frame();
-        
-        global_platform.frame = !global_platform.frame;
+        frame = !frame;
         
         win32_code_update(&win32_app_code);
         

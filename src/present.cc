@@ -397,16 +397,16 @@ check_dropdown(char* fmt, ...){
         v4f bbox = v4f2(pos, widget->min);
         
         if(widget->checked){
-            push_string(pos, make_string("+"), colour_from_v4f(widget->style.text_colour));
+            push_string(pos, make_string("+"), colour_from_v4f(widget->style.text_colour), font_scale);
         }else{
-            push_string(pos, make_string("-"), colour_from_v4f(widget->style.text_colour));
+            push_string(pos, make_string("-"), colour_from_v4f(widget->style.text_colour), font_scale);
         }
         
         
     };
     
     auto result = update_widget(widget);
-    widget->min = get_text_size("+");
+    widget->min = get_text_size("+", font_scale);
     if(result.clicked){
         widget->checked = !widget->checked;
     }
@@ -580,7 +580,6 @@ present_declaration(Ast_Node* node, int present_style){
     switch(present_style){
         case 0:{
             present_graph(decl->type_usage, present_style);
-            present_space();
             present_editable_string(ui->theme.text, node);
             if(decl->is_initialised){
                 present_space();
@@ -631,6 +630,14 @@ present_declaration(Ast_Node* node, int present_style){
 }
 
 internal void
+present_type_usage(Ast_Node* node){
+    auto tu = &node->type_usage;
+    UI_ROW{
+        present_editable_string(ui->theme.text_type, tu->type_reference);
+    }
+}
+
+internal void
 present_graph(Ast_Node* node, int present_style){
     
     if(!node) return;
@@ -654,6 +661,7 @@ present_graph(Ast_Node* node, int present_style){
             present_scope(node, present_style);
         }break;
         case AST_TYPE_USAGE:{
+            present_type_usage(node);
         }break;
         case AST_DECLARATION:{
             ID("%d", (int)node) UI_ROW present_declaration(node, present_style);

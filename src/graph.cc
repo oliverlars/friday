@@ -4,6 +4,11 @@ global Ast_Node* _u16;
 global Ast_Node* _u32;
 global Ast_Node* _u64;
 
+global Ast_Node* _s8;
+global Ast_Node* _s16;
+global Ast_Node* _s32;
+global Ast_Node* _s64;
+
 internal Ast_Node*
 make_node(Pool* pool, Ast_Type type){
     Ast_Node* result = (Ast_Node*)pool_allocate(pool);
@@ -42,7 +47,7 @@ make_scope_node(Pool* pool){
 internal Ast_Node*
 make_type_usage_node(Pool* pool){
     Ast_Node* result = make_node(pool, AST_TYPE_USAGE);
-    result->type_usage.type_reference = _u16;
+    result->type_usage.type_reference = _s64;
     result->type_usage.number_of_pointers = 0;
     return result;
 }
@@ -93,6 +98,7 @@ make_struct_node(Pool* pool, char* name){
 internal Ast_Node*
 make_declaration_node(Pool* pool, char* name){
     Ast_Node* result = make_node(pool, AST_DECLARATION, name);
+    result->declaration.type_usage = make_type_usage_node(pool);
     return result;
 }
 

@@ -157,7 +157,8 @@ struct UI_State {
     
     Widget* root;
     
-    Widget** widget_table[2];
+    Widget** widget_table;
+    Widget** last_widget_table;
     
     Panel* panel;
     

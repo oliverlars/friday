@@ -1120,6 +1120,11 @@ widget_render_text(Widget* widget, Colour colour){
     f32 text_centre = get_text_width(widget->string)/2.0f;
     f32 text_x = centre - text_centre;
     
+    v4f shadow_colour = v4f_from_colour(colour);
+    shadow_colour.r /= 2;
+    shadow_colour.g /= 2;
+    shadow_colour.b /= 2;
+    push_string(v2f(text_x+1.5, bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour));
     push_string(v2f(text_x, bbox.y), widget->string, colour);
 }
 

@@ -180,3 +180,58 @@ remove_node_at(Ast_Node* at){
     }
     
 }
+
+internal void
+serialise_to_disk_helper(FILE* file, Ast_Node* node){
+    
+    if(!node) return;
+    
+    switch(node->type){
+        case AST_INVALID:{
+        }break;
+        case AST_BINARY:{
+        }break;
+        case AST_UNARY:{
+        }break;
+        case AST_LITERAL:{
+        }break;
+        case AST_STRUCT:{
+        }break;
+        case AST_ENUM:{
+        }break;
+        case AST_UNION:{
+        }break;
+        case AST_SCOPE:{
+        }break;
+        case AST_TYPE_USAGE:{
+        }break;
+        case AST_DECLARATION:{
+            
+        }break;
+        case AST_IDENTIFIER:{
+        }break;
+        case AST_FUNCTION:{
+        }break;
+        case AST_CONDITIONAL:{
+        }break;
+        case AST_LOOP:{
+        }break;
+        case AST_CALL:{
+        }break;
+        case AST_TOKEN:{
+        }break;
+        case AST_DUMMY:{
+            serialise_to_disk_helper(file, node->next);
+        }break;
+    }
+    
+}
+
+internal void
+serialise_to_disk(Ast_Node* node){
+    FILE* file = fopen("main.arc", "wb");
+    u64 version = 1;
+    fwrite(&version, sizeof(u64), 1, file);
+    serialise_to_disk_helper(file, node);
+    fclose(file);
+}

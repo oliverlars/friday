@@ -128,9 +128,12 @@ PERMANENT_LOAD {
         
         function->scope->scope.statements->next = make_declaration_node(pool, "Hey Friday!");
         function->scope->scope.statements->next->prev = function->scope->scope.statements;
+        serialise_to_disk(function->parameters);
     }
     
     editor->program = global_scope;
+    
+    
 }
 
 HOT_LOAD {

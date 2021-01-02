@@ -354,3 +354,335 @@ is_in_rect_border(v2f pos, v4f rect, f32 thickness){
     return is_in_left_or_right_border(pos, rect, thickness) ||
         is_in_bottom_or_top_border(pos, rect, thickness);
 }
+
+
+inline v2f
+operator+(v2f a, v2f b){
+    v2f result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    return result;
+}
+
+inline v2f
+operator+=(v2f& a, v2f b){
+    a = a + b;
+}
+
+inline v2f
+operator-(v2f a, v2f b){
+    v2f result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    return result;
+}
+
+inline v2f
+operator-=(v2f& a, v2f b){
+    a = a - b;
+}
+
+inline v2f
+operator-(v2f a){
+    v2f result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    return result;
+}
+
+inline v2f
+operator*(v2f a, f32 b){
+    v2f result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    return result;
+}
+
+inline v2f
+operator/(v2f a, f32 b){
+    v2f result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    return result;
+}
+
+inline v3f
+operator+(v3f a, v3f b){
+    v3f result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    return result;
+}
+
+inline v3f
+operator+=(v3f& a, v3f b){
+    a = a + b;
+}
+
+inline v3f
+operator-(v3f a, v3f b){
+    v3f result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
+    return result;
+}
+
+inline v3f
+operator-=(v3f& a, v3f b){
+    a = a - b;
+}
+
+inline v3f
+operator-(v3f a){
+    v3f result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    result.z = -a.z;
+    return result;
+}
+
+inline v3f
+operator*(v3f a, f32 b){
+    v3f result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    result.z = a.z*b;
+    return result;
+}
+
+inline v3f
+operator/(v3f a, f32 b){
+    v3f result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    result.z = a.z/b;
+    return result;
+}
+
+inline v4f
+operator+(v4f a, v4f b){
+    v4f result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    result.w = a.w + b.w;
+    return result;
+}
+
+inline v4f
+operator+=(v4f& a, v4f b){
+    a = a + b;
+}
+
+inline v4f
+operator-(v4f a, v4f b){
+    v4f result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
+    result.w = a.w - b.w;
+    return result;
+}
+
+inline v4f
+operator-=(v4f& a, v4f b){
+    a = a - b;
+}
+
+inline v4f
+operator-(v4f a){
+    v4f result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    result.z = -a.z;
+    result.w = -a.w;
+    return result;
+}
+
+inline v4f
+operator*(v4f a, f32 b){
+    v4f result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    result.z = a.z*b;
+    result.w = a.w*b;
+    return result;
+}
+
+inline v4f
+operator/(v4f a, f32 b){
+    v4f result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    result.z = a.z/b;
+    result.w = a.w/b;
+    return result;
+}
+
+
+inline v2i
+operator+(v2i a, v2i b){
+    v2i result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    return result;
+}
+
+inline v2i
+operator+=(v2i& a, v2i b){
+    a = a + b;
+}
+
+inline v2i
+operator-(v2i a, v2i b){
+    v2i result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    return result;
+}
+
+inline v2i
+operator-=(v2i& a, v2i b){
+    a = a - b;
+}
+
+inline v2i
+operator-(v2i a){
+    v2i result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    return result;
+}
+
+inline v2i
+operator*(v2i a, s32 b){
+    v2i result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    return result;
+}
+
+inline v2i
+operator/(v2i a, s32 b){
+    v2i result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    return result;
+}
+
+inline v3i
+operator+(v3i a, v3i b){
+    v3i result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    return result;
+}
+
+inline v3i
+operator+=(v3i& a, v3i b){
+    a = a + b;
+}
+
+inline v3i
+operator-(v3i a, v3i b){
+    v3i result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
+    return result;
+}
+
+inline v3i
+operator-=(v3i& a, v3i b){
+    a = a - b;
+}
+
+inline v3i
+operator-(v3i a){
+    v3i result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    result.z = -a.z;
+    return result;
+}
+
+inline v3i
+operator*(v3i a, s32 b){
+    v3i result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    result.z = a.z*b;
+    return result;
+}
+
+inline v3i
+operator/(v3i a, s32 b){
+    v3i result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    result.z = a.z/b;
+    return result;
+}
+
+inline v4i
+operator+(v4i a, v4i b){
+    v4i result = {};
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
+    result.w = a.w + b.w;
+    return result;
+}
+
+inline v4i
+operator+=(v4i& a, v4i b){
+    a = a + b;
+}
+
+inline v4i
+operator-(v4i a, v4i b){
+    v4i result = {};
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
+    result.w = a.w - b.w;
+    return result;
+}
+
+inline v4i
+operator-=(v4i& a, v4i b){
+    a = a - b;
+}
+
+inline v4i
+operator-(v4i a){
+    v4i result = {};
+    result.x = -a.x;
+    result.y = -a.y;
+    result.z = -a.z;
+    result.w = -a.w;
+    return result;
+}
+
+inline v4i
+operator*(v4i a, s32 b){
+    v4i result = {};
+    result.x = a.x*b;
+    result.y = a.y*b;
+    result.z = a.z*b;
+    result.w = a.w*b;
+    return result;
+}
+
+inline v4i
+operator/(v4i a, s32 b){
+    v4i result = {};
+    result.x = a.x/b;
+    result.y = a.y/b;
+    result.z = a.z/b;
+    result.w = a.w/b;
+    return result;
+}

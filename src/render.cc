@@ -1024,7 +1024,7 @@ init_shaders(){
             "uniform sampler2D atlas;\n"
             "uniform vec4 clip_range;\n"
             
-            "float width = 0.5;\n"
+            "float width = 0.45;\n"
             "const float edge = 0.15;\n"
             
             "void main(){\n"

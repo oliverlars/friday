@@ -179,6 +179,7 @@ struct UI_State {
     int cursor_pos;
 };
 
+global f32 time_per_gui_update;
 
 typedef u64 UI_ID;
 

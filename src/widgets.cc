@@ -122,7 +122,6 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
     widget_set_property(widget, WP_LERP_POSITION);
-    widget->style.font_scale = 1.0f;
     auto result = update_widget(widget);
     return result.clicked;
 }

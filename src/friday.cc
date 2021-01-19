@@ -151,6 +151,7 @@ HOT_UNLOAD {
 UPDATE {
     FRAME
     {
+        f32 start = platform->get_time();
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -159,6 +160,8 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
+        f32 end = platform->get_time();
+        time_per_gui_update = end - start;
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else

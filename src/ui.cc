@@ -265,6 +265,27 @@ load_theme_dots(){
 }
 
 internal void
+load_theme_dedouze(){
+    ui->theme.background.packed = 0x1B5CCFff;
+    ui->theme.text.packed = 0xFFFFC6ff;
+    
+    
+    ui->theme.sub_colour.packed = 0x676e8aff;
+    ui->theme.border.packed = 0xFFFFC6ff;
+    
+    
+    ui->theme.text_comment.packed = 0x71ABFAff;
+    ui->theme.text_literal.packed = 0x71ABFAff;
+    ui->theme.text_function.packed = 0xF8BBF9ff;
+    ui->theme.text_type.packed = 0x9DFFF6ff;
+    ui->theme.text_misc.packed = 0x59337Dff;
+    
+    ui->theme.cursor.packed = 0xe08c17ff;
+    ui->theme.error.packed = 0xffcc3333;
+    
+}
+
+internal void
 load_theme_dracula(){
     
     ui->theme.background.packed = 0x282A35ff;
@@ -1398,7 +1419,7 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, "Console#%d", (int)root){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Console");
-                    
+                    label("%f", time_per_gui_update);
                 }
             }
         }

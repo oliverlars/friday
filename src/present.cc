@@ -5,6 +5,7 @@ advance_cursor(Cursor_Direction dir){
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
+            pos = cursor.arc->string.length;
             if(cursor.arc && cursor.arc->parent){
                 cursor.arc = cursor.arc->parent;
             }
@@ -15,16 +16,21 @@ advance_cursor(Cursor_Direction dir){
             }
         }break;
         case CURSOR_LEFT:{
+            assert(cursor.arc);
+            if(cursor.arc->prev_sibling){
+                cursor.arc = cursor.arc->prev_sibling;
+            }else if(cursor.arc->parent){
+                cursor.arc = cursor.arc->parent;
+            }
             pos = cursor.arc->string.length;
+        }break;
+        case CURSOR_RIGHT:{
             assert(cursor.arc);
             if(cursor.arc->next_sibling){
                 cursor.arc = cursor.arc->next_sibling;
             }else if(cursor.arc->first_child){
                 cursor.arc = cursor.arc->first_child;
             }
-        }break;
-        case CURSOR_RIGHT:{
-            
         }break;
     }
     
@@ -662,6 +668,13 @@ present_graph(Ast_Node* node, int present_style){
 
 //~ Presenter 2.0
 
+internal bool
+arc_has_property(Arc_Node* arc, Arc_Property property);
+internal void
+arc_set_property(Arc_Node* arc, Arc_Property property);
+internal void
+arc_remove_property(Arc_Node* arc, Arc_Property property);
+
 
 internal void
 edit_text(Arc_Node* node){
@@ -708,7 +721,6 @@ edit_text(Arc_Node* node){
     
     if(has_pressed_key(KEY_LEFT)){
         if(ui->cursor_pos == 0){
-            
             advance_cursor(CURSOR_LEFT);
         }else {
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
@@ -739,7 +751,7 @@ edit_text(Arc_Node* node){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            remove_node_at(cursor.at->node);
+            arc_remove_property(cursor.arc, AP_AST);
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -828,13 +840,6 @@ present_editable_string(Colour colour, Arc_Node* node){
 
 internal void present_arc(Arc_Node* node);
 
-
-internal bool
-arc_has_property(Arc_Node* arc, Arc_Property property);
-internal void
-arc_set_property(Arc_Node* arc, Arc_Property property);
-internal void
-arc_remove_property(Arc_Node* arc, Arc_Property property);
 
 
 internal void

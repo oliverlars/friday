@@ -177,7 +177,7 @@ UPDATE {
                 cursor.arc->ast_type = AST_STRUCT;
                 cursor.arc->first_child = make_arc_node(&editor->arc_pool);
                 cursor.arc->first_child->parent = cursor.arc;
-                advance_cursor(CURSOR_LEFT);
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = PRESENT_EDIT;
             }
             if(has_pressed_key(KEY_D)){
@@ -185,7 +185,7 @@ UPDATE {
                 cursor.arc->ast_type = AST_DECLARATION;
                 cursor.arc->first_child = make_arc_node(&editor->arc_pool);
                 cursor.arc->first_child->parent = cursor.arc;
-                advance_cursor(CURSOR_LEFT);
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = PRESENT_EDIT;
             }
             

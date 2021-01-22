@@ -862,11 +862,29 @@ present_struct(Arc_Node* node){
 }
 
 internal void
+present_declaration(Arc_Node* node){
+    ID("declaration%d", (int)node){
+        UI_ROW {
+            present_editable_string(ui->theme.text, node);
+            present_space();
+            present_string(ui->theme.text_misc, make_string(":"));
+            present_space();
+            present_arc(node->first_child);
+            present_space();
+        }
+        
+    }
+}
+
+internal void
 present_ast(Arc_Node* node){
     if(!node) return;
     switch(node->ast_type){
         case AST_STRUCT: {
             present_struct(node);
+        }break;
+        case AST_DECLARATION: {
+            present_declaration(node);
         }break;
     }
 }

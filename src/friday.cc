@@ -180,13 +180,15 @@ UPDATE {
                 advance_cursor(CURSOR_LEFT);
                 presenter->mode = PRESENT_EDIT;
             }
-            
-            if(has_pressed_key(KEY_F)){
-                auto node= make_function_node(&editor->ast_pool, "temp");
+            if(has_pressed_key(KEY_D)){
                 arc_set_property(cursor.arc, AP_AST);
-                insert_node_at(node, cursor.at->node);
+                cursor.arc->ast_type = AST_DECLARATION;
+                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->parent = cursor.arc;
+                advance_cursor(CURSOR_LEFT);
                 presenter->mode = PRESENT_EDIT;
             }
+            
         }
         
     }

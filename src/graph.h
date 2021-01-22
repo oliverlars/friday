@@ -64,6 +64,7 @@ struct Arc_Node {
     u64 properties[(ARC_PROPERTIES_MAX+63)/64];
     
     Ast_Type ast_type;
+    bool is_initialised;
     s64 number_of_pointers;
     Literal_Type literal_type;
     f32 _float;

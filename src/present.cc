@@ -34,6 +34,8 @@ advance_cursor(Cursor_Direction dir){
         }break;
     }
     
+    ui->cursor_pos = pos;
+    
 }
 
 internal Present_Node*

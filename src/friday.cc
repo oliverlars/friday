@@ -85,6 +85,7 @@ PERMANENT_LOAD {
     load_theme_dots();
     
     editor->ast_pool = make_pool(sizeof(Ast_Node));
+    editor->arc_pool = make_pool(sizeof(Arc_Node));
     
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
     ui->panel->split_ratio = 1.0f;
@@ -131,8 +132,12 @@ PERMANENT_LOAD {
         serialise_to_disk(function->parameters);
     }
     
-    editor->program = global_scope;
     
+    
+    editor->program = global_scope;
+    editor->root = make_arc_node(&editor->arc_pool);
+    editor->root->string = make_stringf(&platform->permanent_arena, "test");
+    cursor.arc = editor->root;
     
 }
 
@@ -167,13 +172,19 @@ UPDATE {
         // put this somewhere else
         
         if(presenter->mode == PRESENT_CREATE){
-            if(has_pressed_key(KEY_D)){
-                auto node= make_declaration_node(&editor->ast_pool, "temp");
-                insert_node_at(node, cursor.at->node);
+            if(has_pressed_key(KEY_S)){
+                arc_set_property(cursor.arc, AP_AST);
+                cursor.arc->ast_type = AST_STRUCT;
+                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->string = make_stringf(&platform->permanent_arena, "test2");
+                cursor.string = &cursor.arc->first_child->string;
+                advance_cursor(CURSOR_LEFT);
                 presenter->mode = PRESENT_EDIT;
             }
+            
             if(has_pressed_key(KEY_F)){
                 auto node= make_function_node(&editor->ast_pool, "temp");
+                arc_set_property(cursor.arc, AP_AST);
                 insert_node_at(node, cursor.at->node);
                 presenter->mode = PRESENT_EDIT;
             }

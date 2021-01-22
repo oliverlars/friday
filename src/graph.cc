@@ -9,6 +9,21 @@ global Ast_Node* _s16;
 global Ast_Node* _s32;
 global Ast_Node* _s64;
 
+internal bool
+arc_has_property(Arc_Node* arc, Arc_Property property){
+    return !!(arc->properties[property / 64] & (1ll << (property % 64)));
+}
+
+internal void
+arc_set_property(Arc_Node* arc, Arc_Property property){
+    arc->properties[property / 64] |= (1ll << (property % 64));
+}
+
+internal void
+arc_remove_property(Arc_Node* arc, Arc_Property property){
+    arc->properties[property / 64] &= ~(1ll << (property % 64));
+}
+
 internal Ast_Node*
 make_node(Pool* pool, Ast_Type type){
     Ast_Node* result = (Ast_Node*)pool_allocate(pool);
@@ -139,6 +154,12 @@ make_conditional_node(Pool* pool){
     result->conditional._else_if = nullptr;
     result->conditional._else = nullptr;
     
+    return result;
+}
+
+internal Arc_Node*
+make_arc_node(Pool* pool){
+    auto result = (Arc_Node*)pool_allocate(pool);
     return result;
 }
 

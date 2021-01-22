@@ -676,9 +676,10 @@ ui_edit_text(Widget* widget){
     
     Platform_Event* event = 0;
     for (;platform_get_next_event(&event);){
+        char c = event->character;
         if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
             insert_in_string(&ui->editing_string.string,
-                             &(char)event->character,
+                             &c,
                              ui->cursor_pos++);
             platform_consume_event(event);
         }
@@ -1301,6 +1302,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
 
 static int present_style;
 internal void present_graph(Ast_Node* node, int present_style);
+internal void present_arc(Arc_Node* node);
 static f32 font_scale = 1.0f;
 
 internal void
@@ -1384,7 +1386,8 @@ render_panels(Panel* root, v4f rect){
                     ui_panel_header(root, "Code Editor#%d", (int)root);
                     UI_CONTAINER("snippet"){
                         if(dropdown("Snippet#%d", (int)root)){
-                            present_graph(editor->program, present_style);
+                            //present_graph(editor->program, present_style);
+                            present_arc(editor->root);
                         }
                     }
                 }

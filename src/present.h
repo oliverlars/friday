@@ -41,6 +41,7 @@ struct Presenter_State {
 struct Cursor {
     Present_Node* at;
     String8* string;
+    Arc_Node* arc;
 };
 
 global Cursor cursor;

@@ -44,6 +44,32 @@ enum Token_Type {
     TOKEN_LITERAL,
 };
 
+
+enum Arc_Property {
+    AP_AST,
+};
+
+#define ARC_PROPERTIES_MAX 256
+
+struct Arc_Node {
+    
+    String8 string;
+    
+    Arc_Node* prev_sibling;
+    Arc_Node* next_sibling;
+    Arc_Node* first_child;
+    Arc_Node* last_child;
+    Arc_Node* parent;
+    
+    u64 properties[(ARC_PROPERTIES_MAX+63)/64];
+    
+    Ast_Type ast_type;
+    s64 number_of_pointers;
+    Literal_Type literal_type;
+    f32 _float;
+    s32 _int;
+};
+
 struct Ast_Node {
     Ast_Type type;
     

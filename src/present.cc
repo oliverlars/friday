@@ -1,38 +1,24 @@
 
 internal void
 advance_cursor(Cursor_Direction dir){
-    auto initial = cursor.at;
-    auto line = cursor.at;
-    while(line->prev_sibling){
-        line = line->prev_sibling;
-    }
+    
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
-            auto parent = line->parent;
-            cursor.at = parent ? parent->next_sibling : initial;
         }break;
         case CURSOR_DOWN:{
-            auto child = line->child;
-            cursor.at = child ? child->next_sibling : initial;
-            
         }break;
         case CURSOR_LEFT:{
-            cursor.at = cursor.at->prev_sibling;
-            
-            if(!cursor.at || !cursor.at->prev_sibling){
-                line = line->parent;
-                cursor.at = line ? line->next_sibling : initial;
+            pos = cursor.arc->string.length;
+            assert(cursor.arc);
+            if(cursor.arc->next_sibling){
+                cursor.arc = cursor.arc->next_sibling;
+            }else if(cursor.arc->first_child){
+                cursor.arc = cursor.arc->first_child;
             }
-            pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
-            cursor.at = cursor.at->next_sibling;
-            if(!cursor.at){
-                line = line->child;
-                cursor.at = line ? line->next_sibling : initial;
-            }
-            pos = cursor.at->string.length;
+            
         }break;
     }
     
@@ -41,14 +27,11 @@ advance_cursor(Cursor_Direction dir){
         cursor.string->length = ui->editing_string.length;
     }
     {
-        memcpy(ui->editing_string.text, cursor.at->string.text, cursor.at->string.length);
-        ui->editing_string.length = cursor.at->string.length;
+        memcpy(ui->editing_string.text, cursor.arc->string.text, cursor.arc->string.length);
+        ui->editing_string.length = cursor.arc->string.length;
         ui->cursor_pos = pos;
     }
     
-    auto prev_active = ui->active;
-    
-    ui->active = cursor.at->id;
     
 }
 
@@ -206,9 +189,7 @@ edit_text(Widget* widget){
     auto last_widget = get_last_widget(widget->id, widget->string);
     
     if(has_pressed_key(KEY_ENTER)){
-        if(cursor.at->node->type != AST_DUMMY){
-            presenter->mode = PRESENT_CREATE;
-        }
+        presenter->mode = PRESENT_CREATE;
     }
     
     if(has_pressed_key(KEY_UP)){
@@ -293,8 +274,9 @@ edit_text(Widget* widget){
     Platform_Event* event = 0;
     for (;platform_get_next_event(&event);){
         if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            char c = event->character;
             insert_in_string(&ui->editing_string.string,
-                             &(char)event->character,
+                             &c,
                              ui->cursor_pos++);
             platform_consume_event(event);
         }
@@ -681,5 +663,131 @@ present_graph(Ast_Node* node, int present_style){
         }break;
     }
     
+}
+
+//~ Presenter 2.0
+
+
+internal void
+present_editable_string(Colour colour, Arc_Node* node){
+    
+    auto string = &node->string;
+    auto widget_string = make_stringf(&platform->frame_arena, "edit_string%d", (int)node);
+    auto widget = push_widget(widget_string);
+    
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_TEXT_EDIT);
+    widget_set_property(widget, WP_ALT_STRING);
+    widget->alt_string = node->string;
+    widget->style.text_colour = v4f_from_colour(colour);
+    
+    
+    auto render_hook = [](Widget* widget ){
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
+        
+        if(ui->active == widget->id){
+            String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
+            
+            push_string(bbox.pos, s, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
+            v2f cursor = {};
+            cursor.x = pos.x + get_text_width_n(s, ui->cursor_pos, widget->style.font_scale);
+            cursor.y = bbox.y;
+            push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+        }else {
+            v2f pos = widget->pos;
+            pos.y -= widget->min.height;
+            v4f bbox = v4f2(pos, widget->min);
+            
+            push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
+        }
+    };
+    
+    widget->render_hook = render_hook;
+    
+    // NOTE(Oliver): custom text edit
+    {
+        if(cursor.arc == node){
+            ui->active = widget->id;
+            edit_text(widget);
+        }
+    }
+    
+    auto result = update_widget(widget);
+    
+    Widget_Style style = {
+        v4f_from_colour(colour),
+        v4f_from_colour(ui->theme.text),
+        font_scale,
+    };
+    widget->style = style;
+    
+    if(ui->active == widget->id){
+        v2f size = get_text_size(ui->editing_string.string, widget->style.font_scale);
+        widget->min = size;
+    }else {
+        v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
+        widget->min = size;
+    }
+    
+    if(result.clicked){
+        memcpy(ui->editing_string.text, string->text, string->length);
+        ui->editing_string.length = string->length;
+        ui->cursor_pos = string->length;
+    }
+    
+}
+
+
+internal void present_arc(Arc_Node* node);
+
+
+internal bool
+arc_has_property(Arc_Node* arc, Arc_Property property);
+internal void
+arc_set_property(Arc_Node* arc, Arc_Property property);
+internal void
+arc_remove_property(Arc_Node* arc, Arc_Property property);
+
+
+internal void
+present_struct(Arc_Node* node){
+    UI_COLUMN {
+        UI_ROW {
+            present_editable_string(ui->theme.text, node);
+            present_string(ui->theme.text_misc, make_string("::"));
+            present_string(ui->theme.text_type, make_string("struct"));
+            present_string(ui->theme.text_misc, make_string("{"));
+        }
+        UI_ROW {
+            present_arc(node->first_child);
+        }
+        UI_ROW {
+            present_string(ui->theme.text_misc, make_string("}"));
+        }
+    }
+}
+
+internal void
+present_ast(Arc_Node* node){
+    if(!node) return;
+    switch(node->ast_type){
+        case AST_STRUCT: {
+            present_struct(node);
+        }break;
+    }
+}
+
+internal void
+present_arc(Arc_Node* node){
+    if(!node) return;
+    if(arc_has_property(node, AP_AST)){
+        present_ast(node);
+    }else {
+        present_editable_string(ui->theme.text, node);
+    }
 }
 

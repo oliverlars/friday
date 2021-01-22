@@ -125,7 +125,6 @@ pool_allocate(Pool* pool){
         
         new_block = (Pool_Block*)platform->heap_alloc(sizeof(Pool_Block) + bytes_required);
         assert(new_block);
-        memset(new_block, 0, sizeof(Pool_Block) + bytes_required);
         new_block->memory = (u8*)new_block + sizeof(Pool_Block);
         new_block->size = bytes_required;
         new_block->next = nullptr;
@@ -149,6 +148,8 @@ pool_allocate(Pool* pool){
     
     void* memory = pool->free_head;
     pool->free_head = pool->free_head->next;
+    
+    memset(memory, 0, pool->chunk_size);
     
     return memory;
 }

@@ -49,6 +49,7 @@ enum Widget_Property {
     WP_WRAP,
     WP_SCROLLING,
     WP_MANUAL_LAYOUT,
+    WP_ALT_STRING,
 };
 
 struct Widget_Style {
@@ -64,6 +65,7 @@ struct Widget_State {
 struct Widget {
     UI_ID id;
     String8 string;
+    String8 alt_string;
     
     Widget* next_hash;
     
@@ -73,7 +75,7 @@ struct Widget {
     Widget* last_child;
     Widget* parent;
     
-    u64 properties[PROPERTIES_MAX/64 + 1];
+    u64 properties[(PROPERTIES_MAX-63)/64];
     
     v2f min;
     v2f max;

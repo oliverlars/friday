@@ -22,17 +22,6 @@ advance_cursor(Cursor_Direction dir){
         }break;
     }
     
-    {
-        memcpy(cursor.string->text, ui->editing_string.text, ui->editing_string.length);
-        cursor.string->length = ui->editing_string.length;
-    }
-    {
-        memcpy(ui->editing_string.text, cursor.arc->string.text, cursor.arc->string.length);
-        ui->editing_string.length = cursor.arc->string.length;
-        ui->cursor_pos = pos;
-    }
-    
-    
 }
 
 internal Present_Node*
@@ -755,18 +744,21 @@ arc_remove_property(Arc_Node* arc, Arc_Property property);
 
 internal void
 present_struct(Arc_Node* node){
-    UI_COLUMN {
-        UI_ROW {
-            present_editable_string(ui->theme.text, node);
-            present_string(ui->theme.text_misc, make_string("::"));
-            present_string(ui->theme.text_type, make_string("struct"));
-            present_string(ui->theme.text_misc, make_string("{"));
-        }
-        UI_ROW {
-            present_arc(node->first_child);
-        }
-        UI_ROW {
-            present_string(ui->theme.text_misc, make_string("}"));
+    ID("struct%d", (int)node){
+        UI_COLUMN {
+            UI_ROW {
+                present_editable_string(ui->theme.text, node);
+                present_string(ui->theme.text_misc, make_string("::"));
+                present_string(ui->theme.text_type, make_string("struct"));
+                present_string(ui->theme.text_misc, make_string("{"));
+            }
+            UI_ROW {
+                present_space();
+                present_arc(node->first_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
         }
     }
 }

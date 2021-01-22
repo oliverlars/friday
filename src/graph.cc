@@ -160,6 +160,7 @@ make_conditional_node(Pool* pool){
 internal Arc_Node*
 make_arc_node(Pool* pool){
     auto result = (Arc_Node*)pool_allocate(pool);
+    result->string.text = (char*)pool_allocate(&editor->string_pool);
     return result;
 }
 

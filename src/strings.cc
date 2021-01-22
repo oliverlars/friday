@@ -76,13 +76,27 @@ internal void
 insert_in_string(String8* string, char* insertable, u64 index){
     if(!insertable) return;
     int length = strlen(insertable);
-    for(int i = string->length-1 + length; i > index; i--){
-        string->text[i] = string->text[i-length];
+    if(string->length){
+        for(int i = string->length-1 + length; i > index; i--){
+            string->text[i] = string->text[i-length];
+        }
     }
+    
     for(int i = index; i < index+length; i++){
         string->text[index] = *insertable++;
     }
     string->length += length;
+}
+
+internal void
+insert_in_string(String8* string, char insertable, u64 index){
+    if(string->length){
+        for(int i = string->length; i > index; i--){
+            string->text[i] = string->text[i-1];
+        }
+    }
+    string->text[index] = insertable;
+    string->length++;
 }
 
 internal void

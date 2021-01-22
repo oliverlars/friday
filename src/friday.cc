@@ -136,7 +136,6 @@ PERMANENT_LOAD {
     
     editor->program = global_scope;
     editor->root = make_arc_node(&editor->arc_pool);
-    editor->root->string = make_stringf(&platform->permanent_arena, "test");
     cursor.arc = editor->root;
     cursor.string = &editor->root->string;
     
@@ -177,9 +176,8 @@ UPDATE {
                 arc_set_property(cursor.arc, AP_AST);
                 cursor.arc->ast_type = AST_STRUCT;
                 cursor.arc->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->string = make_stringf(&platform->permanent_arena, "test2");
+                cursor.arc->first_child->parent = cursor.arc;
                 advance_cursor(CURSOR_LEFT);
-                cursor.string = &cursor.arc->first_child->string;
                 presenter->mode = PRESENT_EDIT;
             }
             

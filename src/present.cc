@@ -5,8 +5,14 @@ advance_cursor(Cursor_Direction dir){
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
+            if(cursor.arc && cursor.arc->parent){
+                cursor.arc = cursor.arc->parent;
+            }
         }break;
         case CURSOR_DOWN:{
+            if(cursor.arc && cursor.arc->first_child){
+                cursor.arc = cursor.arc->first_child;
+            }
         }break;
         case CURSOR_LEFT:{
             pos = cursor.arc->string.length;
@@ -658,6 +664,106 @@ present_graph(Ast_Node* node, int present_style){
 
 
 internal void
+edit_text(Arc_Node* node){
+    if(presenter->mode == PRESENT_CREATE) return;
+    clampi(&ui->cursor_pos, 0, node->string.length);
+    auto string = &node->string;
+    
+    if(has_pressed_key(KEY_ENTER)){
+        presenter->mode = PRESENT_CREATE;
+    }
+    
+    if(has_pressed_key(KEY_UP)){
+        advance_cursor(CURSOR_UP);
+    }
+    if(has_pressed_key(KEY_DOWN)){
+        advance_cursor(CURSOR_DOWN);
+    }
+    
+    if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
+        if(string->text[ui->cursor_pos-1] == ' '){
+            while(string->text[ui->cursor_pos-1] == ' '){
+                ui->cursor_pos--;
+            }
+        }else {
+            while(string->text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
+        if(string->text[ui->cursor_pos] == ' '){
+            while(string->text[ui->cursor_pos] == ' '){
+                ui->cursor_pos++;
+            }
+        }else{
+            while(string->text[ui->cursor_pos] != ' ' &&
+                  ui->cursor_pos <= string->length){
+                ui->cursor_pos++;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_LEFT)){
+        if(ui->cursor_pos == 0){
+            
+            advance_cursor(CURSOR_LEFT);
+        }else {
+            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+        }
+    }
+    if(has_pressed_key(KEY_RIGHT)){
+        if(ui->cursor_pos == string->length){
+            advance_cursor(CURSOR_RIGHT);
+        }else{
+            ui->cursor_pos = ui->cursor_pos < string->length ? ui->cursor_pos +1: string->length;
+        }
+    }
+    if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
+        if(string->text[ui->cursor_pos-1] == ' '){
+            pop_from_string(string, ui->cursor_pos);
+            ui->cursor_pos--;
+        }else {
+            while(string->text[ui->cursor_pos-1] != ' ' &&
+                  ui->cursor_pos >= 0){
+                pop_from_string(string, ui->cursor_pos);
+                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
+            }
+        }
+    }
+    
+    if(has_pressed_key(KEY_BACKSPACE)){
+        if(ui->cursor_pos){
+            pop_from_string(string, ui->cursor_pos);
+            ui->cursor_pos--;
+        }else {
+            remove_node_at(cursor.at->node);
+            advance_cursor(CURSOR_LEFT);
+        }
+    }
+    
+    if(has_pressed_key(KEY_END)){
+        ui->cursor_pos = string->length;
+    }
+    
+    if(has_pressed_key(KEY_HOME)){
+        ui->cursor_pos = 0;
+    }
+    
+    Platform_Event* event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            insert_in_string(string,
+                             event->character,
+                             ui->cursor_pos++);
+            platform_consume_event(event);
+        }
+    }
+}
+
+internal void
 present_editable_string(Colour colour, Arc_Node* node){
     
     auto string = &node->string;
@@ -667,7 +773,6 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_TEXT_EDIT);
     widget_set_property(widget, WP_ALT_STRING);
     widget->alt_string = node->string;
     widget->style.text_colour = v4f_from_colour(colour);
@@ -677,21 +782,13 @@ present_editable_string(Colour colour, Arc_Node* node){
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
+        push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         if(ui->active == widget->id){
-            String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
-            
-            push_string(bbox.pos, s, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
             v2f cursor = {};
-            cursor.x = pos.x + get_text_width_n(s, ui->cursor_pos, widget->style.font_scale);
+            cursor.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             cursor.y = bbox.y;
             push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
-        }else {
-            v2f pos = widget->pos;
-            pos.y -= widget->min.height;
-            v4f bbox = v4f2(pos, widget->min);
-            
-            push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         }
     };
     
@@ -701,7 +798,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     {
         if(cursor.arc == node){
             ui->active = widget->id;
-            edit_text(widget);
+            edit_text(cursor.arc);
         }
     }
     
@@ -715,7 +812,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget->style = style;
     
     if(ui->active == widget->id){
-        v2f size = get_text_size(ui->editing_string.string, widget->style.font_scale);
+        v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
@@ -723,8 +820,6 @@ present_editable_string(Colour colour, Arc_Node* node){
     }
     
     if(result.clicked){
-        memcpy(ui->editing_string.text, string->text, string->length);
-        ui->editing_string.length = string->length;
         ui->cursor_pos = string->length;
     }
     
@@ -748,8 +843,11 @@ present_struct(Arc_Node* node){
         UI_COLUMN {
             UI_ROW {
                 present_editable_string(ui->theme.text, node);
+                present_space();
                 present_string(ui->theme.text_misc, make_string("::"));
+                present_space();
                 present_string(ui->theme.text_type, make_string("struct"));
+                present_space();
                 present_string(ui->theme.text_misc, make_string("{"));
             }
             UI_ROW {

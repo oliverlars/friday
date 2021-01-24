@@ -50,6 +50,7 @@ enum Widget_Property {
     WP_SCROLLING,
     WP_MANUAL_LAYOUT,
     WP_ALT_STRING,
+    WP_FIRST_TRANSITION,
 };
 
 struct Widget_Style {
@@ -82,6 +83,7 @@ struct Widget {
     v2f pos;
     f32 hot_transition;
     f32 active_transition;
+    f32 first_transition;
     
     b32 checked;
     f32 scroll_amount;

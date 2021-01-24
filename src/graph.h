@@ -51,6 +51,12 @@ enum Arc_Property {
 
 #define ARC_PROPERTIES_MAX 256
 
+enum Ast_Sub_Type {
+    AST_FUNCTION_PARAMS,
+    AST_FUNCTION_RETURN,
+    AST_FUNCTION_SCOPE,
+};
+
 struct Arc_Node {
     
     String8 string;
@@ -64,6 +70,7 @@ struct Arc_Node {
     u64 properties[(ARC_PROPERTIES_MAX+63)/64];
     
     Ast_Type ast_type;
+    Ast_Sub_Type ast_sub_type;
     bool is_initialised;
     s64 number_of_pointers;
     Literal_Type literal_type;

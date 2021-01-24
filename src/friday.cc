@@ -182,10 +182,26 @@ UPDATE {
             }
             if(has_pressed_key(KEY_D)){
                 arc_set_property(cursor.arc, AP_AST);
+                
                 cursor.arc->ast_type = AST_DECLARATION;
+                cursor.arc->next_sibling = make_arc_node(&editor->arc_pool);
+                cursor.arc->next_sibling->parent = cursor.arc->parent;
+                advance_cursor(CURSOR_RIGHT);
+                presenter->mode = PRESENT_EDIT;
+            }
+            if(has_pressed_key(KEY_F)){
+                arc_set_property(cursor.arc, AP_AST);
+                cursor.arc->ast_type = AST_FUNCTION;
                 cursor.arc->first_child = make_arc_node(&editor->arc_pool);
                 cursor.arc->first_child->parent = cursor.arc;
-                advance_cursor(CURSOR_RIGHT);
+                
+                cursor.arc->first_child->next_sibling = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->next_sibling->parent = cursor.arc;
+                
+                cursor.arc->first_child->next_sibling->next_sibling = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->next_sibling->next_sibling->parent = cursor.arc;
+                cursor.arc->last_child = cursor.arc->first_child->next_sibling->next_sibling;
+                cursor.arc = cursor.arc->first_child;
                 presenter->mode = PRESENT_EDIT;
             }
             

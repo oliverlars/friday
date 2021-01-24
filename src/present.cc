@@ -149,6 +149,7 @@ present_string(Colour colour, String8 string){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->style.text_colour = v4f_from_colour(colour);
     
     auto render_hook = [](Widget* widget ){
@@ -788,6 +789,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_ALT_STRING);
+    widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->alt_string = node->string;
     widget->style.text_colour = v4f_from_colour(colour);
     
@@ -796,13 +798,16 @@ present_editable_string(Colour colour, Arc_Node* node){
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
+        
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         if(ui->active == widget->id){
-            v2f cursor = {};
-            cursor.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
-            cursor.y = bbox.y;
-            push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+            v2f next = {};
+            next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
+            next.y = bbox.y;
+            lerp(&cursor.pos.x, next.x, 0.4f);
+            lerp(&cursor.pos.y, next.y, 0.4f);
+            push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
         }
     };
     
@@ -884,6 +889,40 @@ present_declaration(Arc_Node* node){
 }
 
 internal void
+present_function(Arc_Node* node){
+    if(!node) return;
+    if(arc_has_property(node, AP_AST)){
+        switch(node->ast_type){
+            case AST_FUNCTION: {
+                ID("function%d", (int)node){
+                    UI_ROW {
+                        present_editable_string(ui->theme.text, node);
+                        present_space();
+                        present_string(ui->theme.text_misc, make_string("::"));
+                        present_space();
+                        present_string(ui->theme.text_misc, make_string("("));
+                        present_function(node->first_child);
+                        present_string(ui->theme.text_misc, make_string(")"));
+                    }
+                }
+            }break;
+            case AST_DECLARATION: {
+                auto args = node->first_child;
+                for(auto decl = args; decl; decl = decl->next_sibling){
+                    present_declaration(decl);
+                    present_string(ui->theme.text_misc, make_string(","));
+                }
+                present_function(node->next_sibling);
+            }break;
+            
+        }
+    }else {
+        present_arc(node);
+    }
+    
+}
+
+internal void
 present_ast(Arc_Node* node){
     if(!node) return;
     switch(node->ast_type){
@@ -892,6 +931,9 @@ present_ast(Arc_Node* node){
         }break;
         case AST_DECLARATION: {
             present_declaration(node);
+        }break;
+        case AST_FUNCTION: {
+            present_function(node);
         }break;
     }
 }

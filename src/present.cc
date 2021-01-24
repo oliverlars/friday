@@ -1,35 +1,38 @@
 
 internal void
-advance_cursor(Cursor_Direction dir){
+find_next_selectable(){
+    cursor.arc = cursor.arc->parent;
     
+    while(!cursor.arc->next_sibling){
+        cursor.arc = cursor.arc->parent;
+    }
+    cursor.arc = cursor.arc->next_sibling;
+    while(cursor.arc && cursor.arc->first_child){
+        cursor.arc = cursor.arc->first_child;
+    }
+}
+
+internal void
+advance_cursor(Cursor_Direction dir){
+    if(!cursor.arc) return;
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
-            pos = cursor.arc->string.length;
-            if(cursor.arc && cursor.arc->parent){
-                cursor.arc = cursor.arc->parent;
-            }
+            
         }break;
         case CURSOR_DOWN:{
-            if(cursor.arc && cursor.arc->first_child){
-                cursor.arc = cursor.arc->first_child;
-            }
+            
         }break;
         case CURSOR_LEFT:{
-            assert(cursor.arc);
-            if(cursor.arc->prev_sibling){
-                cursor.arc = cursor.arc->prev_sibling;
-            }else if(cursor.arc->parent){
-                cursor.arc = cursor.arc->parent;
-            }
             pos = cursor.arc->string.length;
         }break;
         case CURSOR_RIGHT:{
-            assert(cursor.arc);
-            if(cursor.arc->next_sibling){
-                cursor.arc = cursor.arc->next_sibling;
-            }else if(cursor.arc->first_child){
+            if(cursor.arc->first_child){
                 cursor.arc = cursor.arc->first_child;
+            }else if(cursor.arc->next_sibling){
+                cursor.arc = cursor.arc->next_sibling;
+            }else {
+                find_next_selectable();
             }
         }break;
     }
@@ -881,10 +884,9 @@ present_declaration(Arc_Node* node){
             present_space();
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
-            present_arc(node->first_child);
+            present_arc(node->next_sibling);
             present_space();
         }
-        
     }
 }
 
@@ -945,6 +947,8 @@ present_arc(Arc_Node* node){
         present_ast(node);
     }else {
         present_editable_string(ui->theme.text, node);
+        present_arc(node->next_sibling);
+        present_arc(node->first_child);
     }
 }
 

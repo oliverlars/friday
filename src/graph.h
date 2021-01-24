@@ -1,6 +1,6 @@
 
 enum Ast_Type {
-    AST_INVALID=-1,
+    AST_INVALID=0,
     AST_BINARY,
     AST_UNARY,
     AST_LITERAL,
@@ -47,11 +47,13 @@ enum Token_Type {
 
 enum Arc_Property {
     AP_AST,
+    AP_SELECTABLE,
 };
 
 #define ARC_PROPERTIES_MAX 256
 
 enum Ast_Sub_Type {
+    AST_SUB_INVALID, 
     AST_FUNCTION_PARAMS,
     AST_FUNCTION_RETURN,
     AST_FUNCTION_SCOPE,
@@ -167,3 +169,13 @@ struct Ast_Node {
 };
 
 internal void remove_node_at(Ast_Node* at);
+
+
+internal bool
+arc_has_property(Arc_Node* arc, Arc_Property property);
+
+internal void
+arc_set_property(Arc_Node* arc, Arc_Property property);
+
+internal void
+arc_remove_property(Arc_Node* arc, Arc_Property property);

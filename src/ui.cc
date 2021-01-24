@@ -1271,7 +1271,6 @@ ui_panel_resize_widgets(Panel* panel, v4f rect, char* fmt, ...){
     auto result = update_widget(widget);
     
     if(result.dragged){
-        log("potato");
         f32 delta = result.delta.x;
         f32 divisor = rect.width/panel->split_ratio;
         update_panel_split(panel->parent, platform->mouse_position.x/platform->window_size.x);
@@ -1364,7 +1363,6 @@ render_panels(Panel* root, v4f rect){
                         fslider(0, 1, &rect.a, "A");
                     }
                     UI_WIDTHFILL fslider(0, 2, &font_scale, "font scale");
-                    log("%d", font_scale);
                     UI_WIDTHFILL {
                         text_box(&text_string);
                     }

@@ -161,6 +161,7 @@ internal Arc_Node*
 make_arc_node(Pool* pool){
     auto result = (Arc_Node*)pool_allocate(pool);
     result->string.text = (char*)pool_allocate(&editor->string_pool);
+    arc_set_property(result, AP_SELECTABLE);
     return result;
 }
 
@@ -257,3 +258,4 @@ serialise_to_disk(Ast_Node* node){
     serialise_to_disk_helper(file, node);
     fclose(file);
 }
+

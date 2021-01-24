@@ -10,6 +10,7 @@ enum Cursor_Direction {
 enum Present_Mode {
     PRESENT_EDIT,
     PRESENT_CREATE,
+    PRESENT_EDIT_TYPE,
 };
 
 // NOTE(Oliver): this helps us traverse the editable strings easier

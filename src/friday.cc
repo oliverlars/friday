@@ -170,22 +170,43 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
+        if(presenter->mode == PRESENT_EDIT_TYPE){
+            if(has_pressed_key(KEY_ENTER)){
+                arc_set_property(cursor.arc, AP_AST);
+                cursor.arc->ast_type = AST_TYPE_USAGE;
+                if(cursor.arc->parent && !cursor.arc->parent->next_sibling){
+                    cursor.arc->parent->next_sibling = make_arc_node(&editor->arc_pool);
+                    cursor.arc->parent->next_sibling->prev_sibling = cursor.arc->parent;
+                }
+                cursor.arc = cursor.arc->parent->next_sibling;
+                
+                presenter->mode = PRESENT_EDIT;
+            }
+        }
         if(presenter->mode == PRESENT_CREATE){
             if(has_pressed_key(KEY_S)){
                 arc_set_property(cursor.arc, AP_AST);
                 cursor.arc->ast_type = AST_STRUCT;
+                
                 cursor.arc->first_child = make_arc_node(&editor->arc_pool);
                 cursor.arc->first_child->parent = cursor.arc;
-                advance_cursor(CURSOR_RIGHT);
+                arc_set_property(cursor.arc->first_child, AP_AST);
+                cursor.arc->first_child->ast_type = AST_SCOPE;
+                
+                
+                cursor.arc->first_child->first_child = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->first_child->parent = cursor.arc->first_child;
+                
+                cursor.arc = cursor.arc->first_child->first_child;
                 presenter->mode = PRESENT_EDIT;
             }
             if(has_pressed_key(KEY_D)){
                 arc_set_property(cursor.arc, AP_AST);
                 cursor.arc->ast_type = AST_DECLARATION;
-                cursor.arc->next_sibling = make_arc_node(&editor->arc_pool);
-                cursor.arc->next_sibling->parent = cursor.arc->parent;
+                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
+                cursor.arc->first_child->parent = cursor.arc;
                 advance_cursor(CURSOR_RIGHT);
-                presenter->mode = PRESENT_EDIT;
+                presenter->mode = PRESENT_EDIT_TYPE;
             }
             if(has_pressed_key(KEY_F)){
                 arc_set_property(cursor.arc, AP_AST);

@@ -13,6 +13,19 @@ find_next_selectable(){
 }
 
 internal void
+find_prev_selectable(){
+    cursor.arc = cursor.arc->parent;
+    
+    while(!cursor.arc->next_sibling){
+        cursor.arc = cursor.arc->parent;
+    }
+    cursor.arc = cursor.arc->next_sibling;
+    while(cursor.arc && cursor.arc->first_child){
+        cursor.arc = cursor.arc->first_child;
+    }
+}
+
+internal void
 advance_cursor(Cursor_Direction dir){
     if(!cursor.arc) return;
     int pos = 0;
@@ -24,6 +37,13 @@ advance_cursor(Cursor_Direction dir){
             
         }break;
         case CURSOR_LEFT:{
+            if(cursor.arc->parent){
+                cursor.arc = cursor.arc->parent;
+            }else if(cursor.arc->prev_sibling){
+                cursor.arc = cursor.arc->prev_sibling;
+            }else {
+                //find_prev_selectable();
+            }
             pos = cursor.arc->string.length;
         }break;
         case CURSOR_RIGHT:{
@@ -688,7 +708,7 @@ edit_text(Arc_Node* node){
     clampi(&ui->cursor_pos, 0, node->string.length);
     auto string = &node->string;
     
-    if(has_pressed_key(KEY_ENTER)){
+    if(presenter->mode != PRESENT_EDIT_TYPE && has_pressed_key(KEY_ENTER)){
         presenter->mode = PRESENT_CREATE;
     }
     
@@ -884,7 +904,7 @@ present_declaration(Arc_Node* node){
             present_space();
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
-            present_arc(node->next_sibling);
+            present_arc(node->first_child);
             present_space();
         }
     }
@@ -925,6 +945,11 @@ present_function(Arc_Node* node){
 }
 
 internal void
+present_type_usage(Arc_Node* node){
+    present_editable_string(ui->theme.text_type, node);
+}
+
+internal void
 present_ast(Arc_Node* node){
     if(!node) return;
     switch(node->ast_type){
@@ -936,6 +961,19 @@ present_ast(Arc_Node* node){
         }break;
         case AST_FUNCTION: {
             present_function(node);
+        }break;
+        case AST_TYPE_USAGE: {
+            present_type_usage(node);
+        }break;
+        case AST_SCOPE: {
+            auto member = node->first_child;
+            UI_COLUMN{
+                while(member){
+                    present_arc(member);
+                    member = member->next_sibling;
+                    
+                }
+            }
         }break;
     }
 }

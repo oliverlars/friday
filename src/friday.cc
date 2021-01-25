@@ -176,13 +176,6 @@ UPDATE {
                 
                 cursor.arc->ast_type = AST_TYPE_USAGE;
                 
-#if 0                
-                cursor.arc->parent->parent->last_child->next_sibling = make_arc_node(&editor->arc_pool);
-                cursor.arc->parent->parent->last_child->next_sibling->parent = cursor.arc->parent;
-                cursor.arc->parent->parent->last_child->next_sibling->prev_sibling = cursor.arc->parent;
-                cursor.arc->parent->parent->last_child = cursor.arc->parent->parent->last_child->next_sibling;
-                cursor.arc = cursor.arc->parent->parent->last_child;
-#endif
                 auto next = make_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.arc->parent->parent, next);
                 cursor.arc = next;

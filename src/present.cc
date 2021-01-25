@@ -920,7 +920,7 @@ present_function(Arc_Node* node){
                         auto params = node->first_child->first_child;
                         auto return_type = node->first_child->next_sibling->first_child;
                         auto scope = node->first_child->next_sibling->next_sibling;
-                        present_editable_string(ui->theme.text, node);
+                        present_editable_string(ui->theme.text_function, node);
                         present_space();
                         present_string(ui->theme.text_misc, make_string("::"));
                         present_space();

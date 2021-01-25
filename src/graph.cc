@@ -259,3 +259,28 @@ serialise_to_disk(Ast_Node* node){
     fclose(file);
 }
 
+internal void
+insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node){
+    assert(at);
+    assert(node);
+    assert(at->next_sibling);
+    assert(at->prev_sibling);
+    auto next_sibling = at->next_sibling;
+    at->next_sibling = node;
+    node->prev_sibling = at;
+    node->next_sibling = next_sibling;
+    node->parent = at->parent;
+    next_sibling->prev_sibling = node;
+}
+
+internal void
+insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
+    assert(at);
+    assert(node);
+    assert(at->last_child);
+    auto last_child = at->last_child;
+    at->last_child = node;
+    node->parent = at;
+    node->prev_sibling = last_child;
+    last_child->next_sibling = node;
+}

@@ -905,7 +905,6 @@ present_declaration(Arc_Node* node){
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_arc(node->first_child);
-            present_space();
         }
     }
 }
@@ -918,23 +917,41 @@ present_function(Arc_Node* node){
             case AST_FUNCTION: {
                 ID("function%d", (int)node){
                     UI_ROW {
+                        auto params = node->first_child->first_child;
+                        auto return_type = node->first_child->next_sibling->first_child;
+                        auto scope = node->first_child->next_sibling->next_sibling;
                         present_editable_string(ui->theme.text, node);
                         present_space();
                         present_string(ui->theme.text_misc, make_string("::"));
                         present_space();
                         present_string(ui->theme.text_misc, make_string("("));
-                        present_function(node->first_child);
+                        present_function(params);
                         present_string(ui->theme.text_misc, make_string(")"));
+                        present_space();
+                        present_string(ui->theme.text_misc, make_string("->"));
+                        present_space();
+                        present_function(return_type);
+                        present_space();
+                        present_string(ui->theme.text_misc, make_string("{"));
+                        present_arc(scope);
                     }
+                    present_string(ui->theme.text_misc, make_string("}"));
                 }
             }break;
             case AST_DECLARATION: {
-                auto args = node->first_child;
+                auto args = node;
                 for(auto decl = args; decl; decl = decl->next_sibling){
-                    present_declaration(decl);
-                    present_string(ui->theme.text_misc, make_string(","));
+                    ID("param%d", (int)decl){
+                        present_arc(decl);
+                        if(decl->next_sibling){
+                            present_string(ui->theme.text_misc, make_string(","));
+                            present_space();
+                        }
+                    }
                 }
-                present_function(node->next_sibling);
+            }break;
+            default: {
+                present_arc(node);
             }break;
             
         }
@@ -988,5 +1005,10 @@ present_arc(Arc_Node* node){
         present_arc(node->next_sibling);
         present_arc(node->first_child);
     }
+}
+
+internal void
+present_debug_arc(Arc_Node* node){
+    
 }
 

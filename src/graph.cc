@@ -277,10 +277,15 @@ internal void
 insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
     assert(at);
     assert(node);
-    assert(at->last_child);
-    auto last_child = at->last_child;
-    at->last_child = node;
-    node->parent = at;
-    node->prev_sibling = last_child;
-    last_child->next_sibling = node;
+    if(at->last_child){
+        auto last_child = at->last_child;
+        at->last_child = node;
+        node->parent = at;
+        node->prev_sibling = last_child;
+        last_child->next_sibling = node;
+    }else {
+        at->first_child = node;
+        at->last_child = node;
+        node->parent = at;
+    }
 }

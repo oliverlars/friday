@@ -1032,7 +1032,7 @@ init_shaders(){
             "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
             "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
-            "colour = vec4(frag_colour.rgb, alpha);\n"
+            "colour = vec4(frag_colour.rgb, min(alpha, frag_colour.a));\n"
             "}else {\n"
             "discard;\n"
             "}\n"

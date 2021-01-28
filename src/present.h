@@ -8,9 +8,15 @@ enum Cursor_Direction {
 };
 
 enum Present_Mode {
-    PRESENT_EDIT,
-    PRESENT_CREATE,
-    PRESENT_EDIT_TYPE,
+    P_EDIT,
+    P_CREATE,
+};
+
+enum Present_Context {
+    PC_PARAMS,
+    PC_TYPE,
+    PC_EXPR,
+    PC_NAME,
 };
 
 // NOTE(Oliver): this helps us traverse the editable strings easier
@@ -37,6 +43,7 @@ struct Presenter_State {
     Present_Node** last_table;
     
     Present_Mode mode;
+    Present_Context context;
 };
 
 struct Cursor {

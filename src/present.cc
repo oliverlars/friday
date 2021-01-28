@@ -211,12 +211,12 @@ present_space() {
 
 internal void
 edit_text(Widget* widget){
-    if(presenter->mode == PRESENT_CREATE) return;
+    if(presenter->mode == P_CREATE) return;
     clampi(&ui->cursor_pos, 0, ui->editing_string.length);
     auto last_widget = get_last_widget(widget->id, widget->string);
     
     if(has_pressed_key(KEY_ENTER)){
-        presenter->mode = PRESENT_CREATE;
+        presenter->mode = P_CREATE;
     }
     
     if(has_pressed_key(KEY_UP)){
@@ -704,13 +704,10 @@ arc_remove_property(Arc_Node* arc, Arc_Property property);
 
 internal void
 edit_text(Arc_Node* node){
-    if(presenter->mode == PRESENT_CREATE) return;
+    if(presenter->mode == P_CREATE) return;
     clampi(&ui->cursor_pos, 0, node->string.length);
     auto string = &node->string;
     
-    if(presenter->mode != PRESENT_EDIT_TYPE && has_pressed_key(KEY_ENTER)){
-        presenter->mode = PRESENT_CREATE;
-    }
     
     if(has_pressed_key(KEY_UP)){
         advance_cursor(CURSOR_UP);
@@ -815,6 +812,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->alt_string = node->string;
     widget->style.text_colour = v4f_from_colour(colour);
+    widget->style.text_colour.a = 0;
     
     
     auto render_hook = [](Widget* widget ){
@@ -830,7 +828,11 @@ present_editable_string(Colour colour, Arc_Node* node){
             next.y = bbox.y;
             lerp(&cursor.pos.x, next.x, 0.4f);
             lerp(&cursor.pos.y, next.y, 0.4f);
-            push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+            if(presenter->mode == P_CREATE){
+                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
+            }else {
+                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+            }
         }
     };
     
@@ -913,29 +915,40 @@ internal void
 present_function(Arc_Node* node){
     if(!node) return;
     if(arc_has_property(node, AP_AST)){
+        
         switch(node->ast_type){
             case AST_FUNCTION: {
+                
                 ID("function%d", (int)node){
-                    UI_ROW {
+                    UI_COLUMN {
+                        
                         auto params = node->first_child->first_child;
                         auto return_type = node->first_child->next_sibling->first_child;
-                        auto scope = node->first_child->next_sibling->next_sibling;
-                        present_editable_string(ui->theme.text_function, node);
-                        present_space();
-                        present_string(ui->theme.text_misc, make_string("::"));
-                        present_space();
-                        present_string(ui->theme.text_misc, make_string("("));
-                        present_function(params);
-                        present_string(ui->theme.text_misc, make_string(")"));
-                        present_space();
-                        present_string(ui->theme.text_misc, make_string("->"));
-                        present_space();
-                        present_function(return_type);
-                        present_space();
-                        present_string(ui->theme.text_misc, make_string("{"));
-                        present_arc(scope);
+                        auto scope = node->first_child->next_sibling->next_sibling->first_child;
+                        UI_ROW{
+                            present_editable_string(ui->theme.text_function, node);
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("::"));
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("("));
+                            present_function(params);
+                            present_string(ui->theme.text_misc, make_string(")"));
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("->"));
+                            present_space();
+                            present_function(return_type);
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("{"));
+                        }
+                        UI_ROW {
+                            present_space();
+                            present_space();
+                            present_arc(scope);
+                        }
+                        UI_ROW {
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
                     }
-                    present_string(ui->theme.text_misc, make_string("}"));
                 }
             }break;
             case AST_DECLARATION: {

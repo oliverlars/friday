@@ -47,16 +47,17 @@ enum Token_Type {
 
 enum Arc_Property {
     AP_AST,
+    AP_AST_TAG,
     AP_SELECTABLE,
 };
 
 #define ARC_PROPERTIES_MAX 256
 
-enum Ast_Sub_Type {
-    AST_SUB_INVALID, 
-    AST_FUNCTION_PARAMS,
-    AST_FUNCTION_RETURN,
-    AST_FUNCTION_SCOPE,
+enum Ast_Tag {
+    AT_INVALID, 
+    AT_PARAMS,
+    AT_RETURN_TYPE,
+    AT_BODY,
 };
 
 struct Arc_Node {
@@ -72,7 +73,7 @@ struct Arc_Node {
     u64 properties[(ARC_PROPERTIES_MAX+63)/64];
     
     Ast_Type ast_type;
-    Ast_Sub_Type ast_sub_type;
+    Ast_Tag ast_tag;
     bool is_initialised;
     s64 number_of_pointers;
     Literal_Type literal_type;

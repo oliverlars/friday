@@ -170,20 +170,45 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
-        if(presenter->mode == PRESENT_EDIT_TYPE){
+        auto string = &cursor.arc->string;
+        
+        if(presenter->mode == P_EDIT){
             if(has_pressed_key(KEY_ENTER)){
-                arc_set_property(cursor.arc, AP_AST);
+                auto parent = cursor.arc->parent;
                 
-                cursor.arc->ast_type = AST_TYPE_USAGE;
-                
-                auto next = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.arc->parent->parent, next);
-                cursor.arc = next;
-                
-                presenter->mode = PRESENT_EDIT;
+                if(parent && parent->ast_type == AST_DECLARATION){
+                    
+                    arc_set_property(cursor.arc, AP_AST);
+                    
+                    cursor.arc->ast_type = AST_TYPE_USAGE;
+                    
+                    auto next = make_arc_node(&editor->arc_pool);
+                    insert_arc_node_as_child(cursor.arc->parent->parent, next);
+                    cursor.arc = next;
+                    
+                    presenter->mode = P_EDIT;
+                }
+                else if(parent && parent->parent->ast_tag == AT_PARAMS){
+                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
+                }
+                else if(parent && parent->ast_tag == AT_RETURN_TYPE){
+                    arc_set_property(cursor.arc, AP_AST);
+                    
+                    cursor.arc->ast_type = AST_TYPE_USAGE;
+                    auto scope = cursor.arc->parent->next_sibling->first_child;
+                    auto next = make_arc_node(&editor->arc_pool);
+                    scope->first_child = next;
+                    cursor.arc = next;
+                    
+                }else if(!string->length){
+                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
+                }else {
+                    presenter->mode = P_CREATE;
+                }
             }
         }
-        if(presenter->mode == PRESENT_CREATE){
+        
+        if(presenter->mode == P_CREATE){
             if(has_pressed_key(KEY_S)){
                 arc_set_property(cursor.arc, AP_AST);
                 cursor.arc->ast_type = AST_STRUCT;
@@ -198,36 +223,47 @@ UPDATE {
                 cursor.arc->first_child->first_child->parent = cursor.arc->first_child;
                 
                 cursor.arc = cursor.arc->first_child->first_child;
-                presenter->mode = PRESENT_EDIT;
+                presenter->mode = P_EDIT;
             }
             if(has_pressed_key(KEY_D)){
                 arc_set_property(cursor.arc, AP_AST);
                 cursor.arc->ast_type = AST_DECLARATION;
-                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->parent = cursor.arc;
-                advance_cursor(CURSOR_RIGHT);
-                presenter->mode = PRESENT_EDIT_TYPE;
+                auto type = make_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.arc, type);
+                cursor.arc = type;
+                presenter->mode = P_EDIT;
             }
             if(has_pressed_key(KEY_F)){
                 arc_set_property(cursor.arc, AP_AST);
                 
                 cursor.arc->ast_type = AST_FUNCTION;
-                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->parent = cursor.arc;
+                auto params = make_arc_node(&editor->arc_pool);
+                arc_set_property(params, AP_AST_TAG);
+                params->ast_tag = AT_PARAMS;
+                insert_arc_node_as_child(cursor.arc, params);
                 
-                cursor.arc->first_child->next_sibling = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->next_sibling->parent = cursor.arc;
+                auto return_type = make_arc_node(&editor->arc_pool);
+                arc_set_property(return_type, AP_AST_TAG);
+                return_type->ast_tag = AT_RETURN_TYPE;
+                insert_arc_node_as_child(cursor.arc, return_type);
                 
-                cursor.arc->first_child->next_sibling->next_sibling = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->next_sibling->next_sibling->parent = cursor.arc;
+                auto body = make_arc_node(&editor->arc_pool);
+                arc_set_property(body, AP_AST_TAG);
+                body->ast_tag = AT_BODY;
+                insert_arc_node_as_child(cursor.arc, body);
                 
-                cursor.arc->first_child->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->last_child = cursor.arc->first_child->first_child;
-                cursor.arc->first_child->first_child->parent = cursor.arc->first_child;
+                auto  first_decl = make_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(params, first_decl);
                 
-                cursor.arc = cursor.arc->first_child->first_child;
+                auto type_expr = make_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(return_type, type_expr);
                 
-                presenter->mode = PRESENT_EDIT;
+                auto scope = make_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(body, scope);
+                
+                cursor.arc = first_decl;
+                
+                presenter->mode = P_EDIT;
             }
             
         }

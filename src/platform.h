@@ -1,3 +1,5 @@
+//Based on ryan fleury's (github.com/ryanfleury) platform layer
+//under MIT license
 
 enum Key_Enum {
 #define Key(name, str) KEY_##name,

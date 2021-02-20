@@ -9,7 +9,6 @@
 #include "widgets.h"
 #include "graph.h"
 #include "present.h"
-#include "editor.h"
 #include "friday.h"
 
 #include "extras.cc"

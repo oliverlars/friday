@@ -181,6 +181,9 @@ struct UI_State {
     } editing_string;
     
     int cursor_pos;
+    
+    f32 zoom_level;
+    f32 target_zoom_level;
 };
 
 global f32 time_per_gui_update;

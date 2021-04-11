@@ -94,6 +94,9 @@ PERMANENT_LOAD {
     ui->editing_string.length = 0;
     ui->editing_string.capacity = 8192;
     
+    ui->zoom_level = 1;
+    ui->target_zoom_level = 1;
+    
     split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
     
@@ -156,117 +159,13 @@ UPDATE {
     FRAME
     {
         f32 start = platform->get_time();
-        //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
-        render_panels(ui->panel, v4f(0,platform->window_size.height, 
-                                     platform->window_size.width, platform->window_size.height));
         
-        ForEachWidgetSibling(ui->root){
-            layout_widgets(it);
-            render_widgets(it);
+        draw_backdrop_grid();
+        v2f delta = {};
+        if(has_mouse_scrolled(&delta)){
+            ui->target_zoom_level += delta.y*0.005f;
         }
-        f32 end = platform->get_time();
-        time_per_gui_update = end - start;
-        
-        //NOTE(Oliver): handle input for presenter
-        // put this somewhere else
-        auto string = &cursor.arc->string;
-        
-        if(presenter->mode == P_EDIT){
-            if(has_pressed_key(KEY_ENTER)){
-                auto parent = cursor.arc->parent;
-                
-                if(parent && parent->ast_type == AST_DECLARATION){
-                    
-                    arc_set_property(cursor.arc, AP_AST);
-                    
-                    cursor.arc->ast_type = AST_TYPE_USAGE;
-                    
-                    auto next = make_arc_node(&editor->arc_pool);
-                    insert_arc_node_as_child(cursor.arc->parent->parent, next);
-                    cursor.arc = next;
-                    
-                    presenter->mode = P_EDIT;
-                }
-                else if(parent && parent->parent->ast_tag == AT_PARAMS){
-                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
-                }
-                else if(parent && parent->ast_tag == AT_RETURN_TYPE){
-                    arc_set_property(cursor.arc, AP_AST);
-                    
-                    cursor.arc->ast_type = AST_TYPE_USAGE;
-                    auto scope = cursor.arc->parent->next_sibling->first_child;
-                    auto next = make_arc_node(&editor->arc_pool);
-                    scope->first_child = next;
-                    cursor.arc = next;
-                    
-                }else if(!string->length){
-                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
-                }else {
-                    presenter->mode = P_CREATE;
-                }
-            }
-        }
-        
-        if(presenter->mode == P_CREATE){
-            if(has_pressed_key(KEY_S)){
-                arc_set_property(cursor.arc, AP_AST);
-                cursor.arc->ast_type = AST_STRUCT;
-                
-                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->parent = cursor.arc;
-                arc_set_property(cursor.arc->first_child, AP_AST);
-                cursor.arc->first_child->ast_type = AST_SCOPE;
-                
-                
-                cursor.arc->first_child->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->first_child->parent = cursor.arc->first_child;
-                
-                cursor.arc = cursor.arc->first_child->first_child;
-                presenter->mode = P_EDIT;
-            }
-            if(has_pressed_key(KEY_D)){
-                arc_set_property(cursor.arc, AP_AST);
-                cursor.arc->ast_type = AST_DECLARATION;
-                auto type = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.arc, type);
-                cursor.arc = type;
-                presenter->mode = P_EDIT;
-            }
-            if(has_pressed_key(KEY_F)){
-                arc_set_property(cursor.arc, AP_AST);
-                
-                cursor.arc->ast_type = AST_FUNCTION;
-                auto params = make_arc_node(&editor->arc_pool);
-                arc_set_property(params, AP_AST_TAG);
-                params->ast_tag = AT_PARAMS;
-                insert_arc_node_as_child(cursor.arc, params);
-                
-                auto return_type = make_arc_node(&editor->arc_pool);
-                arc_set_property(return_type, AP_AST_TAG);
-                return_type->ast_tag = AT_RETURN_TYPE;
-                insert_arc_node_as_child(cursor.arc, return_type);
-                
-                auto body = make_arc_node(&editor->arc_pool);
-                arc_set_property(body, AP_AST_TAG);
-                body->ast_tag = AT_BODY;
-                insert_arc_node_as_child(cursor.arc, body);
-                
-                auto  first_decl = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(params, first_decl);
-                
-                auto type_expr = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(return_type, type_expr);
-                
-                auto scope = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(body, scope);
-                
-                cursor.arc = first_decl;
-                
-                presenter->mode = P_EDIT;
-            }
-            
-        }
-        
+        lerp(&ui->zoom_level, ui->target_zoom_level, 0.1);
     }
     platform->refresh_screen();
 }

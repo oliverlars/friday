@@ -7,10 +7,14 @@ struct Editor_State {
     
     Pool arc_pool;
     
+    Pool block_pool;
+    
     Ast_Node* program;
     Arc_Node* root;
     
     Pool string_pool;
+    
+    Block* block_start;
 };
 
 Editor_State* editor;

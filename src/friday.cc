@@ -81,10 +81,11 @@ PERMANENT_LOAD {
     initialise_globals();
     init_opengl_renderer();
     init_shaders();
-    load_theme_dots();
+    load_theme_blender();
     
     editor->ast_pool = make_pool(sizeof(Ast_Node));
     editor->arc_pool = make_pool(sizeof(Arc_Node));
+    editor->block_pool = make_pool(sizeof(Block));
     
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
     ui->panel->split_ratio = 1.0f;
@@ -141,13 +142,18 @@ PERMANENT_LOAD {
     cursor.arc = editor->root;
     cursor.string = &editor->root->string;
     
+    editor->block_start = make_block(&editor->block_pool, "Hello");
+    editor->block_start->first_child = make_block(&editor->block_pool, "There");
+    editor->block_start->last_child = editor->block_start->first_child;
+    editor->block_start->first_child->next_sibling = make_block(&editor->block_pool, "Parallel!");
+    
 }
 
 HOT_LOAD {
     platform = platform_;
     load_all_opengl_procs();
     initialise_globals();
-    load_theme_dots();
+    load_theme_blender();
 }
 
 HOT_UNLOAD {
@@ -175,8 +181,11 @@ UPDATE {
                 ui->offset = ui->offset + delta;
             }
         }
+        draw_blocks(ui->offset + v2f(platform->window_size.width/2.0,
+                                     platform->window_size.height/2.0), editor->block_start);
+        ui->hot_block = nullptr;
+        platform->refresh_screen();
     }
-    platform->refresh_screen();
 }
 
 END_C_EXPORT

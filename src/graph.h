@@ -170,6 +170,17 @@ struct Ast_Node {
 };
 
 
+struct Block {
+    
+    String8 string;
+    
+    Block* prev_sibling;
+    Block* next_sibling;
+    Block* first_child;
+    Block* last_child;
+    Block* parent;
+    
+};
 
 internal void remove_node_at(Ast_Node* at);
 

@@ -9,6 +9,22 @@ global Ast_Node* _s16;
 global Ast_Node* _s32;
 global Ast_Node* _s64;
 
+internal Block*
+make_block(Pool* pool, char* name){
+    auto result = (Block*)pool_allocate(pool);
+    result->string = make_stringf(&editor->string_pool, "%s", name);
+    
+    result->prev_sibling = nullptr;
+    result->next_sibling = nullptr;
+    result->first_child = nullptr;
+    result->last_child = nullptr;
+    result->parent = nullptr;
+    
+    return result;
+    
+}
+
+
 internal bool
 arc_has_property(Arc_Node* arc, Arc_Property property){
     return !!(arc->properties[property / 64] & (1ll << (property % 64)));

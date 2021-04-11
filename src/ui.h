@@ -2,7 +2,13 @@ typedef u64 UI_ID;
 
 struct Theme {
     Colour background;
+    Colour sub_background;
     Colour text;
+    
+    Colour block;
+    Colour block_border1;
+    Colour block_border2;
+    Colour block_shadow;
     
     Colour sub_colour;
     Colour border;
@@ -14,6 +20,7 @@ struct Theme {
     Colour text_misc;
     
     Colour cursor;
+    Colour cursor_lighter;
     
     Colour error;
     
@@ -147,6 +154,8 @@ struct Style_Node {
     Style_Node* prev;
 };
 
+struct Block;
+
 struct UI_State {
     
     Theme theme;
@@ -186,7 +195,11 @@ struct UI_State {
     f32 target_zoom_level;
     
     v2f offset;
+    
+    Block* active_block;
+    Block* hot_block;
 };
+
 
 global f32 time_per_gui_update;
 

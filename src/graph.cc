@@ -24,6 +24,62 @@ make_block(Pool* pool, char* name){
     
 }
 
+internal Block*
+make_child_block(Block* at, char* name){
+    auto block = make_block(&editor->block_pool, name);
+    if(at->last_child){
+        at->last_child->next_sibling = block;
+        block->prev_sibling = at->last_child;
+        block->parent = at;
+        at->last_child = block;
+    }else {
+        at->last_child = block;
+        at->first_child = block;
+        block->parent = at;
+        
+    }
+    
+    return block;
+}
+
+internal Block*
+make_sibling_block_after(Block* at, char* name){
+    auto block = make_block(&editor->block_pool, name);
+    
+    block->next_sibling = at->next_sibling;
+    
+    at->next_sibling = block;
+    
+    block->prev_sibling = at;
+    
+    if (block->next_sibling){
+        block->next_sibling->prev_sibling = block;
+    }
+    
+    block->parent = at->parent;
+    return block;
+}
+
+internal Block*
+make_sibling_block_before(Block* at, char* name){
+    
+    auto block = make_block(&editor->block_pool, name);
+    
+    block->prev_sibling = at->prev_sibling;
+    
+    at->prev_sibling = block;
+    
+    block->next_sibling = at;
+    
+    if (block->prev_sibling){
+        block->prev_sibling->next_sibling = block;
+    }else{
+        at->parent->first_child = block;
+    }
+    block->parent = at->parent;
+    
+    return block;
+}
 
 internal bool
 arc_has_property(Arc_Node* arc, Arc_Property property){

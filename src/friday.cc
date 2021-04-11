@@ -143,10 +143,7 @@ PERMANENT_LOAD {
     cursor.string = &editor->root->string;
     
     editor->block_start = make_block(&editor->block_pool, "Hello");
-    editor->block_start->first_child = make_block(&editor->block_pool, "There");
-    editor->block_start->last_child = editor->block_start->first_child;
-    editor->block_start->first_child->next_sibling = make_block(&editor->block_pool, "Parallel!");
-    
+    make_child_block(editor->block_start, "Parallel!");
 }
 
 HOT_LOAD {
@@ -181,6 +178,56 @@ UPDATE {
                 ui->offset = ui->offset + delta;
             }
         }
+        if(has_pressed_key_modified(KEY_L, KEY_MOD_SHIFT)){
+            if(ui->active_block){
+                ui->active_block = make_child_block(ui->active_block, "test");
+            }
+        }
+        
+        if(has_pressed_key_modified(KEY_K, KEY_MOD_SHIFT)){
+            if(ui->active_block){
+                ui->active_block = make_sibling_block_before(ui->active_block, "test");
+            }
+        }
+        
+        if(has_pressed_key_modified(KEY_J, KEY_MOD_SHIFT)){
+            if(ui->active_block){
+                ui->active_block = make_sibling_block_after(ui->active_block, "test");
+            }
+        }
+        
+        if(has_pressed_key(KEY_K)){
+            if(ui->active_block){
+                if(ui->active_block->next_sibling){
+                    ui->active_block = ui->active_block->next_sibling;
+                }
+            }
+        }
+        
+        if(has_pressed_key(KEY_J)){
+            if(ui->active_block){
+                if(ui->active_block->prev_sibling){
+                    ui->active_block = ui->active_block->prev_sibling;
+                }
+            }
+        }
+        
+        if(has_pressed_key(KEY_H)){
+            if(ui->active_block){
+                if(ui->active_block->parent){
+                    ui->active_block = ui->active_block->parent;
+                }
+            }
+        }
+        
+        if(has_pressed_key(KEY_L)){
+            if(ui->active_block){
+                if(ui->active_block->first_child){
+                    ui->active_block = ui->active_block->first_child;
+                }
+            }
+        }
+        
         draw_blocks(ui->offset + v2f(platform->window_size.width/2.0,
                                      platform->window_size.height/2.0), editor->block_start);
         ui->hot_block = nullptr;

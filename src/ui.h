@@ -184,6 +184,8 @@ struct UI_State {
     
     f32 zoom_level;
     f32 target_zoom_level;
+    
+    v2f offset;
 };
 
 global f32 time_per_gui_update;

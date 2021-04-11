@@ -1435,10 +1435,12 @@ draw_backdrop_grid(){
     f32 width = platform->window_size.width;
     f32 height  = platform->window_size.height;
     v4f background = v4f(0,0,width, height);
+    
     push_rectangle(background, 1, ui->theme.background);
+    
     for(f32 x = 0; x < width; x += size){
         v4f rect = {};
-        rect.x = x;
+        rect.x = x + ((int)ui->offset.x % (int)size);
         rect.y = 0;
         rect.width = 1;
         rect.height = height;
@@ -1447,9 +1449,10 @@ draw_backdrop_grid(){
     for(f32 y = 0; y < height; y += size){
         v4f rect = {};
         rect.x = 0;
-        rect.y = y;
+        rect.y = y + ((int)ui->offset.y % (int)size);
         rect.width = width;
         rect.height = 1;
         push_rectangle(rect, 1, ui->theme.sub_colour);
     }
+    
 }

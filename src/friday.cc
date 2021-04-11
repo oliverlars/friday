@@ -161,11 +161,20 @@ UPDATE {
         f32 start = platform->get_time();
         
         draw_backdrop_grid();
-        v2f delta = {};
-        if(has_mouse_scrolled(&delta)){
-            ui->target_zoom_level += delta.y*0.005f;
+        
+        {
+            v2f delta = {};
+            if(has_mouse_scrolled(&delta)){
+                ui->target_zoom_level += delta.y*0.005f;
+            }
+            lerp(&ui->zoom_level, ui->target_zoom_level, 0.1);
         }
-        lerp(&ui->zoom_level, ui->target_zoom_level, 0.1);
+        {
+            v2f delta = {};
+            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+                ui->offset = ui->offset + delta;
+            }
+        }
     }
     platform->refresh_screen();
 }

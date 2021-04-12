@@ -169,10 +169,16 @@ struct Ast_Node {
     };
 };
 
+enum Block_Type {
+    BLOCK_EXECUTE,
+    BLOCK_DATA,
+};
 
 struct Block {
     
     String8 string;
+    
+    Block_Type type;
     
     Block* prev_sibling;
     Block* next_sibling;
@@ -180,6 +186,7 @@ struct Block {
     Block* last_child;
     Block* parent;
     
+    Block* scope;
 };
 
 internal void remove_node_at(Ast_Node* at);

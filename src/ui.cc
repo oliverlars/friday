@@ -129,6 +129,29 @@ has_pressed_key(Key key){
 }
 
 internal b32
+is_key_down(Platform_Event** event_out, Key key){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        
+        if (event->type == PLATFORM_EVENT_KEY_PRESS){
+            if(event->key == key){
+                *event_out = event;
+                result = 1;
+            }
+        }
+    }
+    return(result);
+}
+
+internal b32
+is_key_down(Key key){
+    Platform_Event* event = 0;
+    b32 result = is_key_down(&event, key);
+    return result;
+}
+
+internal b32
 has_pressed_key_modified(Platform_Event** event_out, Key key, Key_Modifiers modifiers){
     b32 result = 0;
     Platform_Event *event = 0;
@@ -178,6 +201,33 @@ internal b32
 has_mouse_dragged(Mouse_Button button, v2f* delta = 0) {
     Platform_Event* event = 0;
     b32 result = has_mouse_dragged(&event, button, delta);
+    return result;
+}
+
+
+internal b32
+has_mouse_dragged_modified(Platform_Event **event_out, Mouse_Button button, Key_Modifiers modifiers, v2f* delta){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_DRAG && button == event->mouse_button && event->modifiers == modifiers){
+            *event_out = event;
+            platform_consume_event(event);
+            if(delta){
+                delta->x += event->delta.x;
+                delta->y += event->delta.y;
+            }
+            
+            result = 1;
+        }
+    }
+    return result;
+}
+
+internal b32
+has_mouse_dragged_modified(Mouse_Button button, Key_Modifiers modifiers, v2f* delta = 0) {
+    Platform_Event* event = 0;
+    b32 result = has_mouse_dragged_modified(&event, button, modifiers, delta);
     return result;
 }
 
@@ -1459,7 +1509,7 @@ render_panels(Panel* root, v4f rect){
 
 internal void
 draw_backdrop_grid(){
-    f32 size = 20.0f* clampf(ui->zoom_level, 1, 20);
+    f32 size = 20.0f*ui->zoom_level;
     f32 width = platform->window_size.width;
     f32 height  = platform->window_size.height;
     v4f background = v4f(0,0,width, height);
@@ -1492,9 +1542,12 @@ draw_blocks(v2f pos, Block* block){
     }
     
     f32 width = 200*ui->zoom_level;
-    f32 height = 50*ui->zoom_level;
+    f32 height = 80*ui->zoom_level;
+    f32 text_ratio = 0.006f*width;
     f32 offset = 0;
     
+    int sibling_count = 0;
+    f32 line_y_start = pos.y;
     while(block){
         
         
@@ -1523,7 +1576,7 @@ draw_blocks(v2f pos, Block* block){
         push_rectangle(shadow_rect, 3, ui->theme.block);
         
         
-        v2f text_size = get_text_size(block->string, 1.0f);
+        v2f text_size = get_text_size(block->string, text_ratio);
         v2f text_pos = rect.pos;
         
         text_pos.y += rect.height/2.0;
@@ -1531,7 +1584,7 @@ draw_blocks(v2f pos, Block* block){
         
         text_pos.x += 10;
         
-        push_string(text_pos, block->string, ui->theme.text, 1.0f);
+        push_string(text_pos, block->string, ui->theme.text, text_ratio);
         
         if(block->first_child){
             f32 child_offset = draw_blocks(pos + v2f(width + 5, 0), block->first_child);
@@ -1541,9 +1594,15 @@ draw_blocks(v2f pos, Block* block){
         else{
             offset += height + 20;
             pos.y += height + 20;
+            
         }
         block = block->next_sibling;
-        
+        sibling_count++;
+    }
+    if(sibling_count > 1){ 
+        f32 line_height = sibling_count*(height + 20)-20;
+        if(offset > line_height) line_height = offset; 
+        push_rectangle(v4f(pos.x - 3, line_y_start,  3, line_height), 1, ui->theme.block_border1);
     }
     
     return offset;

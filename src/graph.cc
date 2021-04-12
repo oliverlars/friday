@@ -44,6 +44,7 @@ make_child_block(Block* at, char* name){
 
 internal Block*
 make_sibling_block_after(Block* at, char* name){
+    assert(0);
     auto block = make_block(&editor->block_pool, name);
     
     block->next_sibling = at->next_sibling;
@@ -53,7 +54,7 @@ make_sibling_block_after(Block* at, char* name){
     block->prev_sibling = at;
     
     if (block->next_sibling){
-        block->next_sibling->prev_sibling = block;
+        //block->next_sibling->prev_sibling = block;
     }
     
     block->parent = at->parent;
@@ -64,20 +65,17 @@ internal Block*
 make_sibling_block_before(Block* at, char* name){
     
     auto block = make_block(&editor->block_pool, name);
-    
-    block->prev_sibling = at->prev_sibling;
-    
-    at->prev_sibling = block;
-    
-    block->next_sibling = at;
-    
-    if (block->prev_sibling){
-        block->prev_sibling->next_sibling = block;
-    }else{
+    if(at->prev_sibling){
+        block->next_sibling = at;
+        block->prev_sibling = at->prev_sibling;
+        at->prev_sibling->next_sibling = block;
+        at->prev_sibling = block;
+    }else {
+        at->prev_sibling = block;
+        block->next_sibling = at;
         at->parent->first_child = block;
     }
     block->parent = at->parent;
-    
     return block;
 }
 

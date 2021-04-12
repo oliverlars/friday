@@ -1485,52 +1485,67 @@ draw_backdrop_grid(){
     
 }
 
-
-internal void
-draw_blocks(v2f pos, Block* block) {
-    if(!block) return;
-    v4f rect = v4f(pos.x,pos.y, 200*ui->zoom_level, 50*ui->zoom_level);
+internal f32
+draw_blocks(v2f pos, Block* block){
+    if(!block){
+        return 0;
+    }
     
-    if(is_in_rect(platform->mouse_position, rect)){
-        if(has_left_clicked()){
-            ui->active_block = block;
+    f32 width = 200*ui->zoom_level;
+    f32 height = 50*ui->zoom_level;
+    f32 offset = 0;
+    
+    while(block){
+        
+        
+        
+        v4f rect = v4f(pos.x,pos.y, width, height);
+        
+        
+        if(is_in_rect(platform->mouse_position, rect)){
+            if(has_left_clicked()){
+                ui->active_block = block;
+            }
+            ui->hot_block = block; 
         }
-        ui->hot_block = block; 
+        
+        Colour border = ui->theme.block_shadow;
+        if(ui->hot_block == block){
+            border = ui->theme.cursor_lighter;
+        }
+        if(ui->active_block == block){
+            border = ui->theme.cursor;
+        }
+        
+        push_rectangle(rect, 5, border);
+        
+        v4f shadow_rect = inflate_rect(rect, -4);
+        push_rectangle(shadow_rect, 3, ui->theme.block);
+        
+        
+        v2f text_size = get_text_size(block->string, 1.0f);
+        v2f text_pos = rect.pos;
+        
+        text_pos.y += rect.height/2.0;
+        text_pos.y -= text_size.height/2.0;
+        
+        text_pos.x += 10;
+        
+        push_string(text_pos, block->string, ui->theme.text, 1.0f);
+        
+        if(block->first_child){
+            f32 child_offset = draw_blocks(pos + v2f(width + 5, 0), block->first_child);
+            pos.y += child_offset;
+            offset += child_offset;
+        }
+        else{
+            offset += height + 20;
+            pos.y += height + 20;
+        }
+        block = block->next_sibling;
+        
     }
     
-    Colour border = ui->theme.block_shadow;
-    if(ui->hot_block == block){
-        border = ui->theme.cursor_lighter;
-    }
-    if(ui->active_block == block){
-        border = ui->theme.cursor;
-    }
-    
-    push_rectangle(rect, 5, border);
-    
-    v4f shadow_rect = inflate_rect(rect, -4);
-    push_rectangle(shadow_rect, 3, ui->theme.block);
-    
-    v2f text_size = get_text_size(block->string, 1.0f);
-    v2f text_pos = rect.pos;
-    
-    text_pos.y += rect.height/2.0;
-    text_pos.y -= text_size.height/2.0;
-    
-    text_pos.x += 10;
-    
-    push_string(text_pos, block->string, ui->theme.text, 1.0f);
-    
-    auto sibling = block->next_sibling;
-    v2f sibling_pos = pos;
-    
-    for(; sibling; sibling = sibling->next_sibling){
-        sibling_pos.y += rect.height + 5;
-        draw_blocks(sibling_pos, sibling);
-    }
-    
-    pos.x += rect.width + 5;
-    draw_blocks(pos, block->first_child);
-    
+    return offset;
     
 }

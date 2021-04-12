@@ -142,8 +142,23 @@ PERMANENT_LOAD {
     cursor.arc = editor->root;
     cursor.string = &editor->root->string;
     
-    editor->block_start = make_block(&editor->block_pool, "Hello");
-    make_child_block(editor->block_start, "Parallel!");
+    editor->block_start = make_block(&editor->block_pool, "Root");
+    
+#if 0
+    editor->block_start->first_child = make_block(&editor->block_pool, "First Child 1");
+    
+    editor->block_start->last_child = editor->block_start->first_child;
+    
+    editor->block_start->first_child->first_child = make_block(&editor->block_pool, "First Child 2");
+    editor->block_start->first_child->last_child = editor->block_start->first_child->first_child;
+    
+    editor->block_start->first_child->first_child->next_sibling = make_block(&editor->block_pool, "First Sibling");
+    editor->block_start->first_child->first_child->next_sibling->next_sibling = make_block(&editor->block_pool, "Next Sibling");
+    
+    editor->block_start->first_child->next_sibling = make_block(&editor->block_pool, "First Sibling");
+#endif
+    
+    //make_child_block(editor->block_start, "Parallel!");
 }
 
 HOT_LOAD {
@@ -228,8 +243,9 @@ UPDATE {
             }
         }
         
-        draw_blocks(ui->offset + v2f(platform->window_size.width/2.0,
-                                     platform->window_size.height/2.0), editor->block_start);
+        v2f pos = ui->offset + v2f(platform->window_size.width/2.0,
+                                   platform->window_size.height/2.0);
+        draw_blocks(pos, editor->block_start);
         ui->hot_block = nullptr;
         platform->refresh_screen();
     }

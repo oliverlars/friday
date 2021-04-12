@@ -1542,7 +1542,7 @@ draw_blocks(v2f pos, Block* block){
     }
     
     f32 width = 200*ui->zoom_level;
-    f32 height = 80*ui->zoom_level;
+    f32 height = 50*ui->zoom_level;
     f32 text_ratio = 0.006f*width;
     f32 offset = 0;
     
@@ -1569,6 +1569,18 @@ draw_blocks(v2f pos, Block* block){
         if(ui->active_block == block){
             border = ui->theme.cursor;
         }
+        f32 child_offset = 0;
+        if(block->first_child){
+            push_rectangle(v4f(rect.x+width, rect.y+height/2.0, 50, 10), 1, ui->theme.block_border1);
+            child_offset = draw_blocks(pos + v2f(width + 40, 0), block->first_child);
+            pos.y += child_offset;
+            offset += child_offset;
+        }
+        else{
+            offset += height + 40;
+            pos.y += height + 40;
+            
+        }
         
         push_rectangle(rect, 5, border);
         
@@ -1586,23 +1598,21 @@ draw_blocks(v2f pos, Block* block){
         
         push_string(text_pos, block->string, ui->theme.text, text_ratio);
         
-        if(block->first_child){
-            f32 child_offset = draw_blocks(pos + v2f(width + 5, 0), block->first_child);
-            pos.y += child_offset;
-            offset += child_offset;
-        }
-        else{
-            offset += height + 20;
-            pos.y += height + 20;
-            
-        }
         block = block->next_sibling;
         sibling_count++;
+        
+        if(block){
+            f32 line_height = (height + 40);
+            if(child_offset > line_height) line_height =  child_offset;
+            push_rectangle(v4f(rect.x+width/2.0, rect.y+height, 10, line_height), 1, ui->theme.block_border1);
+        }
+        
     }
-    if(sibling_count > 1){ 
-        f32 line_height = sibling_count*(height + 20)-20;
+    if(sibling_count > 1 && 0){ 
+        f32 line_height = sibling_count*(height + 40);
         if(offset > line_height) line_height = offset; 
-        push_rectangle(v4f(pos.x - 3, line_y_start,  3, line_height), 1, ui->theme.block_border1);
+        push_rectangle(v4f(pos.x + width/2.0, line_y_start + height/2.0,  10, line_height-40 - height), 
+                       1, ui->theme.block_border1);
     }
     
     return offset;

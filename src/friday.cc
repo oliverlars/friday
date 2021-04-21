@@ -186,7 +186,7 @@ UPDATE {
                 ui->target_zoom_level += delta.y*0.005f;
             }
             lerp(&ui->zoom_level, ui->target_zoom_level, 0.1);
-            clampf(&ui->zoom_level, 1, 5);
+            clampf(&ui->zoom_level, 0.5, 5);
         }
         {
             v2f delta = {};

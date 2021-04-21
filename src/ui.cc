@@ -1512,27 +1512,72 @@ draw_backdrop_grid(){
     f32 size = 20.0f*ui->zoom_level;
     f32 width = platform->window_size.width;
     f32 height  = platform->window_size.height;
+    
+    f32 half_width = width/2.0f;
+    f32 half_height = height/2.0f;
+    
     v4f background = v4f(0,0,width, height);
     
     push_rectangle(background, 1, ui->theme.background);
-    
-    for(f32 x = 0; x < width; x += size){
-        v4f rect = {};
-        rect.x = x + ((int)ui->offset.x % (int)size);
-        rect.y = 0;
-        rect.width = 1;
-        rect.height = height;
-        push_rectangle(rect, 1, ui->theme.sub_background);
+    for(f32 x1 = half_width, x2 = half_width; x1 < width && x2 >= 0; x1 += size, x2 -= size){
+        
+        v4f rect1 = {};
+        rect1.x = x1 + ((int)ui->offset.x % (int)size);
+        rect1.y = 0;
+        rect1.width = 1;
+        rect1.height = height;
+        push_rectangle(rect1, 1, ui->theme.sub_background);
+        
+        v4f rect2 = {};
+        rect2.x = x2 + ((int)ui->offset.x % (int)size);
+        rect2.y = 0;
+        rect2.width = 1;
+        rect2.height = height;
+        push_rectangle(rect2, 1, ui->theme.sub_background);
+        
     }
-    for(f32 y = 0; y < height; y += size){
-        v4f rect = {};
-        rect.x = 0;
-        rect.y = y + ((int)ui->offset.y % (int)size);
-        rect.width = width;
-        rect.height = 1;
-        push_rectangle(rect, 1, ui->theme.sub_background);
+    
+    
+    for(f32 y1 = half_height, y2 = half_height; y1 < height && y2 >= 0; y1 += size, y2 -= size){
+        
+        v4f rect1 = {};
+        rect1.x = 0;
+        rect1.y = y1 + ((int)ui->offset.y % (int)size);
+        rect1.width = width;
+        rect1.height = 1;
+        push_rectangle(rect1, 1, ui->theme.sub_background);
+        
+        v4f rect2 = {};
+        rect2.x = 0;
+        rect2.y = y2 + ((int)ui->offset.y % (int)size);
+        rect2.width = width;
+        rect2.height = 1;
+        push_rectangle(rect2, 1, ui->theme.sub_background);
+        
     }
     
+}
+
+internal f32
+get_height_of_blocks(Block* block){
+    
+    f32 width = 200*ui->zoom_level;
+    f32 height = 50*ui->zoom_level;
+    f32 offset = 0;
+    while(block){
+        
+        f32 child_offset = 0;
+        if(block->first_child){
+            child_offset = get_height_of_blocks(block->first_child);
+            offset += child_offset;
+        }
+        else{
+            offset += height + 40;
+        }
+        
+        block = block->next_sibling;
+    }
+    return offset;
 }
 
 internal f32
@@ -1548,6 +1593,8 @@ draw_blocks(v2f pos, Block* block){
     
     int sibling_count = 0;
     f32 line_y_start = pos.y;
+    
+    
     while(block){
         
         
@@ -1569,17 +1616,17 @@ draw_blocks(v2f pos, Block* block){
         if(ui->active_block == block){
             border = ui->theme.cursor;
         }
+        
         f32 child_offset = 0;
         if(block->first_child){
             push_rectangle(v4f(rect.x+width, rect.y+height/2.0, 50, 10), 1, ui->theme.block_border1);
-            child_offset = draw_blocks(pos + v2f(width + 40, 0), block->first_child);
+            child_offset = draw_blocks(pos + v2f(width + 40 , 0), block->first_child);
             pos.y += child_offset;
             offset += child_offset;
         }
         else{
             offset += height + 40;
             pos.y += height + 40;
-            
         }
         
         push_rectangle(rect, 5, border);

@@ -1513,8 +1513,8 @@ draw_backdrop_grid(){
     f32 width = platform->window_size.width;
     f32 height  = platform->window_size.height;
     
-    f32 half_width = width/2.0f;
-    f32 half_height = height/2.0f;
+    f32 half_width = round(width/2.0f);
+    f32 half_height = round(height/2.0f);
     
     v4f background = v4f(0,0,width, height);
     

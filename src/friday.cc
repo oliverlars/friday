@@ -135,8 +135,13 @@ PERMANENT_LOAD {
     
     editor->program = global_scope;
     editor->root = make_arc_node(&editor->arc_pool);
-    cursor.arc = editor->root;
-    cursor.string = &editor->root->string;
+    arc_set_property(editor->root, AP_AST);
+    editor->root->ast_type = AST_SCOPE;
+    editor->root->first_child = make_arc_node(&editor->arc_pool);
+    editor->root->last_child = editor->root->first_child;
+    
+    cursor.arc = editor->root->first_child;
+    cursor.string = &editor->root->first_child->string;
     
 }
 
@@ -176,15 +181,18 @@ UPDATE {
                 auto parent = cursor.arc->parent;
                 
                 if(parent && parent->ast_type == AST_DECLARATION){
-                    
                     arc_set_property(cursor.arc, AP_AST);
-                    
-                    cursor.arc->ast_type = AST_TYPE_USAGE;
-                    
                     auto next = make_arc_node(&editor->arc_pool);
-                    insert_arc_node_as_child(cursor.arc->parent->parent, next);
-                    cursor.arc = next;
                     
+                    if(cursor.arc->prev_sibling){
+                        cursor.arc->ast_type = AST_TOKEN;
+                        make_sibling_arc_node_after(cursor.arc->parent, next);
+                    }else {
+                        cursor.arc->ast_type = AST_TYPE_USAGE;
+                        make_arc_node_child(cursor.arc->parent, next);
+                    }
+                    
+                    cursor.arc = next;
                     presenter->mode = P_EDIT;
                 }
                 else if(parent && parent->parent->ast_tag == AT_PARAMS){

@@ -1143,9 +1143,10 @@ widget_render_text(Widget* widget, Colour colour){
     f32 text_x = centre - text_centre;
     
     v4f shadow_colour = v4f_from_colour(colour);
-    shadow_colour.r /= 2;
-    shadow_colour.g /= 2;
-    shadow_colour.b /= 2;
+    shadow_colour.r /= 8;
+    shadow_colour.g /= 8;
+    shadow_colour.b /= 8;
+    shadow_colour.a = 1;
     push_string(v2f(text_x+1.5, bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour));
     push_string(v2f(text_x, bbox.y), widget->string, colour);
 }

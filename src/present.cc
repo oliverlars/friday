@@ -907,6 +907,12 @@ present_declaration(Arc_Node* node){
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_arc(node->first_child);
+            if(node->first_child && node->first_child->next_sibling){
+                present_space();
+                present_string(ui->theme.text_misc, make_string("="));
+                present_space();
+                present_arc(node->first_child->next_sibling);
+            }
         }
     }
 }
@@ -1001,9 +1007,11 @@ present_ast(Arc_Node* node){
                 while(member){
                     present_arc(member);
                     member = member->next_sibling;
-                    
                 }
             }
+        }break;
+        case AST_TOKEN: {
+            present_string(ui->theme.text_literal, node->string);
         }break;
     }
 }

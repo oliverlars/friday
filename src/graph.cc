@@ -273,6 +273,38 @@ insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node){
     next_sibling->prev_sibling = node;
 }
 
+internal Arc_Node*
+make_arc_node_child(Arc_Node* at, Arc_Node* block){
+    if(at->last_child){
+        at->last_child->next_sibling = block;
+        block->prev_sibling = at->last_child;
+        block->parent = at;
+        at->last_child = block;
+    }else {
+        at->last_child = block;
+        at->first_child = block;
+        block->parent = at;
+    }
+    return block;
+}
+internal Arc_Node*
+make_sibling_arc_node_after(Arc_Node* at, Arc_Node* block){
+    
+    block->next_sibling = at->next_sibling;
+    
+    at->next_sibling = block;
+    
+    block->prev_sibling = at;
+    
+    if (block->next_sibling){
+        block->next_sibling->prev_sibling = block;
+    }
+    
+    block->parent = at->parent;
+    return block;
+}
+
+
 internal void
 insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
     assert(at);

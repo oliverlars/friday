@@ -34,6 +34,7 @@ struct Present_Node {
 };
 
 struct Presenter_State {
+    
     Present_Node* lines;
     Present_Node* last_lines;
     
@@ -44,7 +45,10 @@ struct Presenter_State {
     
     Present_Mode mode;
     Present_Context context;
+    
+    
 };
+global Arc_Node* highlight_reference;
 
 struct Cursor {
     Present_Node* at;

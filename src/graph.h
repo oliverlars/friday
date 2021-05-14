@@ -72,6 +72,7 @@ struct Arc_Node {
     
     u64 properties[(ARC_PROPERTIES_MAX+63)/64];
     
+    Arc_Node* reference;
     Ast_Type ast_type;
     Ast_Tag ast_tag;
     Token_Type token_type;

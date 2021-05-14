@@ -37,7 +37,7 @@ advance_cursor(Cursor_Direction dir){
             
         }break;
         case CURSOR_LEFT:{
-            if(cursor.arc->parent){
+            if(cursor.arc->parent && !cursor.arc->prev_sibling){
                 cursor.arc = cursor.arc->parent;
             }else if(cursor.arc->prev_sibling){
                 cursor.arc = cursor.arc->prev_sibling;
@@ -47,7 +47,7 @@ advance_cursor(Cursor_Direction dir){
             pos = cursor.arc->string.length;
         }break;
         case CURSOR_RIGHT:{
-            if(cursor.arc->first_child){
+            if(cursor.arc->first_child && !cursor.arc->next_sibling){
                 cursor.arc = cursor.arc->first_child;
             }else if(cursor.arc->next_sibling){
                 cursor.arc = cursor.arc->next_sibling;
@@ -798,6 +798,18 @@ edit_text(Arc_Node* node){
     }
 }
 
+internal void present_editable_string(Colour colour, Arc_Node* node);
+
+internal void set_token_type(Arc_Node* node);
+
+internal void
+present_editable_reference(Colour colour, Arc_Node* node){
+    node->string = make_stringf(&platform->frame_arena, "%.*s", node->reference->string.length,
+                                node->reference->string.text);
+    present_editable_string(colour, node);
+    set_token_type(node);
+}
+
 internal void
 present_editable_string(Colour colour, Arc_Node* node){
     
@@ -814,6 +826,11 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget->style.text_colour = v4f_from_colour(colour);
     widget->style.text_colour.a = 0;
     
+    widget->arc = node;
+    
+    if(ui->hot == widget->id){
+        highlight_reference = node->reference;
+    }
     
     auto render_hook = [](Widget* widget ){
         v2f pos = widget->pos;
@@ -822,18 +839,25 @@ present_editable_string(Colour colour, Arc_Node* node){
         
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
+        v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
+        if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
+            push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
+        }
+        
         if(ui->active == widget->id){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
             lerp(&cursor.pos.x, next.x, 0.4f);
             lerp(&cursor.pos.y, next.y, 0.4f);
+            
             if(presenter->mode == P_CREATE){
                 push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
             }else {
                 push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
             }
         }
+        
     };
     
     widget->render_hook = render_hook;
@@ -865,6 +889,10 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     if(result.clicked){
         ui->cursor_pos = string->length;
+    }
+    
+    if(result.hovered && node->reference){
+        highlight_reference = node->reference;
     }
     
 }
@@ -1014,7 +1042,7 @@ present_ast(Arc_Node* node){
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
-                present_editable_string(ui->theme.text_function, node);
+                present_editable_reference(ui->theme.text_function, node);
             }else{
                 present_editable_string(ui->theme.text_literal, node);
             }

@@ -164,6 +164,7 @@ set_token_type(Arc_Node* node){
     while(decl){
         if(string_eq(decl->string, node->string)){
             node->token_type = TOKEN_REFERENCE;
+            node->reference = decl;
             return;
         }
         decl = decl->prev_sibling;
@@ -319,7 +320,7 @@ UPDATE {
             }
             
         }
-        
+        highlight_reference = nullptr;
     }
     platform->refresh_screen();
 }

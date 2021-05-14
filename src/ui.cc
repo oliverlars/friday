@@ -692,6 +692,7 @@ update_widget(Widget* widget){
     UI_ID last_active = ui->active;
     
     Widget* last_widget = get_widget(widget->string);
+    
     // NOTE(Oliver): gotta stop special casing for the widgets
     if(widget_has_property(widget, WP_WINDOW) ||
        widget_has_property(widget, WP_MANUAL_LAYOUT)){
@@ -704,6 +705,7 @@ update_widget(Widget* widget){
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         if(is_in_rect(platform->mouse_position, bbox) || ui->active == widget->id){
             v2f delta = {};
+            result.hovered = true;
             if(!widget_has_property(widget, WP_CONTAINER) && has_left_clicked()){
                 ui->active = widget->id;
                 result.clicked = true;

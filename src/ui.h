@@ -29,6 +29,7 @@ enum Widget_Property {
     WP_RENDER_CORNERS,
     WP_RENDER_DOUBLE_BORDER,
     WP_RENDER_BACKGROUND,
+    WP_RENDER_UNDERLINE,
     WP_LERP_POSITION,
     WP_LERP_COLOURS,
     WP_CLICKABLE,
@@ -63,6 +64,8 @@ struct Widget_State {
     
 };
 
+struct Arc_Node;
+
 struct Widget {
     UI_ID id;
     String8 string;
@@ -77,6 +80,8 @@ struct Widget {
     Widget* parent;
     
     u64 properties[(PROPERTIES_MAX-63)/64];
+    
+    Arc_Node* arc;
     
     v2f min;
     v2f max;
@@ -98,6 +103,7 @@ struct Widget {
 struct Widget_Update {
     b32 clicked;
     b32 dragged;
+    b32 hovered;
     v2f delta;
     v2f clicked_position;
     v2f pos;
@@ -159,6 +165,7 @@ struct UI_State {
     
     UI_ID hot;
     UI_ID active;
+    
     
     Widget* root;
     

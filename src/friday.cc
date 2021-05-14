@@ -175,18 +175,47 @@ UPDATE {
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
         auto string = &cursor.arc->string;
+        auto parent = cursor.arc->parent;
         
         if(presenter->mode == P_EDIT){
+            
+            if(parent && parent->ast_type == AST_DECLARATION){
+                bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
+                bool minus = has_pressed_key(KEY_MINUS);
+                bool times = has_pressed_key_modified(KEY_8, KEY_MOD_SHIFT);
+                if(plus || minus || times){
+                    arc_set_property(cursor.arc, AP_AST);
+                    cursor.arc->ast_type = AST_TOKEN;
+                    cursor.arc->token_type = TOKEN_LITERAL;
+                    cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
+                    auto op = make_arc_node(&editor->arc_pool);
+                    make_sibling_arc_node_after(cursor.arc, op);
+                    if(plus){
+                        op->string = make_string("+");
+                    }else if(minus){
+                        op->string = make_string("-");
+                    }else if(times){
+                        op->string = make_string("*");
+                    }
+                    
+                    arc_set_property(op, AP_AST);
+                    op->ast_type = AST_TOKEN;
+                    
+                    auto next = make_arc_node(&editor->arc_pool);
+                    make_sibling_arc_node_after(op, next);
+                    cursor.arc = next;
+                }
+            }
+            
             if(has_pressed_key(KEY_ENTER)){
-                auto parent = cursor.arc->parent;
                 
                 if(parent && parent->ast_type == AST_DECLARATION){
                     arc_set_property(cursor.arc, AP_AST);
                     auto next = make_arc_node(&editor->arc_pool);
                     
                     if(cursor.arc->prev_sibling){
-                        cursor.arc->ast_type = AST_TOKEN;
                         make_sibling_arc_node_after(cursor.arc->parent, next);
+                        cursor.arc->ast_type = AST_TOKEN;
                     }else {
                         cursor.arc->ast_type = AST_TYPE_USAGE;
                         make_arc_node_child(cursor.arc->parent, next);

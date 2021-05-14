@@ -1011,7 +1011,13 @@ present_ast(Arc_Node* node){
             }
         }break;
         case AST_TOKEN: {
-            present_string(ui->theme.text_literal, node->string);
+            if(node->token_type == TOKEN_MISC){
+                present_editable_string(ui->theme.text_misc, node);
+            }else{
+                present_editable_string(ui->theme.text_literal, node);
+            }
+            present_space();
+            present_arc(node->next_sibling);
         }break;
     }
 }

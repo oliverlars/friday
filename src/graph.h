@@ -74,11 +74,9 @@ struct Arc_Node {
     
     Ast_Type ast_type;
     Ast_Tag ast_tag;
+    Token_Type token_type;
     bool is_initialised;
     s64 number_of_pointers;
-    Literal_Type literal_type;
-    f32 _float;
-    s32 _int;
 };
 
 struct Ast_Node {

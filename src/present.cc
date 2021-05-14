@@ -866,6 +866,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     {
         if(cursor.arc == node){
             ui->active = widget->id;
+            if(node->reference) highlight_reference = node->reference;
             edit_text(cursor.arc);
         }
     }

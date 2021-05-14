@@ -170,6 +170,7 @@ struct Ast_Node {
 
 internal void remove_node_at(Ast_Node* at);
 
+internal void remove_arc_node_at(Arc_Node** head, Arc_Node* at);
 
 internal bool
 arc_has_property(Arc_Node* arc, Arc_Property property);

@@ -285,7 +285,7 @@ edit_text(Widget* widget){
             pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            remove_node_at(cursor.at->node);
+            remove_arc_node_at(&cursor.arc->parent->first_child, cursor.arc);
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -774,7 +774,7 @@ edit_text(Arc_Node* node){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            arc_remove_property(cursor.arc, AP_AST);
+            remove_arc_node_at(&cursor.arc->parent->first_child, cursor.arc);
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -793,7 +793,7 @@ edit_text(Arc_Node* node){
             insert_in_string(string,
                              event->character,
                              ui->cursor_pos++);
-            platform_consume_event(event);
+            //platform_consume_event(event);
         }
     }
 }

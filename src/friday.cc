@@ -199,7 +199,9 @@ UPDATE {
                 bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
                 bool minus = has_pressed_key(KEY_MINUS);
                 bool times = has_pressed_key_modified(KEY_8, KEY_MOD_SHIFT);
-                if(plus || minus || times){
+                bool left_paren = has_pressed_key_modified(KEY_9, KEY_MOD_SHIFT);
+                bool right_paren = has_pressed_key_modified(KEY_0, KEY_MOD_SHIFT);
+                if((plus || minus || times || left_paren || right_paren)){
                     arc_set_property(cursor.arc, AP_AST);
                     cursor.arc->ast_type = AST_TOKEN;
                     cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
@@ -207,11 +209,15 @@ UPDATE {
                     auto op = make_arc_node(&editor->arc_pool);
                     make_sibling_arc_node_after(cursor.arc, op);
                     if(plus){
-                        op->string = make_string("+");
+                        insert_in_string(&op->string, '+', 0);
                     }else if(minus){
-                        op->string = make_string("-");
+                        insert_in_string(&op->string, '-', 0);
                     }else if(times){
-                        op->string = make_string("*");
+                        insert_in_string(&op->string, '*', 0);
+                    }else if(left_paren){
+                        insert_in_string(&op->string, '(', 0);
+                    }else if(right_paren){
+                        insert_in_string(&op->string, ')', 0);
                     }
                     
                     arc_set_property(op, AP_AST);
@@ -220,6 +226,15 @@ UPDATE {
                     auto next = make_arc_node(&editor->arc_pool);
                     make_sibling_arc_node_after(op, next);
                     cursor.arc = next;
+                }
+                
+                if(cursor.arc->ast_type == AST_TOKEN && cursor.arc->token_type == TOKEN_MISC){
+                    if(has_input_character(0)){
+                        cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
+                        auto next = make_arc_node(&editor->arc_pool);
+                        make_sibling_arc_node_after(cursor.arc, next);
+                        cursor.arc = next;
+                    }
                 }
             }
             

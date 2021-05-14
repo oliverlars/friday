@@ -213,7 +213,9 @@ has_input_character(Platform_Event **event_out){
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
         if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-            *event_out = event;
+            if(event_out){
+                *event_out = event;
+            }
             result = 1;
         }
     }

@@ -166,6 +166,23 @@ make_arc_node(Pool* pool){
 }
 
 internal void
+remove_arc_node_at(Arc_Node** head, Arc_Node* at){
+    if (!*head || !at) return;
+    
+    if (*head == at)
+        *head = at->next_sibling;
+    
+    if (at->next_sibling)
+        at->next_sibling->prev_sibling = at->prev_sibling;
+    
+    if (at->prev_sibling)
+        at->prev_sibling->next_sibling = at->next_sibling;
+    
+    pool_clear(&editor->arc_pool, at);
+    return;
+}
+
+internal void
 insert_node_at(Ast_Node* node, Ast_Node* at){
     if(!at) return;
     if(at->next){
@@ -180,26 +197,6 @@ insert_node_at(Ast_Node* node, Ast_Node* at){
         at->next = node;
         node->prev = at;
         node->next = nullptr;
-    }
-    
-}
-
-internal void
-remove_node_at(Ast_Node* at){
-    if(!at) return;
-    
-    if(!at->prev && at->next){
-        at->next->prev = nullptr;
-    }
-    
-    if(at->next){
-        at->next->prev = at->prev;
-    }
-    
-    if(at->prev){
-        at->prev->next = at->next;
-    }else {
-        
     }
     
 }

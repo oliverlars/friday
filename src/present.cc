@@ -1013,6 +1013,8 @@ present_ast(Arc_Node* node){
         case AST_TOKEN: {
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
+            }else if(node->token_type == TOKEN_REFERENCE){
+                present_editable_string(ui->theme.text_function, node);
             }else{
                 present_editable_string(ui->theme.text_literal, node);
             }

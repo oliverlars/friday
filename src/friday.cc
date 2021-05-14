@@ -157,6 +157,21 @@ HOT_UNLOAD {
 }
 
 
+internal void
+set_token_type(Arc_Node* node){
+    auto decl = node->parent;
+    decl = decl->prev_sibling;
+    while(decl){
+        if(string_eq(decl->string, node->string)){
+            node->token_type = TOKEN_REFERENCE;
+            return;
+        }
+        decl = decl->prev_sibling;
+    }
+    node->token_type = TOKEN_LITERAL;
+}
+
+
 UPDATE {
     FRAME
     {
@@ -186,8 +201,8 @@ UPDATE {
                 if(plus || minus || times){
                     arc_set_property(cursor.arc, AP_AST);
                     cursor.arc->ast_type = AST_TOKEN;
-                    cursor.arc->token_type = TOKEN_LITERAL;
                     cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
+                    set_token_type(cursor.arc);
                     auto op = make_arc_node(&editor->arc_pool);
                     make_sibling_arc_node_after(cursor.arc, op);
                     if(plus){
@@ -216,6 +231,7 @@ UPDATE {
                     if(cursor.arc->prev_sibling){
                         make_sibling_arc_node_after(cursor.arc->parent, next);
                         cursor.arc->ast_type = AST_TOKEN;
+                        set_token_type(cursor.arc);
                     }else {
                         cursor.arc->ast_type = AST_TYPE_USAGE;
                         make_arc_node_child(cursor.arc->parent, next);

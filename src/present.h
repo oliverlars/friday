@@ -35,14 +35,6 @@ struct Present_Node {
 
 struct Presenter_State {
     
-    Present_Node* lines;
-    Present_Node* last_lines;
-    
-    Present_Node* line;
-    
-    Present_Node** table;
-    Present_Node** last_table;
-    
     Present_Mode mode;
     Present_Context context;
     

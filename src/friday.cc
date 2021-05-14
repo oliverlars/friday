@@ -46,13 +46,6 @@ start_frame(){
     ui->last_widget_table = ui->widget_table;
     ui->widget_table = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
     
-    // TODO(Oliver): tidy this up
-    presenter->last_table = presenter->table;
-    presenter->table = (Present_Node**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Present_Node*));
-    presenter->last_lines = presenter->lines;
-    presenter->lines = 0;
-    presenter->line = 0;
-    
     opengl_start_frame();
 }
 
@@ -234,6 +227,16 @@ UPDATE {
                         auto next = make_arc_node(&editor->arc_pool);
                         make_sibling_arc_node_after(cursor.arc, next);
                         cursor.arc = next;
+                        
+                        Platform_Event* event = 0;
+                        for (;platform_get_next_event(&event);){
+                            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+                                insert_in_string(&cursor.arc->string,
+                                                 event->character,
+                                                 ui->cursor_pos++);
+                                platform_consume_event(event);
+                            }
+                        }
                     }
                 }
             }

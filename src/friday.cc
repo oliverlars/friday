@@ -150,7 +150,7 @@ UPDATE {
         auto parent = cursor.at->parent;
         
         if(presenter->mode == P_EDIT){
-            if(parent && parent->ast_type == AST_DECLARATION){
+            if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION)){
                 bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
                 bool minus = has_pressed_key(KEY_MINUS);
                 bool times = has_pressed_key_modified(KEY_8, KEY_MOD_SHIFT);
@@ -162,7 +162,7 @@ UPDATE {
                     cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
                     set_token_type(cursor.at);
                     auto op = make_selectable_arc_node(&editor->arc_pool);
-                    make_sibling_arc_node_after(cursor.at, op);
+                    insert_arc_node_as_sibling(cursor.at, op);
                     if(plus){
                         insert_in_string(&op->string, '+', 0);
                     }else if(minus){
@@ -179,7 +179,7 @@ UPDATE {
                     op->ast_type = AST_TOKEN;
                     
                     auto next = make_selectable_arc_node(&editor->arc_pool);
-                    make_sibling_arc_node_after(op, next);
+                    insert_arc_node_as_sibling(op, next);
                     cursor.at = next;
                 }
                 
@@ -187,7 +187,7 @@ UPDATE {
                     if(has_input_character(0)){
                         cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
                         auto next = make_selectable_arc_node(&editor->arc_pool);
-                        make_sibling_arc_node_after(cursor.at, next);
+                        insert_arc_node_as_sibling(cursor.at, next);
                         cursor.at = next;
                         
                         Platform_Event* event = 0;
@@ -205,19 +205,22 @@ UPDATE {
             
             if(has_pressed_key(KEY_ENTER)){
                 presenter->mode = P_CREATE;
-                if(parent && parent->ast_type == AST_DECLARATION){
+                Arc_Node* result;
+                if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
+                    auto decl = result;
+                    auto type = decl->first_child;
+                    auto expr = decl->last_child;
+                    
                     arc_set_property(cursor.at, AP_AST);
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     
-                    if(cursor.at->prev_sibling){
-                        auto expr = make_arc_node(&editor->arc_pool);
-                        make_sibling_arc_node_after(cursor.at->parent, expr);
-                        make_arc_node_child(expr, next);
+                    if(type->first_child->ast_type == AST_TYPE_USAGE){
+                        insert_arc_node_as_child(expr, next);
                         cursor.at->ast_type = AST_TOKEN;
                         set_token_type(cursor.at);
                     }else {
                         cursor.at->ast_type = AST_TYPE_USAGE;
-                        make_arc_node_child(cursor.at->parent, next);
+                        insert_arc_node_as_child(expr, next);
                     }
                     
                     cursor.at = next;
@@ -228,57 +231,12 @@ UPDATE {
         }
         
         if(presenter->mode == P_CREATE){
-            if(has_pressed_key(KEY_S)){
-                arc_set_property(cursor.at, AP_AST);
-                cursor.at->ast_type = AST_STRUCT;
-                
-                cursor.at->first_child = make_arc_node(&editor->arc_pool);
-                cursor.at->first_child->parent = cursor.at;
-                arc_set_property(cursor.at->first_child, AP_AST);
-                cursor.at->first_child->ast_type = AST_SCOPE;
-                
-                
-                cursor.at->first_child->first_child = make_arc_node(&editor->arc_pool);
-                cursor.at->first_child->first_child->parent = cursor.at->first_child;
-                
-                cursor.at = cursor.at->first_child->first_child;
-                presenter->mode = P_EDIT;
-            }
+            
             if(has_pressed_key(KEY_D)){
                 make_declaration_from_node(cursor.at, &editor->arc_pool);
-                cursor.at = cursor.at->first_child;
-                presenter->mode = P_EDIT;
-            }
-            if(has_pressed_key(KEY_F)){
-                arc_set_property(cursor.at, AP_AST);
-                
-                cursor.at->ast_type = AST_FUNCTION;
-                auto params = make_arc_node(&editor->arc_pool);
-                arc_set_property(params, AP_AST_TAG);
-                params->ast_tag = AT_PARAMS;
-                insert_arc_node_as_child(cursor.at, params);
-                
-                auto return_type = make_arc_node(&editor->arc_pool);
-                arc_set_property(return_type, AP_AST_TAG);
-                return_type->ast_tag = AT_RETURN_TYPE;
-                insert_arc_node_as_child(cursor.at, return_type);
-                
-                auto body = make_arc_node(&editor->arc_pool);
-                arc_set_property(body, AP_AST_TAG);
-                body->ast_tag = AT_BODY;
-                insert_arc_node_as_child(cursor.at, body);
-                
-                auto  first_decl = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(params, first_decl);
-                
-                auto type_expr = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(return_type, type_expr);
-                
-                auto scope = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(body, scope);
-                
-                cursor.at = first_decl;
-                
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                cursor.at = next;
                 presenter->mode = P_EDIT;
             }
             

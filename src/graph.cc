@@ -49,7 +49,26 @@ make_declaration(Pool* pool){
     insert_arc_node_as_child(decl, type);
     insert_arc_node_as_sibling(type, expr);
     
+    assert(is_sub_node_of_ast_type(type, AST_DECLARATION));
+    assert(is_sub_node_of_ast_type(expr, AST_DECLARATION));
+    
     return decl;
+}
+
+internal b32
+is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(arc_has_property(node, AP_AST)){
+            if(node->ast_type == type){
+                if(result) *result = node;
+                return true;
+            }
+        }
+        node = node->parent;
+    }
+    return false;
 }
 
 internal Arc_Node*
@@ -61,7 +80,18 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     auto expr = make_arc_node(pool);
     
     insert_arc_node_as_child(decl, type);
+    assert(!type->prev_sibling);
+    assert(!type->next_sibling);
+    assert(type->parent == decl);
+    assert(decl->first_child == type);
+    assert(decl->last_child == type);
     insert_arc_node_as_sibling(type, expr);
+    assert(decl->last_child == expr);
+    assert(decl->first_child == type);
+    assert(expr->prev_sibling == type);
+    assert(type->next_sibling == expr);
+    assert(type->parent == expr->parent);
+    assert(type->parent == decl);
     
     return decl;
 }
@@ -96,55 +126,26 @@ insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node){
     
     if(node->next_sibling){
         node->next_sibling->prev_sibling = node;
-    }
-    
-}
-
-internal Arc_Node*
-make_arc_node_child(Arc_Node* at, Arc_Node* block){
-    if(at->last_child){
-        at->last_child->next_sibling = block;
-        block->prev_sibling = at->last_child;
-        block->parent = at;
-        at->last_child = block;
     }else {
-        at->last_child = block;
-        at->first_child = block;
-        block->parent = at;
-    }
-    return block;
-}
-internal Arc_Node*
-make_sibling_arc_node_after(Arc_Node* at, Arc_Node* block){
-    
-    block->next_sibling = at->next_sibling;
-    
-    at->next_sibling = block;
-    
-    block->prev_sibling = at;
-    
-    if (block->next_sibling){
-        block->next_sibling->prev_sibling = block;
+        if(at->parent){
+            at->parent->last_child = node;
+        }
     }
     
-    block->parent = at->parent;
-    return block;
+    node->parent = at->parent;
+    
 }
-
 
 internal void
 insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
     assert(at);
     assert(node);
     if(at->last_child){
-        auto last_child = at->last_child;
-        at->last_child = node;
-        node->parent = at;
-        node->prev_sibling = last_child;
-        last_child->next_sibling = node;
+        insert_arc_node_as_sibling(at->last_child, node);
     }else {
         at->first_child = node;
         at->last_child = node;
         node->parent = at;
     }
+    
 }

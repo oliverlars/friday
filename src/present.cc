@@ -4,29 +4,32 @@ find_next_selectable(Arc_Node* node){
     if(!node) return nullptr;
     
     while(node){
-        if(arc_has_property(node, AP_SELECTABLE)) return node;
-        if(node->first_child){
-            find_next_selectable(node->first_child);
+        if(arc_has_property(node, AP_SELECTABLE)) {
+            //cursor.at = node;
+            return node;
+        }else {
+            auto result = find_next_selectable(node->first_child);
+            if(result) return result;
         }
         node = node->next_sibling;
     }
 }
 
 
-internal void
+internal Arc_Node*
 set_prev_selectable(Arc_Node* node){
-    if(!node) return;
+    if(!node) return nullptr;
     
     while(node){
         if(arc_has_property(node, AP_SELECTABLE)) {
-            cursor.at = node;
-            return;
+            //cursor.at = node;
+            return node;
         }
-        if(node->last_child){
-            set_prev_selectable(node->last_child);
-        }
+        auto result = set_prev_selectable(node->last_child);
+        if(result) return result;
         if(!node->prev_sibling){
-            node = node->parent;
+            while(!node->prev_sibling)
+                node = node->parent;
         }else{
             node = node->prev_sibling;
         }
@@ -45,21 +48,23 @@ advance_cursor(Cursor_Direction dir){
             
         }break;
         case CURSOR_LEFT:{
-            auto current = cursor.at;
+            Arc_Node* result;
             if(cursor.at->prev_sibling){
-                set_prev_selectable(cursor.at->prev_sibling);
+                result = set_prev_selectable(cursor.at->prev_sibling);
+                if(result) cursor.at = result;
             }else{
-                set_prev_selectable(cursor.at->parent);
+                result = set_prev_selectable(cursor.at->parent->prev_sibling);
+                if(result) cursor.at = result;
             }
             pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
             if(cursor.at->next_sibling){
-                cursor.at = cursor.at->next_sibling;
+                auto result = find_next_selectable(cursor.at->next_sibling);
+                if(result) cursor.at = result;
             }else {
-                if(cursor.at->parent){
-                    cursor.at = find_next_selectable(cursor.at->parent->next_sibling);
-                }
+                auto result = find_next_selectable(cursor.at->first_child);
+                if(result) cursor.at = result;
             }
         }break;
     }
@@ -494,12 +499,12 @@ present_declaration(Arc_Node* node){
             present_space();
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
-            present_arc(node->first_child);
-            if(node->first_child && node->first_child->next_sibling){
+            present_arc(node->first_child->first_child);
+            if(node->last_child->first_child){
                 present_space();
                 present_string(ui->theme.text_misc, make_string("="));
                 present_space();
-                present_arc(node->first_child->next_sibling);
+                present_arc(node->last_child->first_child);
             }
         }
     }

@@ -1,33 +1,41 @@
 
-internal void
-find_next_selectable(){
-    cursor.arc = cursor.arc->parent;
+internal Arc_Node*
+find_next_selectable(Arc_Node* node){
+    if(!node) return nullptr;
     
-    while(!cursor.arc->next_sibling){
-        cursor.arc = cursor.arc->parent;
-    }
-    cursor.arc = cursor.arc->next_sibling;
-    while(cursor.arc && cursor.arc->first_child){
-        cursor.arc = cursor.arc->first_child;
+    while(node){
+        if(arc_has_property(node, AP_SELECTABLE)) return node;
+        if(node->first_child){
+            find_next_selectable(node->first_child);
+        }
+        node = node->next_sibling;
     }
 }
 
+
 internal void
-find_prev_selectable(){
-    cursor.arc = cursor.arc->parent;
+set_prev_selectable(Arc_Node* node){
+    if(!node) return;
     
-    while(!cursor.arc->next_sibling){
-        cursor.arc = cursor.arc->parent;
-    }
-    cursor.arc = cursor.arc->next_sibling;
-    while(cursor.arc && cursor.arc->first_child){
-        cursor.arc = cursor.arc->first_child;
+    while(node){
+        if(arc_has_property(node, AP_SELECTABLE)) {
+            cursor.at = node;
+            return;
+        }
+        if(node->last_child){
+            set_prev_selectable(node->last_child);
+        }
+        if(!node->prev_sibling){
+            node = node->parent;
+        }else{
+            node = node->prev_sibling;
+        }
     }
 }
 
 internal void
 advance_cursor(Cursor_Direction dir){
-    if(!cursor.arc) return;
+    if(!cursor.at) return;
     int pos = 0;
     switch(dir){
         case CURSOR_UP:{
@@ -37,22 +45,21 @@ advance_cursor(Cursor_Direction dir){
             
         }break;
         case CURSOR_LEFT:{
-            if(cursor.arc->parent && !cursor.arc->prev_sibling){
-                cursor.arc = cursor.arc->parent->prev_sibling;
-            }else if(cursor.arc->prev_sibling){
-                cursor.arc = cursor.arc->prev_sibling;
-            }else {
-                //find_prev_selectable();
+            auto current = cursor.at;
+            if(cursor.at->prev_sibling){
+                set_prev_selectable(cursor.at->prev_sibling);
+            }else{
+                set_prev_selectable(cursor.at->parent);
             }
-            pos = cursor.arc->string.length;
+            pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
-            if(cursor.arc->first_child && !cursor.arc->next_sibling){
-                cursor.arc = cursor.arc->first_child;
-            }else if(cursor.arc->next_sibling){
-                cursor.arc = cursor.arc->next_sibling;
+            if(cursor.at->next_sibling){
+                cursor.at = cursor.at->next_sibling;
             }else {
-                find_next_selectable();
+                if(cursor.at->parent){
+                    cursor.at = find_next_selectable(cursor.at->parent->next_sibling);
+                }
             }
         }break;
     }
@@ -181,7 +188,7 @@ edit_text(Widget* widget){
             pop_from_string(&ui->editing_string.string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            remove_arc_node_at(&cursor.arc->parent->first_child, cursor.arc);
+            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -326,7 +333,7 @@ edit_text(Arc_Node* node){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            remove_arc_node_at(&cursor.arc->parent->first_child, cursor.arc);
+            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -416,10 +423,10 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(cursor.arc == node){
+        if(cursor.at == node){
             ui->active = widget->id;
             if(node->reference) highlight_reference = node->reference;
-            edit_text(cursor.arc);
+            edit_text(cursor.at);
         }
     }
     

@@ -3,11 +3,8 @@
 // needed because all globals are wiped on hot load
 
 struct Editor_State {
-    Pool ast_pool;
-    
     Pool arc_pool;
     
-    Ast_Node* program;
     Arc_Node* root;
     
     Pool string_pool;

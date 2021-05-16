@@ -1305,7 +1305,6 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
 }
 
 static int present_style;
-internal void present_graph(Ast_Node* node, int present_style);
 internal void present_arc(Arc_Node* node);
 static f32 font_scale = 1.0f;
 
@@ -1388,7 +1387,7 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor#%d", (int)root);
                     UI_CONTAINER("snippet"){
-                        if(dropdown("Snippet#%d", (int)root)){
+                        if(!dropdown("Snippet#%d", (int)root)){
                             //present_graph(editor->program, present_style);
                             present_arc(editor->root);
                         }

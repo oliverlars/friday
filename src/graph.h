@@ -58,6 +58,7 @@ enum Ast_Tag {
     AT_PARAMS,
     AT_RETURN_TYPE,
     AT_BODY,
+    AT_
 };
 
 struct Arc_Node {
@@ -80,96 +81,6 @@ struct Arc_Node {
     s64 number_of_pointers;
 };
 
-struct Ast_Node {
-    Ast_Type type;
-    
-    String8 name;
-    
-    Ast_Node* next = nullptr;
-    Ast_Node* prev = nullptr;
-    
-    union {
-        struct {
-            Operator_Type op_type;
-            Ast_Node* left;
-            Ast_Node* right;
-        }binary;
-        
-        struct {
-            Ast_Node* operand;
-        }unary;
-        
-        struct {
-            Literal_Type lit_type;
-            union {
-                f32 _float;
-                s32 _int;
-            };
-        } literal;
-        
-        struct {
-            Ast_Node* members;
-        }_struct;
-        
-        struct {
-            Ast_Node* members;
-        }_union;
-        
-        struct {
-            Ast_Node* members;
-        }_enum;
-        
-        struct {
-            Ast_Node* return_type;
-            Ast_Node* parameters;
-            Ast_Node* scope;
-        } function;
-        
-        struct {
-            Ast_Node* expression;
-            Ast_Node* type_usage;
-            bool is_initialised = false;
-        } declaration;
-        
-        struct {
-            s64 number_of_pointers;
-            Ast_Node* type_reference;
-        } type_usage;
-        
-        struct {
-            Ast_Node* statements;
-            Ast_Node* outer;
-        } scope;
-        
-        struct {
-            Ast_Node* condition;
-            Ast_Node* scope;
-            Ast_Node* _else_if;
-            Ast_Node* _else;
-        } conditional;
-        
-        union {
-            struct {
-                Ast_Node* min;
-                Ast_Node* max;
-                Ast_Node* scope;
-            };
-        }loop;
-        
-        struct {
-            Ast_Node* who_called_me;
-            Ast_Node* arguments;
-        } call;
-        
-        struct {
-            Ast_Node* reference;
-            Token_Type token_type;
-        } token;
-    };
-};
-
-internal void remove_node_at(Ast_Node* at);
-
 internal void remove_arc_node_at(Arc_Node** head, Arc_Node* at);
 
 internal bool
@@ -180,3 +91,11 @@ arc_set_property(Arc_Node* arc, Arc_Property property);
 
 internal void
 arc_remove_property(Arc_Node* arc, Arc_Property property);
+
+
+internal void
+insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node);
+
+
+internal void
+insert_arc_node_as_child(Arc_Node* at, Arc_Node* node);

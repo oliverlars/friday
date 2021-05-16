@@ -76,7 +76,6 @@ PERMANENT_LOAD {
     init_shaders();
     load_theme_dots();
     
-    editor->ast_pool = make_pool(sizeof(Ast_Node));
     editor->arc_pool = make_pool(sizeof(Arc_Node));
     
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
@@ -92,49 +91,13 @@ PERMANENT_LOAD {
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     
-    auto pool = &editor->ast_pool;
-    auto global_scope = make_scope_node(pool); 
     
-    _s64 = make_declaration_node(pool, "s64");
-    
-    {
-        global_scope->scope.statements->next = make_function_node(pool, "entry");
-        
-        auto function_scope = global_scope->scope.statements->next->function.scope;
-        
-        function_scope->scope.statements->next = make_declaration_node(pool, "test");
-        function_scope->scope.statements->next->prev = function_scope->scope.statements;
-    }
-    
-    {
-        global_scope->scope.statements->next->next = make_function_node(pool, "add");
-        global_scope->scope.statements->next->next->prev = global_scope->scope.statements;
-        
-        auto function = &global_scope->scope.statements->next->next->function;
-        function->parameters->next = make_declaration_node(pool, "a");
-        function->parameters->next->prev = function->parameters;
-        function->parameters->next->next = make_declaration_node(pool, "b");
-        function->parameters->next->next->prev = function->parameters->next;
-        
-        function->parameters->next->next->next = make_declaration_node(pool, "arg 3");
-        function->parameters->next->next->next->prev = function->parameters->next->next;
-        
-        function->scope->scope.statements->next = make_declaration_node(pool, "Hey Friday!");
-        function->scope->scope.statements->next->prev = function->scope->scope.statements;
-        serialise_to_disk(function->parameters);
-    }
-    
-    
-    
-    editor->program = global_scope;
-    editor->root = make_arc_node(&editor->arc_pool);
-    arc_set_property(editor->root, AP_AST);
-    editor->root->ast_type = AST_SCOPE;
-    editor->root->first_child = make_arc_node(&editor->arc_pool);
-    editor->root->last_child = editor->root->first_child;
-    
-    cursor.arc = editor->root->first_child;
-    cursor.string = &editor->root->first_child->string;
+    auto scope = make_scope(&editor->arc_pool);
+    auto first = make_selectable_arc_node(&editor->arc_pool);
+    insert_arc_node_as_child(scope, first);
+    editor->root = scope;
+    cursor.at = first;
+    cursor.string = &first->string;
     
 }
 
@@ -183,11 +146,10 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
-        auto string = &cursor.arc->string;
-        auto parent = cursor.arc->parent;
+        auto string = &cursor.at->string;
+        auto parent = cursor.at->parent;
         
         if(presenter->mode == P_EDIT){
-            
             if(parent && parent->ast_type == AST_DECLARATION){
                 bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
                 bool minus = has_pressed_key(KEY_MINUS);
@@ -195,12 +157,12 @@ UPDATE {
                 bool left_paren = has_pressed_key_modified(KEY_9, KEY_MOD_SHIFT);
                 bool right_paren = has_pressed_key_modified(KEY_0, KEY_MOD_SHIFT);
                 if((plus || minus || times || left_paren || right_paren)){
-                    arc_set_property(cursor.arc, AP_AST);
-                    cursor.arc->ast_type = AST_TOKEN;
-                    cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
-                    set_token_type(cursor.arc);
-                    auto op = make_arc_node(&editor->arc_pool);
-                    make_sibling_arc_node_after(cursor.arc, op);
+                    arc_set_property(cursor.at, AP_AST);
+                    cursor.at->ast_type = AST_TOKEN;
+                    cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
+                    set_token_type(cursor.at);
+                    auto op = make_selectable_arc_node(&editor->arc_pool);
+                    make_sibling_arc_node_after(cursor.at, op);
                     if(plus){
                         insert_in_string(&op->string, '+', 0);
                     }else if(minus){
@@ -216,22 +178,22 @@ UPDATE {
                     arc_set_property(op, AP_AST);
                     op->ast_type = AST_TOKEN;
                     
-                    auto next = make_arc_node(&editor->arc_pool);
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
                     make_sibling_arc_node_after(op, next);
-                    cursor.arc = next;
+                    cursor.at = next;
                 }
                 
-                if(cursor.arc->ast_type == AST_TOKEN && cursor.arc->token_type == TOKEN_MISC){
+                if(cursor.at->ast_type == AST_TOKEN && cursor.at->token_type == TOKEN_MISC){
                     if(has_input_character(0)){
-                        cursor.arc->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
-                        auto next = make_arc_node(&editor->arc_pool);
-                        make_sibling_arc_node_after(cursor.arc, next);
-                        cursor.arc = next;
+                        cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        make_sibling_arc_node_after(cursor.at, next);
+                        cursor.at = next;
                         
                         Platform_Event* event = 0;
                         for (;platform_get_next_event(&event);){
                             if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-                                insert_in_string(&cursor.arc->string,
+                                insert_in_string(&cursor.at->string,
                                                  event->character,
                                                  ui->cursor_pos++);
                                 platform_consume_event(event);
@@ -242,86 +204,69 @@ UPDATE {
             }
             
             if(has_pressed_key(KEY_ENTER)){
-                
+                presenter->mode = P_CREATE;
                 if(parent && parent->ast_type == AST_DECLARATION){
-                    arc_set_property(cursor.arc, AP_AST);
-                    auto next = make_arc_node(&editor->arc_pool);
+                    arc_set_property(cursor.at, AP_AST);
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
                     
-                    if(cursor.arc->prev_sibling){
-                        make_sibling_arc_node_after(cursor.arc->parent, next);
-                        cursor.arc->ast_type = AST_TOKEN;
-                        set_token_type(cursor.arc);
+                    if(cursor.at->prev_sibling){
+                        auto expr = make_arc_node(&editor->arc_pool);
+                        make_sibling_arc_node_after(cursor.at->parent, expr);
+                        make_arc_node_child(expr, next);
+                        cursor.at->ast_type = AST_TOKEN;
+                        set_token_type(cursor.at);
                     }else {
-                        cursor.arc->ast_type = AST_TYPE_USAGE;
-                        make_arc_node_child(cursor.arc->parent, next);
+                        cursor.at->ast_type = AST_TYPE_USAGE;
+                        make_arc_node_child(cursor.at->parent, next);
                     }
                     
-                    cursor.arc = next;
+                    cursor.at = next;
                     presenter->mode = P_EDIT;
                 }
-                else if(parent && parent->parent->ast_tag == AT_PARAMS){
-                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
-                }
-                else if(parent && parent->ast_tag == AT_RETURN_TYPE){
-                    arc_set_property(cursor.arc, AP_AST);
-                    
-                    cursor.arc->ast_type = AST_TYPE_USAGE;
-                    auto scope = cursor.arc->parent->next_sibling->first_child;
-                    auto next = make_arc_node(&editor->arc_pool);
-                    scope->first_child = next;
-                    cursor.arc = next;
-                    
-                }else if(!string->length){
-                    cursor.arc = cursor.arc->parent->next_sibling->first_child;
-                }else {
-                    presenter->mode = P_CREATE;
-                }
+                
             }
         }
         
         if(presenter->mode == P_CREATE){
             if(has_pressed_key(KEY_S)){
-                arc_set_property(cursor.arc, AP_AST);
-                cursor.arc->ast_type = AST_STRUCT;
+                arc_set_property(cursor.at, AP_AST);
+                cursor.at->ast_type = AST_STRUCT;
                 
-                cursor.arc->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->parent = cursor.arc;
-                arc_set_property(cursor.arc->first_child, AP_AST);
-                cursor.arc->first_child->ast_type = AST_SCOPE;
+                cursor.at->first_child = make_arc_node(&editor->arc_pool);
+                cursor.at->first_child->parent = cursor.at;
+                arc_set_property(cursor.at->first_child, AP_AST);
+                cursor.at->first_child->ast_type = AST_SCOPE;
                 
                 
-                cursor.arc->first_child->first_child = make_arc_node(&editor->arc_pool);
-                cursor.arc->first_child->first_child->parent = cursor.arc->first_child;
+                cursor.at->first_child->first_child = make_arc_node(&editor->arc_pool);
+                cursor.at->first_child->first_child->parent = cursor.at->first_child;
                 
-                cursor.arc = cursor.arc->first_child->first_child;
+                cursor.at = cursor.at->first_child->first_child;
                 presenter->mode = P_EDIT;
             }
             if(has_pressed_key(KEY_D)){
-                arc_set_property(cursor.arc, AP_AST);
-                cursor.arc->ast_type = AST_DECLARATION;
-                auto type = make_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.arc, type);
-                cursor.arc = type;
+                make_declaration_from_node(cursor.at, &editor->arc_pool);
+                cursor.at = cursor.at->first_child;
                 presenter->mode = P_EDIT;
             }
             if(has_pressed_key(KEY_F)){
-                arc_set_property(cursor.arc, AP_AST);
+                arc_set_property(cursor.at, AP_AST);
                 
-                cursor.arc->ast_type = AST_FUNCTION;
+                cursor.at->ast_type = AST_FUNCTION;
                 auto params = make_arc_node(&editor->arc_pool);
                 arc_set_property(params, AP_AST_TAG);
                 params->ast_tag = AT_PARAMS;
-                insert_arc_node_as_child(cursor.arc, params);
+                insert_arc_node_as_child(cursor.at, params);
                 
                 auto return_type = make_arc_node(&editor->arc_pool);
                 arc_set_property(return_type, AP_AST_TAG);
                 return_type->ast_tag = AT_RETURN_TYPE;
-                insert_arc_node_as_child(cursor.arc, return_type);
+                insert_arc_node_as_child(cursor.at, return_type);
                 
                 auto body = make_arc_node(&editor->arc_pool);
                 arc_set_property(body, AP_AST_TAG);
                 body->ast_tag = AT_BODY;
-                insert_arc_node_as_child(cursor.arc, body);
+                insert_arc_node_as_child(cursor.at, body);
                 
                 auto  first_decl = make_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(params, first_decl);
@@ -332,7 +277,7 @@ UPDATE {
                 auto scope = make_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(body, scope);
                 
-                cursor.arc = first_decl;
+                cursor.at = first_decl;
                 
                 presenter->mode = P_EDIT;
             }

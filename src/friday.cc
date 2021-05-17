@@ -225,9 +225,14 @@ UPDATE {
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     
                     if(type->first_child->ast_type == AST_TYPE_USAGE){
+                        if(cursor.at->string.length == 0){
+                            remove_arc_node_at(&cursor.at, cursor.at);
+                            
+                        }else {
+                            set_token_type(cursor.at);
+                            cursor.at->ast_type = AST_TOKEN;
+                        }
                         insert_arc_node_as_child(decl->parent, next);
-                        cursor.at->ast_type = AST_TOKEN;
-                        set_token_type(cursor.at);
                     }else {
                         cursor.at->ast_type = AST_TYPE_USAGE;
                         insert_arc_node_as_child(expr, next);
@@ -239,7 +244,7 @@ UPDATE {
                 else if(is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result) &&
                         cursor.at->string.length == 0){
                     auto next = make_selectable_arc_node(&editor->arc_pool);
-                    
+                    remove_arc_node_at(&result->first_child, cursor.at);
                     insert_arc_node_as_child(result->next_sibling, next);
                     cursor.at = next;
                     presenter->mode = P_EDIT;

@@ -55,6 +55,58 @@ make_declaration(Pool* pool){
     return decl;
 }
 
+internal Arc_Node*
+make_function(Pool* pool){
+    auto func = make_arc_node(pool);
+    arc_set_property(func, AP_AST);
+    func->ast_type = AST_FUNCTION;
+    
+    auto params = make_arc_node(pool);
+    auto ret = make_arc_node(pool);
+    auto scope = make_arc_node(pool);
+    
+    insert_arc_node_as_child(func, params);
+    insert_arc_node_as_sibling(params, ret);
+    insert_arc_node_as_sibling(ret, scope);
+    
+    assert(is_sub_node_of_ast_type(params, AST_FUNCTION));
+    assert(is_sub_node_of_ast_type(ret, AST_FUNCTION));
+    assert(is_sub_node_of_ast_type(scope, AST_FUNCTION));
+    
+    return func;
+}
+
+internal Arc_Node*
+make_function_from_node(Arc_Node* func, Pool* pool){
+    arc_set_property(func, AP_AST);
+    func->ast_type = AST_FUNCTION;
+    
+    auto params = make_arc_node(pool);
+    arc_set_property(params, AP_AST);
+    params->ast_tag = AT_PARAMS;
+    
+    auto ret = make_arc_node(pool);
+    arc_set_property(ret, AP_AST);
+    ret->ast_tag = AT_RETURN_TYPE;
+    
+    auto scope = make_arc_node(pool);
+    arc_set_property(scope, AP_AST);
+    scope->ast_tag = AT_BODY;
+    
+    insert_arc_node_as_child(func, params);
+    insert_arc_node_as_sibling(params, ret);
+    insert_arc_node_as_sibling(ret, scope);
+    
+    assert(is_sub_node_of_ast_type(params, AST_FUNCTION));
+    assert(is_sub_node_of_ast_type(ret, AST_FUNCTION));
+    assert(is_sub_node_of_ast_type(scope, AST_FUNCTION));
+    
+    
+    
+    
+    return func;
+}
+
 internal b32
 is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     if(!node) return false;
@@ -62,6 +114,22 @@ is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     while(node){
         if(arc_has_property(node, AP_AST)){
             if(node->ast_type == type){
+                if(result) *result = node;
+                return true;
+            }
+        }
+        node = node->parent;
+    }
+    return false;
+}
+
+internal b32
+is_sub_node_of_ast_tag(Arc_Node* node, Ast_Tag type, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(arc_has_property(node, AP_AST)){
+            if(node->ast_tag == type){
                 if(result) *result = node;
                 return true;
             }
@@ -80,18 +148,7 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     auto expr = make_arc_node(pool);
     
     insert_arc_node_as_child(decl, type);
-    assert(!type->prev_sibling);
-    assert(!type->next_sibling);
-    assert(type->parent == decl);
-    assert(decl->first_child == type);
-    assert(decl->last_child == type);
     insert_arc_node_as_sibling(type, expr);
-    assert(decl->last_child == expr);
-    assert(decl->first_child == type);
-    assert(expr->prev_sibling == type);
-    assert(type->next_sibling == expr);
-    assert(type->parent == expr->parent);
-    assert(type->parent == decl);
     
     return decl;
 }

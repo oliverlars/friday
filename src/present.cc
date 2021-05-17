@@ -1,86 +1,8 @@
 
-internal Arc_Node*
-find_next_selectable(Arc_Node* node){
-    
-    if(!node) return nullptr;
-    
-    if(node->next_sibling){
-        node = node->next_sibling;
-    }else{
-        while(!node->next_sibling){
-            if(arc_has_property(node, AP_SELECTABLE)) {
-                return node;
-            }
-            node = node->parent;
-        }
-    }
-    while(node){
-        if(arc_has_property(node, AP_SELECTABLE)) {
-            return node;
-        }
-        auto result = find_next_selectable(node->first_child);
-        if(result) return result;
-        node = node->next_sibling;
-    }
-    
-}
-
-
-internal Arc_Node*
-find_prev_selectable(Arc_Node* node){
-    if(!node) return nullptr;
-    if(node->prev_sibling){
-        node = node->prev_sibling;
-    }else{
-        while(!node->prev_sibling){
-            if(arc_has_property(node, AP_SELECTABLE)) {
-                return node;
-            }
-            node = node->parent;
-        }
-    }
-    while(node){
-        if(arc_has_property(node, AP_SELECTABLE)) {
-            return node;
-        }
-        auto result = find_prev_selectable(node->last_child);
-        if(result) return result;
-        node = node->prev_sibling;
-    }
-}
-
 internal void
 advance_cursor(Cursor_Direction dir){
     if(!cursor.at) return;
-    int pos = 0;
     presenter->direction = dir;
-    return;
-    switch(dir){
-        case CURSOR_UP:{
-            
-        }break;
-        case CURSOR_DOWN:{
-            
-        }break;
-        case CURSOR_LEFT:{
-            Arc_Node* result;
-            result = find_prev_selectable(cursor.at);
-            
-            pos = cursor.at->string.length;
-        }break;
-        case CURSOR_RIGHT:{
-            if(cursor.at->next_sibling){
-                auto result = find_next_selectable(cursor.at);
-                if(result) cursor.at = result;
-            }else {
-                auto result = find_next_selectable(cursor.at->first_child);
-                if(result) cursor.at = result;
-            }
-        }break;
-    }
-    
-    ui->cursor_pos = pos;
-    
 }
 
 internal void

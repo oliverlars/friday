@@ -155,6 +155,7 @@ UPDATE {
         auto parent = cursor.at->parent;
         
         if(presenter->mode == P_EDIT){
+            
             if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION)){
                 bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
                 bool minus = has_pressed_key(KEY_MINUS);
@@ -186,6 +187,10 @@ UPDATE {
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     insert_arc_node_as_sibling(op, next);
                     cursor.at = next;
+                }
+                
+                if(is_sub_node_of_ast_type(cursor.at, AST_FUNCTION)){
+                    
                 }
                 
                 if(cursor.at->ast_type == AST_TOKEN && cursor.at->token_type == TOKEN_MISC){
@@ -231,6 +236,22 @@ UPDATE {
                     cursor.at = next;
                     presenter->mode = P_EDIT;
                 }
+                else if(is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result) &&
+                        cursor.at->string.length == 0){
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    
+                    insert_arc_node_as_child(result->next_sibling, next);
+                    cursor.at = next;
+                    presenter->mode = P_EDIT;
+                } else if(is_sub_node_of_ast_tag(cursor.at, AT_RETURN_TYPE, &result)){
+                    arc_set_property(cursor.at, AP_AST);
+                    cursor.at->ast_type = AST_TYPE_USAGE;
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    insert_arc_node_as_child(result->next_sibling, next);
+                    cursor.at = next;
+                    presenter->mode = P_EDIT;
+                }
+                
                 
             }
         }
@@ -239,6 +260,14 @@ UPDATE {
             
             if(has_pressed_key(KEY_D)){
                 make_declaration_from_node(cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                cursor.at = next;
+                presenter->mode = P_EDIT;
+            }
+            
+            if(has_pressed_key(KEY_F)){
+                make_function_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;

@@ -1,38 +1,51 @@
 
 internal Arc_Node*
 find_next_selectable(Arc_Node* node){
+    
     if(!node) return nullptr;
     
+    if(node->next_sibling){
+        node = node->next_sibling;
+    }else{
+        while(!node->next_sibling){
+            if(arc_has_property(node, AP_SELECTABLE)) {
+                return node;
+            }
+            node = node->parent;
+        }
+    }
     while(node){
         if(arc_has_property(node, AP_SELECTABLE)) {
-            //cursor.at = node;
             return node;
-        }else {
-            auto result = find_next_selectable(node->first_child);
-            if(result) return result;
         }
+        auto result = find_next_selectable(node->first_child);
+        if(result) return result;
         node = node->next_sibling;
     }
+    
 }
 
 
 internal Arc_Node*
-set_prev_selectable(Arc_Node* node){
+find_prev_selectable(Arc_Node* node){
     if(!node) return nullptr;
-    
+    if(node->prev_sibling){
+        node = node->prev_sibling;
+    }else{
+        while(!node->prev_sibling){
+            if(arc_has_property(node, AP_SELECTABLE)) {
+                return node;
+            }
+            node = node->parent;
+        }
+    }
     while(node){
         if(arc_has_property(node, AP_SELECTABLE)) {
-            //cursor.at = node;
             return node;
         }
-        auto result = set_prev_selectable(node->last_child);
+        auto result = find_prev_selectable(node->last_child);
         if(result) return result;
-        if(!node->prev_sibling){
-            while(!node->prev_sibling)
-                node = node->parent;
-        }else{
-            node = node->prev_sibling;
-        }
+        node = node->prev_sibling;
     }
 }
 
@@ -40,6 +53,8 @@ internal void
 advance_cursor(Cursor_Direction dir){
     if(!cursor.at) return;
     int pos = 0;
+    presenter->direction = dir;
+    return;
     switch(dir){
         case CURSOR_UP:{
             
@@ -49,18 +64,13 @@ advance_cursor(Cursor_Direction dir){
         }break;
         case CURSOR_LEFT:{
             Arc_Node* result;
-            if(cursor.at->prev_sibling){
-                result = set_prev_selectable(cursor.at->prev_sibling);
-                if(result) cursor.at = result;
-            }else{
-                result = set_prev_selectable(cursor.at->parent->prev_sibling);
-                if(result) cursor.at = result;
-            }
+            result = find_prev_selectable(cursor.at);
+            
             pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
             if(cursor.at->next_sibling){
-                auto result = find_next_selectable(cursor.at->next_sibling);
+                auto result = find_next_selectable(cursor.at);
                 if(result) cursor.at = result;
             }else {
                 auto result = find_next_selectable(cursor.at->first_child);
@@ -71,6 +81,47 @@ advance_cursor(Cursor_Direction dir){
     
     ui->cursor_pos = pos;
     
+}
+
+internal void
+set_next_cursor_pos(){
+    int pos;
+    for(pos = 0; pos < presenter->buffer_pos; pos++){
+        if(presenter->buffer[pos].node &&
+           presenter->buffer[pos].node == cursor.at){
+            break;
+        }
+    }
+    int next_pos = pos;
+    switch(presenter->direction){
+        case CURSOR_LEFT:{
+            next_pos = clampi(next_pos-1, 0, presenter->buffer_pos);
+            if(presenter->buffer[next_pos].newline){
+                next_pos = clampi(next_pos-1, 0, presenter->buffer_pos);
+            }
+            cursor.at = presenter->buffer[next_pos].node;
+            ui->cursor_pos = cursor.at->string.length;
+        }break;
+        case CURSOR_RIGHT:{
+            next_pos = clampi(next_pos+1, 0, presenter->buffer_pos);
+            if(presenter->buffer[next_pos].newline){
+                next_pos = clampi(next_pos+1, 0, presenter->buffer_pos);
+            }
+            cursor.at = presenter->buffer[next_pos].node;
+            ui->cursor_pos = 0;
+        }break;
+        case CURSOR_UP:{
+            int distance_from_newline = pos;
+            while(!presenter->buffer[distance_from_newline++].newline);
+            distance_from_newline -= pos;
+            while(!presenter->buffer[next_pos--].newline);
+            cursor.at = presenter->buffer[next_pos].node;
+        }break;
+        case CURSOR_DOWN:{
+            while(!presenter->buffer[next_pos++].newline);
+            cursor.at = presenter->buffer[pos].node;
+        }break;
+    }
 }
 
 internal void
@@ -115,6 +166,21 @@ internal void
 present_space() {
     f32 space = get_text_width(" ", font_scale);
     xspacer(space);
+}
+
+internal void
+push_arc(Arc_Node* node) {
+    Present_Node present_node = {};
+    present_node.node = node;
+    presenter->buffer[presenter->buffer_pos++] = present_node;
+    return;
+}
+
+internal void
+push_newline(){
+    Present_Node present_node = {};
+    present_node.newline = true;
+    presenter->buffer[presenter->buffer_pos++] = present_node;
 }
 
 internal void
@@ -495,16 +561,20 @@ internal void
 present_declaration(Arc_Node* node){
     ID("declaration%d", (int)node){
         UI_ROW {
+            push_arc(node);
             present_editable_string(ui->theme.text, node);
             present_space();
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_arc(node->first_child->first_child);
+            //push_arc(node->first_child->first_child);
             if(node->last_child->first_child){
                 present_space();
                 present_string(ui->theme.text_misc, make_string("="));
                 present_space();
+                //push_arc(node->last_child->first_child);
                 present_arc(node->last_child->first_child);
+                push_newline();
             }
         }
     }
@@ -575,6 +645,7 @@ present_function(Arc_Node* node){
 
 internal void
 present_type_usage(Arc_Node* node){
+    push_arc(node);
     present_editable_string(ui->theme.text_type, node);
 }
 
@@ -612,6 +683,7 @@ present_ast(Arc_Node* node){
                 present_editable_string(ui->theme.text_literal, node);
             }
             present_space();
+            push_arc(node);
             present_arc(node->next_sibling);
         }break;
     }

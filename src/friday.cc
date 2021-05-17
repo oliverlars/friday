@@ -132,6 +132,11 @@ set_token_type(Arc_Node* node){
 UPDATE {
     FRAME
     {
+        
+        presenter->buffer_pos = 0;
+        presenter->direction = CURSOR_NONE;
+        presenter->buffer = (Present_Node*)push_size_zero(&platform->frame_arena, sizeof(Present_Node)*8192);
+        
         f32 start = platform->get_time();
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
@@ -215,7 +220,7 @@ UPDATE {
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     
                     if(type->first_child->ast_type == AST_TYPE_USAGE){
-                        insert_arc_node_as_child(expr, next);
+                        insert_arc_node_as_child(decl->parent, next);
                         cursor.at->ast_type = AST_TOKEN;
                         set_token_type(cursor.at);
                     }else {
@@ -241,6 +246,7 @@ UPDATE {
             }
             
         }
+        set_next_cursor_pos();
         highlight_reference = nullptr;
     }
     platform->refresh_screen();

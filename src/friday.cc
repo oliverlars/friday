@@ -117,27 +117,26 @@ HOT_UNLOAD {
 internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
-    auto find = node;
-    while(find){
-        if(find->parent && arc_has_property(find->parent, AP_AST)){
-            if(find->parent->ast_type == AST_SCOPE){
-                result = find;
-                break;
+    auto scope = node;
+    while(scope){
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        node->token_type = TOKEN_REFERENCE;
+                        node->reference = member;
+                        return;
+                    }
+                    member = member->prev_sibling;
+                }
+                node->token_type = TOKEN_LITERAL;
             }
         }
-        find = find->parent;
+        scope = scope->parent;
     }
-    assert(result);
-    auto member = result->prev_sibling;
-    while(member){
-        if(string_eq(member->string, node->string)){
-            node->token_type = TOKEN_REFERENCE;
-            node->reference = member;
-            return;
-        }
-        member = member->prev_sibling;
-    }
-    node->token_type = TOKEN_LITERAL;
+    
 }
 
 

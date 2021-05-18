@@ -453,32 +453,6 @@ present_editable_string(Colour colour, Arc_Node* node){
 
 internal void present_arc(Arc_Node* node);
 
-
-
-internal void
-present_struct(Arc_Node* node){
-    ID("struct%d", (int)node){
-        UI_COLUMN {
-            UI_ROW {
-                present_editable_string(ui->theme.text, node);
-                present_space();
-                present_string(ui->theme.text_misc, make_string("::"));
-                present_space();
-                present_string(ui->theme.text_type, make_string("struct"));
-                present_space();
-                present_string(ui->theme.text_misc, make_string("{"));
-            }
-            UI_ROW {
-                present_space();
-                present_arc(node->first_child);
-            }
-            UI_ROW {
-                present_string(ui->theme.text_misc, make_string("}"));
-            }
-        }
-    }
-}
-
 internal void
 present_declaration(Arc_Node* node){
     ID("declaration%d", (int)node){
@@ -578,7 +552,8 @@ present_if(Arc_Node* node){
         
         UI_COLUMN{
             UI_ROW{
-                present_string(ui->theme.text, make_string("if"));
+                present_editable_string(ui->theme.text, node);
+                push_arc(node);
                 present_space();
                 present_arc(node->first_child->first_child);
                 push_arc(node->first_child->first_child);
@@ -600,14 +575,43 @@ present_if(Arc_Node* node){
 }
 
 internal void
+present_struct(Arc_Node* node){
+    ID("if%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_editable_string(ui->theme.text_type, node);
+                present_space();
+                present_string(ui->theme.text, make_string("::"));
+                present_space();
+                present_string(ui->theme.text, make_string("struct"));
+                push_arc(node);
+                present_space();
+                present_string(ui->theme.text_misc, make_string("{"));
+                push_newline();
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->first_child);
+                push_newline();
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
 present_ast(Arc_Node* node){
     if(!node) return;
     switch(node->ast_type){
-        case AST_STRUCT: {
-            present_struct(node);
-        }break;
         case AST_DECLARATION: {
             present_declaration(node);
+        }break;
+        case AST_STRUCT: {
+            present_struct(node);
         }break;
         case AST_FUNCTION: {
             present_function(node);

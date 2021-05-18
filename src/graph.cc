@@ -215,6 +215,20 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     return decl;
 }
 
+internal Arc_Node*
+make_struct_from_node(Arc_Node* _struct, Pool* pool){
+    arc_set_property(_struct, AP_AST);
+    _struct->ast_type = AST_STRUCT;
+    
+    auto members = make_arc_node(pool);
+    arc_set_property(members, AP_AST);
+    members->ast_type = AST_SCOPE;
+    
+    insert_arc_node_as_child(_struct, members);
+    
+    return _struct;
+}
+
 internal void
 remove_arc_node_at(Arc_Node** head, Arc_Node* at){
     if (!*head || !at) return;

@@ -320,6 +320,13 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }
+            if(has_pressed_key(KEY_S)){
+                make_struct_from_node(cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                cursor.at = next;
+                presenter->mode = P_EDIT;
+            }
         }
         set_next_cursor_pos();
         highlight_reference = nullptr;

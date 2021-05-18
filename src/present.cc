@@ -573,6 +573,32 @@ present_type_usage(Arc_Node* node){
 }
 
 internal void
+present_if(Arc_Node* node){
+    ID("if%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_string(ui->theme.text, make_string("if"));
+                present_space();
+                present_arc(node->first_child->first_child);
+                push_arc(node->first_child->first_child);
+                present_string(ui->theme.text_misc, make_string("{"));
+                push_newline();
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->last_child);
+                push_newline();
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
 present_ast(Arc_Node* node){
     if(!node) return;
     switch(node->ast_type){
@@ -587,6 +613,9 @@ present_ast(Arc_Node* node){
         }break;
         case AST_TYPE_USAGE: {
             present_type_usage(node);
+        }break;
+        case AST_IF: {
+            present_if(node);
         }break;
         case AST_SCOPE: {
             auto member = node->first_child;
@@ -618,6 +647,7 @@ present_arc(Arc_Node* node){
     if(arc_has_property(node, AP_AST)){
         present_ast(node);
     }else {
+        push_arc(node);
         present_editable_string(ui->theme.text, node);
         present_arc(node->next_sibling);
         present_arc(node->first_child);

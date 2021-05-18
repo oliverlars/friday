@@ -56,6 +56,49 @@ make_declaration(Pool* pool){
 }
 
 internal Arc_Node*
+make_if(Pool* pool){
+    auto _if = make_arc_node(pool);
+    arc_set_property(_if, AP_AST);
+    _if->ast_type = AST_IF;
+    
+    auto expr = make_arc_node(pool);
+    auto scope = make_arc_node(pool);
+    
+    arc_set_property(scope, AP_AST);
+    scope->ast_type = AST_SCOPE;
+    scope->ast_tag = AT_BODY;
+    
+    insert_arc_node_as_child(_if, expr);
+    insert_arc_node_as_sibling(_if, scope);
+    
+    assert(is_sub_node_of_ast_type(expr, AST_IF));
+    assert(is_sub_node_of_ast_type(scope, AST_IF));
+    
+    return _if;
+}
+
+internal Arc_Node*
+make_if_from_node(Arc_Node* _if, Pool* pool){
+    arc_set_property(_if, AP_AST);
+    _if->ast_type = AST_IF;
+    
+    auto expr = make_arc_node(pool);
+    auto scope = make_arc_node(pool);
+    
+    arc_set_property(scope, AP_AST);
+    scope->ast_type = AST_SCOPE;
+    scope->ast_tag = AT_BODY;
+    
+    insert_arc_node_as_child(_if, expr);
+    insert_arc_node_as_sibling(expr, scope);
+    
+    assert(is_sub_node_of_ast_type(expr, AST_IF));
+    assert(is_sub_node_of_ast_type(scope, AST_IF));
+    
+    return _if;
+}
+
+internal Arc_Node*
 make_function(Pool* pool){
     auto func = make_arc_node(pool);
     arc_set_property(func, AP_AST);
@@ -117,6 +160,8 @@ is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
             if(node->ast_type == type){
                 if(result) *result = node;
                 return true;
+            }else if(node->ast_type != AST_SCOPE){
+                return false;
             }
         }
         node = node->parent;

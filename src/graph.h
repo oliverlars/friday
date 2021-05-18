@@ -12,7 +12,7 @@ enum Ast_Type {
     AST_DECLARATION,
     AST_IDENTIFIER,
     AST_FUNCTION,
-    AST_CONDITIONAL,
+    AST_IF,
     AST_LOOP,
     AST_CALL,
     AST_TOKEN,

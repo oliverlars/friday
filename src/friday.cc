@@ -95,6 +95,7 @@ PERMANENT_LOAD {
     auto scope = make_scope(&editor->arc_pool);
     auto first = make_selectable_arc_node(&editor->arc_pool);
     insert_arc_node_as_child(scope, first);
+    
     editor->root = scope;
     cursor.at = first;
     cursor.string = &first->string;
@@ -189,10 +190,6 @@ UPDATE {
                     cursor.at = next;
                 }
                 
-                if(is_sub_node_of_ast_type(cursor.at, AST_FUNCTION)){
-                    
-                }
-                
                 if(cursor.at->ast_type == AST_TOKEN && cursor.at->token_type == TOKEN_MISC){
                     if(has_input_character(0)){
                         cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
@@ -255,8 +252,15 @@ UPDATE {
                     insert_arc_node_as_child(result->next_sibling, next);
                     cursor.at = next;
                     presenter->mode = P_EDIT;
+                }else if(cursor.at->string.length == 0){
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    Arc_Node* outer_scope;
+                    is_sub_node_of_ast_type(cursor.at, AST_SCOPE, &result);
+                    is_sub_node_of_ast_type(result, AST_SCOPE, &outer_scope);
+                    insert_arc_node_as_child(outer_scope, next);
+                    cursor.at = next;
+                    presenter->mode = P_EDIT;
                 }
-                
                 
             }
         }

@@ -515,7 +515,7 @@ present_function(Arc_Node* node){
                         
                         auto params = node->first_child->first_child;
                         auto return_type = node->first_child->next_sibling->first_child;
-                        auto scope = node->first_child->next_sibling->next_sibling->first_child;
+                        auto scope = node->first_child->next_sibling->next_sibling;
                         UI_ROW{
                             push_arc(node);
                             present_editable_string(ui->theme.text_function, node);

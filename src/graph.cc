@@ -91,6 +91,7 @@ make_function_from_node(Arc_Node* func, Pool* pool){
     
     auto scope = make_arc_node(pool);
     arc_set_property(scope, AP_AST);
+    scope->ast_type = AST_SCOPE;
     scope->ast_tag = AT_BODY;
     
     insert_arc_node_as_child(func, params);

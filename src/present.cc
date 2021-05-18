@@ -582,6 +582,7 @@ present_if(Arc_Node* node){
                 present_space();
                 present_arc(node->first_child->first_child);
                 push_arc(node->first_child->first_child);
+                present_space();
                 present_string(ui->theme.text_misc, make_string("{"));
                 push_newline();
             }
@@ -634,7 +635,9 @@ present_ast(Arc_Node* node){
             }else{
                 present_editable_string(ui->theme.text_literal, node);
             }
-            present_space();
+            if(node->next_sibling){
+                present_space();
+            }
             push_arc(node);
             present_arc(node->next_sibling);
         }break;

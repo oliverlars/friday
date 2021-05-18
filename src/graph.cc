@@ -160,6 +160,22 @@ is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
             if(node->ast_type == type){
                 if(result) *result = node;
                 return true;
+            }
+        }
+        node = node->parent;
+    }
+    return false;
+}
+
+internal b32
+is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(arc_has_property(node, AP_AST)){
+            if(node->ast_type == type){
+                if(result) *result = node;
+                return true;
             }else if(node->ast_type != AST_SCOPE){
                 return false;
             }

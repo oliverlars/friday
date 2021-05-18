@@ -98,6 +98,8 @@ insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node);
 internal b32
 is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result = nullptr);
 
+internal b32
+is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result = nullptr);
 
 internal void
 insert_arc_node_as_child(Arc_Node* at, Arc_Node* node);

@@ -32,6 +32,7 @@ global Arc_Node* highlight_reference;
 struct Cursor {
     String8* string;
     Arc_Node* at;
+    UI_ID text_id;
     v2f pos;
 };
 

@@ -99,7 +99,6 @@ PERMANENT_LOAD {
     editor->root = scope;
     cursor.at = first;
     cursor.string = &first->string;
-    
 }
 
 HOT_LOAD {
@@ -330,6 +329,9 @@ UPDATE {
         }
         set_next_cursor_pos();
         highlight_reference = nullptr;
+        if(platform->frame_count == 0){
+            ui->active = cursor.text_id;
+        }
     }
     platform->refresh_screen();
 }

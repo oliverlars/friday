@@ -401,7 +401,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         }
     }
     
-    f32 refresh_rate = 120.f;
+    f32 refresh_rate = 240.f;
     {
         DEVMODEA device_mode = {0};
         if(EnumDisplaySettingsA(0, ENUM_CURRENT_SETTINGS, &device_mode))
@@ -521,6 +521,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         }
         platform_end_frame();
         frame = !frame;
+        global_platform.frame_count++;
         
         win32_code_update(&win32_app_code);
         

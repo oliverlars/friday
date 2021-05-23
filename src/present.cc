@@ -396,7 +396,7 @@ present_editable_string(Colour colour, Arc_Node* node){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
         
-        if(ui->active == widget->id){
+        if(cursor.text_id == widget->id){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
@@ -417,7 +417,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     // NOTE(Oliver): custom text edit
     {
         if(cursor.at == node){
-            ui->active = widget->id;
+            cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(cursor.at);
         }
@@ -432,7 +432,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     };
     widget->style = style;
     
-    if(ui->active == widget->id){
+    if(cursor.text_id == widget->id){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {

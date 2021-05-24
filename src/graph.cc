@@ -193,7 +193,7 @@ find_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
 internal b32
 is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     if(!node) return false;
-    node = node->parent;
+    //node = node->parent;
     while(node){
         if(arc_has_property(node, AP_AST)){
             if(node->ast_type == type){

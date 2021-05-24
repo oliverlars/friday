@@ -185,7 +185,8 @@ UPDATE {
                 presenter->mode = P_CREATE;
                 Arc_Node* result;
                 
-                if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result)){
+                if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
+                   !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){
                     auto expr = result;
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     if(cursor.at->string.length){
@@ -214,6 +215,8 @@ UPDATE {
                     if(type->first_child->ast_type == AST_TYPE_USAGE){
                         if(cursor.at->string.length == 0){
                             remove_arc_node_at(&cursor.at, cursor.at);
+                            
+                        }else {
                             
                         }
                         insert_arc_node_as_child(decl->parent, next);

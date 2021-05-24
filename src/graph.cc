@@ -190,7 +190,6 @@ find_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
     }
     return false;
 }
-
 internal b32
 is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     if(!node) return false;

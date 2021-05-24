@@ -165,7 +165,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
+        //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
         f32 end = platform->get_time();
         time_per_gui_update = end - start;
         

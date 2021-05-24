@@ -412,6 +412,7 @@ present_editable_string(Colour colour, Arc_Node* node){
             }else {
                 push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
             }
+            
         }
         
     };
@@ -446,6 +447,8 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     if(result.clicked){
         ui->cursor_pos = string->length;
+        cursor.at = widget->arc;
+        cursor.text_id = widget->id;
     }
     
     if(result.hovered && node->reference){

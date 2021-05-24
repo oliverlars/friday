@@ -36,6 +36,7 @@ struct Cursor {
     v2f pos;
 };
 
+global Cursor last_cursor;
 global Cursor cursor;
 
 Presenter_State* presenter;

@@ -172,21 +172,37 @@ UPDATE {
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
         
+        if(last_cursor.at && cursor.at != last_cursor.at &&
+           arc_has_property(last_cursor.at, AP_AST) &&
+           last_cursor.at->ast_type == AST_TOKEN){
+            set_token_type(last_cursor.at);
+        }
+        
         if(presenter->mode == P_EDIT){
+            if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
+                if(cursor.at->token_type == TOKEN_REFERENCE){
+                    cursor.at->token_type = TOKEN_UNASSIGNED;
+                    replace_string(&cursor.at->string, cursor.at->reference->string);
+                    cursor.at->reference = nullptr;
+                }
+            }
             
             // NOTE(Oliver): this is just a token list, it appears in lots of places
             // make it more clear that's the context we're in
             if(is_direct_sub_node_of_ast_type(cursor.at, AST_DECLARATION) ||
                is_direct_sub_node_of_ast_type(cursor.at, AST_IF)){
-                
             }
             
             if(has_pressed_key(KEY_ENTER)){
                 presenter->mode = P_CREATE;
                 Arc_Node* result;
-                
-                if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
-                   !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){
+                if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
+                    set_token_type(cursor.at);
+                    presenter->mode = P_EDIT;
+                    advance_cursor(CURSOR_RIGHT);
+                }
+                else if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
+                        !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){
                     auto expr = result;
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     if(cursor.at->string.length){
@@ -306,6 +322,7 @@ UPDATE {
                 presenter->mode = P_EDIT;
             }
         }
+        last_cursor = cursor;
         set_next_cursor_pos();
         highlight_reference = nullptr;
         if(platform->frame_count == 0){

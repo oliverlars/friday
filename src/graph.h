@@ -40,6 +40,7 @@ enum Literal_Type {
 };
 
 enum Token_Type {
+    TOKEN_UNASSIGNED,
     TOKEN_MISC,
     TOKEN_REFERENCE,
     TOKEN_LITERAL,

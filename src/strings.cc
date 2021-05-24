@@ -54,6 +54,14 @@ make_stringf(Pool* pool, char *fmt, ...)
     return(result);
 }
 
+internal void
+replace_string(String8* string, String8 replacement){
+    for(int i = 0; i < replacement.length; i++){
+        string->text[i] = replacement.text[i];
+    }
+    string->length = replacement.length;
+}
+
 internal String8
 copy_string(Arena* arena, String8 string){
     return make_stringf(arena, "%.*s", string.length, string.text);

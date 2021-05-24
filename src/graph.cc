@@ -45,6 +45,8 @@ make_declaration(Pool* pool){
     
     auto type = make_arc_node(pool);
     auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
     
     insert_arc_node_as_child(decl, type);
     insert_arc_node_as_sibling(type, expr);
@@ -62,6 +64,8 @@ make_if(Pool* pool){
     _if->ast_type = AST_IF;
     
     auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
     auto scope = make_arc_node(pool);
     
     arc_set_property(scope, AP_AST);
@@ -83,6 +87,8 @@ make_if_from_node(Arc_Node* _if, Pool* pool){
     _if->ast_type = AST_IF;
     
     auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
     auto scope = make_arc_node(pool);
     
     arc_set_property(scope, AP_AST);
@@ -168,6 +174,24 @@ is_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
 }
 
 internal b32
+find_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(node->parent){
+            if(arc_has_property(node->parent, AP_AST)){
+                if(node->parent->ast_type == AST_SCOPE){
+                    if(result) *result = node;
+                    return true;
+                }
+            }
+            node = node->parent;
+        }
+    }
+    return false;
+}
+
+internal b32
 is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     if(!node) return false;
     node = node->parent;
@@ -208,6 +232,8 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     
     auto type = make_arc_node(pool);
     auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
     
     insert_arc_node_as_child(decl, type);
     insert_arc_node_as_sibling(type, expr);

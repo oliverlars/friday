@@ -17,6 +17,7 @@ enum Ast_Type {
     AST_CALL,
     AST_TOKEN,
     AST_DUMMY,
+    AST_EXPR,
 };
 
 enum Operator_Type {

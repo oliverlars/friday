@@ -130,7 +130,16 @@ set_token_type(Arc_Node* node){
                     }
                     member = member->prev_sibling;
                 }
-                node->token_type = TOKEN_LITERAL;
+                if(string_eq(node->string, "+") ||
+                   string_eq(node->string, "-") ||
+                   string_eq(node->string, "/") ||
+                   string_eq(node->string, "*") ||
+                   string_eq(node->string, "(") ||
+                   string_eq(node->string, ")")){
+                    node->token_type = TOKEN_MISC;
+                }else{
+                    node->token_type = TOKEN_LITERAL;
+                }
             }
         }
         scope = scope->parent;
@@ -165,65 +174,36 @@ UPDATE {
         
         if(presenter->mode == P_EDIT){
             
+            // NOTE(Oliver): this is just a token list, it appears in lots of places
+            // make it more clear that's the context we're in
             if(is_direct_sub_node_of_ast_type(cursor.at, AST_DECLARATION) ||
                is_direct_sub_node_of_ast_type(cursor.at, AST_IF)){
-                bool plus = has_pressed_key_modified(KEY_EQUAL, KEY_MOD_SHIFT);
-                bool minus = has_pressed_key(KEY_MINUS);
-                bool times = has_pressed_key_modified(KEY_8, KEY_MOD_SHIFT);
-                bool left_paren = has_pressed_key_modified(KEY_9, KEY_MOD_SHIFT);
-                bool right_paren = has_pressed_key_modified(KEY_0, KEY_MOD_SHIFT);
-                if((plus || minus || times || left_paren || right_paren)){
-                    arc_set_property(cursor.at, AP_AST);
-                    cursor.at->ast_type = AST_TOKEN;
-                    cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
-                    set_token_type(cursor.at);
-                    auto op = make_selectable_arc_node(&editor->arc_pool);
-                    insert_arc_node_as_sibling(cursor.at, op);
-                    if(plus){
-                        insert_in_string(&op->string, '+', 0);
-                    }else if(minus){
-                        insert_in_string(&op->string, '-', 0);
-                    }else if(times){
-                        insert_in_string(&op->string, '*', 0);
-                    }else if(left_paren){
-                        insert_in_string(&op->string, '(', 0);
-                    }else if(right_paren){
-                        insert_in_string(&op->string, ')', 0);
-                    }
-                    
-                    arc_set_property(op, AP_AST);
-                    op->ast_type = AST_TOKEN;
-                    
-                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                    insert_arc_node_as_sibling(op, next);
-                    cursor.at = next;
-                }
                 
-                if(cursor.at->ast_type == AST_TOKEN && cursor.at->token_type == TOKEN_MISC){
-                    if(has_input_character(0)){
-                        cursor.at->string.length--; // HACK(Oliver): find a way to stop inserting the operator into previous string
-                        auto next = make_selectable_arc_node(&editor->arc_pool);
-                        insert_arc_node_as_sibling(cursor.at, next);
-                        cursor.at = next;
-                        
-                        Platform_Event* event = 0;
-                        for (;platform_get_next_event(&event);){
-                            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-                                insert_in_string(&cursor.at->string,
-                                                 event->character,
-                                                 ui->cursor_pos++);
-                                platform_consume_event(event);
-                            }
-                        }
-                    }
-                }
             }
             
             if(has_pressed_key(KEY_ENTER)){
                 presenter->mode = P_CREATE;
                 Arc_Node* result;
                 
-                if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
+                if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result)){
+                    auto expr = result;
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    if(cursor.at->string.length){
+                        set_token_type(cursor.at);
+                        arc_set_property(cursor.at, AP_AST);
+                        cursor.at->ast_type = AST_TOKEN;
+                        insert_arc_node_as_sibling(cursor.at, next);
+                    }else {
+                        Arc_Node* member;
+                        assert(find_sub_node_of_scope(cursor.at, &member));
+                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        insert_arc_node_as_sibling(member, next);
+                        
+                    }
+                    cursor.at = next;
+                    presenter->mode = P_EDIT;
+                }
+                else if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
                     auto decl = result;
                     auto type = decl->first_child;
                     auto expr = decl->last_child;
@@ -235,9 +215,6 @@ UPDATE {
                         if(cursor.at->string.length == 0){
                             remove_arc_node_at(&cursor.at, cursor.at);
                             
-                        }else {
-                            set_token_type(cursor.at);
-                            cursor.at->ast_type = AST_TOKEN;
                         }
                         insert_arc_node_as_child(decl->parent, next);
                     }else {

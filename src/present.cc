@@ -390,7 +390,7 @@ present_editable_string(Colour colour, Arc_Node* node){
         v4f bbox = v4f2(pos, widget->min);
         
         if(!widget->alt_string.length && cursor.text_id != widget->id){
-            push_rectangle(v4f2(pos, v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
+            push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
         
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
@@ -634,6 +634,9 @@ present_ast(Arc_Node* node){
                     member = member->next_sibling;
                 }
             }
+        }break;
+        case AST_EXPR:{
+            present_ast(node->first_child);
         }break;
         case AST_TOKEN: {
             if(node->token_type == TOKEN_MISC){

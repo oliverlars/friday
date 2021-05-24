@@ -233,7 +233,7 @@ push_rectangle_outline( v4f rect, f32 border, f32 radius, Colour colour = {0xFF0
 }
 
 internal inline void
-push_circle( v2f pos, f32 y, f32 radius, Colour colour = {0xFF00FFFF}){
+push_circle( v2f pos, f32 radius, Colour colour = {0xFF00FFFF}){
     
     auto circle = make_command(COMMAND_CIRCLE);
     circle->circle.x = pos.x;

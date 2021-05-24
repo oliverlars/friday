@@ -661,8 +661,27 @@ present_arc(Arc_Node* node){
     }
 }
 
-internal void
-present_debug_arc(Arc_Node* node){
-    
+internal f32
+present_debug_arc(v2f pos, Arc_Node* node){
+    if(!node) return 0;
+    f32 start_x = pos.x;
+    while(node) {
+        f32 offset = 0;
+        if(node->string.length){
+            push_string(pos + v2f(25, 0), node->string, ui->theme.text, 0.5f);
+            offset = get_text_width(node->string, .5f) + 20;
+        }
+        if(node == cursor.at){
+            push_circle(pos, 20, ui->theme.cursor);
+        }else {
+            push_circle(pos, 20, ui->theme.text);
+        }
+        if (node->first_child)
+            present_debug_arc(pos + v2f(-10, -30), node->first_child);
+        node = node->next_sibling;
+        pos.x += 50 + offset;
+    }
+    return pos.x - start_x;
 }
+
 

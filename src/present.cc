@@ -389,6 +389,10 @@ present_editable_string(Colour colour, Arc_Node* node){
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
+        if(!widget->alt_string.length && cursor.text_id != widget->id){
+            push_rectangle(v4f2(pos, v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
+        }
+        
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
@@ -676,10 +680,10 @@ present_debug_arc(v2f pos, Arc_Node* node){
         }else {
             push_circle(pos, 20, ui->theme.text);
         }
-        if (node->first_child)
-            present_debug_arc(pos + v2f(-10, -30), node->first_child);
+        if(node->first_child)
+            pos.x += present_debug_arc(pos + v2f(-10, -30), node->first_child);
         node = node->next_sibling;
-        pos.x += 50 + offset;
+        pos.x +=  offset;
     }
     return pos.x - start_x;
 }

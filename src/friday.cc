@@ -165,7 +165,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
+        present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
         f32 end = platform->get_time();
         time_per_gui_update = end - start;
         
@@ -199,7 +199,13 @@ UPDATE {
                 if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
                     set_token_type(cursor.at);
                     presenter->mode = P_EDIT;
-                    advance_cursor(CURSOR_RIGHT);
+                    if(can_advance_cursor(CURSOR_RIGHT)){
+                        advance_cursor(CURSOR_RIGHT);
+                    }else {
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        insert_arc_node_as_sibling(cursor.at, next);
+                        cursor.at = next;
+                    }
                 }
                 else if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
                         !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){

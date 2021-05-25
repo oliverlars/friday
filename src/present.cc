@@ -5,6 +5,16 @@ advance_cursor(Cursor_Direction dir){
     presenter->direction = dir;
 }
 
+internal b32
+can_advance_cursor(Cursor_Direction dir){
+    for(int i = presenter->buffer_index+1; i < presenter->buffer_pos; i++){
+        if(!presenter->buffer[i].newline){
+            return true;
+        }
+    }
+    return false;
+}
+
 internal void
 set_next_cursor_pos(){
     int pos;
@@ -25,9 +35,13 @@ set_next_cursor_pos(){
             ui->cursor_pos = cursor.at->string.length;
         }break;
         case CURSOR_RIGHT:{
-            next_pos = clampi(next_pos+1, 0, presenter->buffer_pos);
+            next_pos = clampi(next_pos+1, 0, presenter->buffer_pos-1);
             if(presenter->buffer[next_pos].newline){
-                next_pos = clampi(next_pos+1, 0, presenter->buffer_pos);
+                if(presenter->buffer_pos-1 == next_pos){
+                    next_pos = pos;
+                }else{
+                    next_pos = clampi(next_pos+1, 0, presenter->buffer_pos-1);
+                }
             }
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
@@ -44,6 +58,7 @@ set_next_cursor_pos(){
             cursor.at = presenter->buffer[pos].node;
         }break;
     }
+    presenter->buffer_index = next_pos;
 }
 
 internal void

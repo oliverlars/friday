@@ -24,6 +24,7 @@ struct Presenter_State {
     
     Present_Node* buffer;
     int buffer_pos;
+    int buffer_index;
     
     Cursor_Direction direction;
 };

@@ -135,11 +135,42 @@ set_token_type(Arc_Node* node){
                    string_eq(node->string, "/") ||
                    string_eq(node->string, "*") ||
                    string_eq(node->string, "(") ||
-                   string_eq(node->string, ")")){
+                   string_eq(node->string, ")") ||
+                   string_eq(node->string, "<") ||
+                   string_eq(node->string, ">") ||
+                   string_eq(node->string, ">=") ||
+                   string_eq(node->string, "<=") ||
+                   string_eq(node->string, "!=") ||
+                   string_eq(node->string, "<<") ||
+                   string_eq(node->string, ">>")){
                     node->token_type = TOKEN_MISC;
                 }else{
                     node->token_type = TOKEN_LITERAL;
                 }
+            }
+        }
+        scope = scope->parent;
+    }
+    
+}
+
+internal void
+find_function(Arc_Node* node){
+    Arc_Node* result;
+    auto scope = node;
+    while(scope){
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        node->reference = member;
+                        return;
+                    }
+                    member = member->prev_sibling;
+                }
+                
             }
         }
         scope = scope->parent;
@@ -206,6 +237,29 @@ UPDATE {
                         insert_arc_node_as_sibling(cursor.at, next);
                         cursor.at = next;
                     }
+                }else if(is_sub_node_of_ast_tag(cursor.at, AT_ARGS, &result)){
+                    auto expr = result;
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    if(cursor.at->string.length){
+                        set_token_type(cursor.at);
+                        arc_set_property(cursor.at, AP_AST);
+                        cursor.at->ast_type = AST_TOKEN;
+                        insert_arc_node_as_sibling(cursor.at, next);
+                    }else {
+                        Arc_Node* arg;
+                        assert(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &arg));
+                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        
+                        auto next_expr = make_arc_node(&editor->arc_pool);
+                        arc_set_property(next_expr, AP_AST);
+                        next_expr->ast_type = AST_EXPR;
+                        next_expr->ast_tag = AT_ARGS;
+                        insert_arc_node_as_sibling(arg, next_expr);
+                        insert_arc_node_as_child(next_expr, next);
+                        
+                    }
+                    cursor.at = next;
+                    presenter->mode = P_EDIT;
                 }
                 else if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
                         !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){
@@ -322,6 +376,14 @@ UPDATE {
             }
             if(has_pressed_key(KEY_S)){
                 make_struct_from_node(cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                cursor.at = next;
+                presenter->mode = P_EDIT;
+            }
+            if(has_pressed_key(KEY_C)){
+                make_call_from_node(cursor.at, &editor->arc_pool);
+                find_function(cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;

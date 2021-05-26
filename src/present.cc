@@ -628,8 +628,8 @@ present_function(Arc_Node* node){
                 }
             }break;
             case AST_DECLARATION: {
-                auto args = node;
-                for(auto decl = args; decl; decl = decl->next_sibling){
+                auto params = node;
+                for(auto decl = params; decl; decl = decl->next_sibling){
                     ID("param%d", (int)decl){
                         present_arc(decl);
                         if(decl->next_sibling){
@@ -686,7 +686,7 @@ present_if(Arc_Node* node){
 
 internal void
 present_struct(Arc_Node* node){
-    ID("if%d", (int)node){
+    ID("struct%d", (int)node){
         
         UI_COLUMN{
             UI_ROW{
@@ -709,6 +709,31 @@ present_struct(Arc_Node* node){
             UI_ROW {
                 present_string(ui->theme.text_misc, make_string("}"));
             }
+        }
+    }
+}
+
+internal void
+present_call(Arc_Node* node){
+    ID("call%d", (int)node){
+        UI_ROW{
+            present_editable_string(ui->theme.text_type, node);
+            push_arc(node);
+            present_string(ui->theme.text_misc, make_string("("));
+            
+            auto arg = node->first_child;
+            
+            for(auto expr = arg; expr; expr = expr->next_sibling){
+                ID("args%d", (int)expr){
+                    present_arc(expr->first_child);
+                    if(expr->next_sibling){
+                        present_string(ui->theme.text_misc, make_string(","));
+                        present_space();
+                    }
+                }
+            }
+            present_string(ui->theme.text_misc, make_string(")"));
+            push_newline();
         }
     }
 }
@@ -759,6 +784,9 @@ present_ast(Arc_Node* node){
             }
             push_arc(node);
             present_arc(node->next_sibling);
+        }break;
+        case AST_CALL:{
+            present_call(node);
         }break;
     }
 }

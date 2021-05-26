@@ -60,6 +60,8 @@ enum Ast_Tag {
     AT_PARAMS,
     AT_RETURN_TYPE,
     AT_BODY,
+    
+    AT_ARGS,
 };
 
 struct Arc_Node {

@@ -241,6 +241,21 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
 }
 
 internal Arc_Node*
+make_call_from_node(Arc_Node* call, Pool* pool){
+    arc_set_property(call, AP_AST);
+    call->ast_type = AST_CALL;
+    
+    auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
+    expr->ast_tag = AT_ARGS;
+    
+    insert_arc_node_as_child(call, expr);
+    
+    return call;
+}
+
+internal Arc_Node*
 make_struct_from_node(Arc_Node* _struct, Pool* pool){
     arc_set_property(_struct, AP_AST);
     _struct->ast_type = AST_STRUCT;

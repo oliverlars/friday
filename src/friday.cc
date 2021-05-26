@@ -196,7 +196,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
+        //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
         f32 end = platform->get_time();
         time_per_gui_update = end - start;
         
@@ -245,6 +245,16 @@ UPDATE {
                         arc_set_property(cursor.at, AP_AST);
                         cursor.at->ast_type = AST_TOKEN;
                         insert_arc_node_as_sibling(cursor.at, next);
+                        
+                    }else if(!cursor.at->prev_sibling){
+                        Arc_Node* outer_scope;
+                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        is_sub_node_of_ast_type(cursor.at, AST_SCOPE, &result);
+                        if(is_sub_node_of_ast_type(result, AST_SCOPE, &outer_scope)){
+                            insert_arc_node_as_child(outer_scope, next);
+                        }else {
+                            insert_arc_node_as_child(result, next);
+                        }
                     }else {
                         Arc_Node* arg;
                         assert(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &arg));

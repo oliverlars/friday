@@ -63,7 +63,9 @@ set_next_cursor_pos(){
 
 internal void
 present_string(Colour colour, String8 string){
-    
+    if(string.length == 0){
+        string = make_string(" ");
+    }
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
@@ -493,7 +495,9 @@ present_editable_string(Colour colour, Arc_Node* node){
         v4f bbox = v4f2(pos, widget->min);
         
         if(!widget->alt_string.length && cursor.text_id != widget->id){
-            push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
+            //push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
+            push_circle(pos + v2f(0, 5), 3, ui->theme.border);
+            //push_string(pos, make_string("->"), ui->theme.border, widget->style.font_scale);
         }
         
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
@@ -722,14 +726,23 @@ present_call(Arc_Node* node){
             present_string(ui->theme.text_misc, make_string("("));
             
             auto arg = node->first_child;
+            assert(node->reference);
+            auto param = node->reference->first_child->first_child;
             
             for(auto expr = arg; expr; expr = expr->next_sibling){
                 ID("args%d", (int)expr){
+                    if(param){
+                        present_string(ui->theme.text_misc, param->string);
+                        present_string(ui->theme.text_misc, make_string(": "));
+                    }
                     present_arc(expr->first_child);
                     if(expr->next_sibling){
                         present_string(ui->theme.text_misc, make_string(","));
                         present_space();
                     }
+                }
+                if(param){
+                    param = param->next_sibling;
                 }
             }
             present_string(ui->theme.text_misc, make_string(")"));

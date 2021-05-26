@@ -689,6 +689,23 @@ present_if(Arc_Node* node){
 }
 
 internal void
+present_return(Arc_Node* node){
+    ID("return%d", (int)node){
+        
+        UI_ROW{
+            present_editable_string(ui->theme.text, node);
+            push_arc(node);
+            present_space();
+            present_arc(node->first_child->first_child);
+            push_arc(node->first_child->first_child);
+            present_space();
+            push_newline();
+        }
+        
+    }
+}
+
+internal void
 present_struct(Arc_Node* node){
     ID("struct%d", (int)node){
         
@@ -721,7 +738,7 @@ internal void
 present_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            present_editable_string(ui->theme.text_type, node);
+            present_editable_string(ui->theme.text_function, node);
             push_arc(node);
             present_string(ui->theme.text_misc, make_string("("));
             
@@ -800,6 +817,9 @@ present_ast(Arc_Node* node){
         }break;
         case AST_CALL:{
             present_call(node);
+        }break;
+        case AST_RETURN:{
+            present_return(node);
         }break;
     }
 }

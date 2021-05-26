@@ -118,6 +118,18 @@ set_token_type(Arc_Node* node){
     Arc_Node* result;
     auto scope = node;
     while(scope){
+        Arc_Node* function;
+        if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
+            auto param = function->first_child->first_child;
+            while(param){
+                if(string_eq(param->string, node->string)){
+                    node->token_type = TOKEN_REFERENCE;
+                    node->reference = param;
+                    return;
+                }
+                param = param->next_sibling;
+            }
+        }
         if(scope->parent && arc_has_property(scope->parent, AP_AST)){
             if(scope->parent->ast_type == AST_SCOPE){
                 result = scope;
@@ -149,6 +161,7 @@ set_token_type(Arc_Node* node){
                 }
             }
         }
+        
         scope = scope->parent;
     }
     
@@ -248,13 +261,14 @@ UPDATE {
                         
                     }else if(!cursor.at->prev_sibling){
                         Arc_Node* outer_scope;
-                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
                         is_sub_node_of_ast_type(cursor.at, AST_SCOPE, &result);
                         if(is_sub_node_of_ast_type(result, AST_SCOPE, &outer_scope)){
                             insert_arc_node_as_child(outer_scope, next);
                         }else {
                             insert_arc_node_as_child(result, next);
                         }
+                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        
                     }else {
                         Arc_Node* arg;
                         assert(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &arg));
@@ -379,6 +393,13 @@ UPDATE {
             }
             if(string_eq(cursor.at->string, "if")){
                 make_if_from_node(cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                cursor.at = next;
+                presenter->mode = P_EDIT;
+            }
+            if(string_eq(cursor.at->string, "return")){
+                make_return_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;

@@ -105,6 +105,20 @@ make_if_from_node(Arc_Node* _if, Pool* pool){
 }
 
 internal Arc_Node*
+make_return_from_node(Arc_Node* ret, Pool* pool){
+    arc_set_property(ret, AP_AST);
+    ret->ast_type = AST_RETURN;
+    
+    auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
+    
+    insert_arc_node_as_child(ret, expr);
+    
+    return ret;
+}
+
+internal Arc_Node*
 make_function(Pool* pool){
     auto func = make_arc_node(pool);
     arc_set_property(func, AP_AST);

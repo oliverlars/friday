@@ -886,7 +886,7 @@ pop_widget_container(){
 
 internal v2f layout_widgets(Widget* widget, v2f pos =  v2f(0,0), b32 dont_lerp_children = false);
 
-#define PADDING 10
+#define PADDING 5
 #define V2PADDING v2f(PADDING, PADDING)
 
 internal v2f

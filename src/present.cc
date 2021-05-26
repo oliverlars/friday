@@ -738,7 +738,7 @@ internal void
 present_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            present_editable_string(ui->theme.text_function, node);
+            present_editable_reference(ui->theme.text_function, node);
             push_arc(node);
             present_string(ui->theme.text_misc, make_string("("));
             

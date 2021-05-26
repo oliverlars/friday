@@ -845,9 +845,8 @@ push_widget_window(v4f rect, String8 string){
     
     widget->min = rect.size;
     widget->pos = rect.pos;
-    update_widget(widget);
+    auto result = update_widget(widget);
     push_widget_padding(v2f(10, 10));
-    
 }
 
 internal void

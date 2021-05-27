@@ -113,84 +113,6 @@ HOT_UNLOAD {
 }
 
 
-internal void
-set_token_type(Arc_Node* node){
-    Arc_Node* result;
-    auto scope = node;
-    while(scope){
-        Arc_Node* function;
-        if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
-            auto param = function->first_child->first_child;
-            while(param){
-                if(string_eq(param->string, node->string)){
-                    node->token_type = TOKEN_REFERENCE;
-                    node->reference = param;
-                    return;
-                }
-                param = param->next_sibling;
-            }
-        }
-        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
-            if(scope->parent->ast_type == AST_SCOPE){
-                result = scope;
-                auto member = result->prev_sibling;
-                while(member){
-                    if(string_eq(member->string, node->string)){
-                        node->token_type = TOKEN_REFERENCE;
-                        node->reference = member;
-                        return;
-                    }
-                    member = member->prev_sibling;
-                }
-                if(string_eq(node->string, "+") ||
-                   string_eq(node->string, "-") ||
-                   string_eq(node->string, "/") ||
-                   string_eq(node->string, "*") ||
-                   string_eq(node->string, "(") ||
-                   string_eq(node->string, ")") ||
-                   string_eq(node->string, "<") ||
-                   string_eq(node->string, ">") ||
-                   string_eq(node->string, ">=") ||
-                   string_eq(node->string, "<=") ||
-                   string_eq(node->string, "!=") ||
-                   string_eq(node->string, "<<") ||
-                   string_eq(node->string, ">>")){
-                    node->token_type = TOKEN_MISC;
-                }else{
-                    node->token_type = TOKEN_LITERAL;
-                }
-            }
-        }
-        
-        scope = scope->parent;
-    }
-    
-}
-
-internal void
-find_function(Arc_Node* node){
-    Arc_Node* result;
-    auto scope = node;
-    while(scope){
-        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
-            if(scope->parent->ast_type == AST_SCOPE){
-                result = scope;
-                auto member = result->prev_sibling;
-                while(member){
-                    if(string_eq(member->string, node->string)){
-                        node->reference = member;
-                        return;
-                    }
-                    member = member->prev_sibling;
-                }
-                
-            }
-        }
-        scope = scope->parent;
-    }
-    
-}
-
 
 UPDATE {
     FRAME
@@ -216,26 +138,7 @@ UPDATE {
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
         
-        if(last_cursor.at && cursor.at != last_cursor.at &&
-           arc_has_property(last_cursor.at, AP_AST) &&
-           last_cursor.at->ast_type == AST_TOKEN){
-            set_token_type(last_cursor.at);
-        }
-        
         if(presenter->mode == P_EDIT){
-            if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
-                if(cursor.at->token_type == TOKEN_REFERENCE){
-                    cursor.at->token_type = TOKEN_UNASSIGNED;
-                    replace_string(&cursor.at->string, cursor.at->reference->string);
-                    cursor.at->reference = nullptr;
-                }
-            }
-            
-            // NOTE(Oliver): this is just a token list, it appears in lots of places
-            // make it more clear that's the context we're in
-            if(is_direct_sub_node_of_ast_type(cursor.at, AST_DECLARATION) ||
-               is_direct_sub_node_of_ast_type(cursor.at, AST_IF)){
-            }
             
             if(has_pressed_key(KEY_ENTER)){
                 presenter->mode = P_CREATE;
@@ -272,7 +175,8 @@ UPDATE {
                     }else {
                         Arc_Node* arg;
                         assert(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &arg));
-                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        //remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        remove_arc_node_at(&arg->first_child, cursor.at);
                         
                         auto next_expr = make_arc_node(&editor->arc_pool);
                         arc_set_property(next_expr, AP_AST);
@@ -421,6 +325,7 @@ UPDATE {
                 presenter->mode = P_EDIT;
             }
         }
+        
         last_cursor = cursor;
         set_next_cursor_pos();
         highlight_reference = nullptr;

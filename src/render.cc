@@ -997,6 +997,7 @@ init_shaders(){
             "out vec2 frag_pos;\n"
             "out vec2 frag_uv;\n"
             "out vec4 frag_colour;\n"
+            "out vec2 frag_resolution;\n"
             
             "void main(){\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
@@ -1012,6 +1013,7 @@ init_shaders(){
             "gl_Position = screen_position;\n"
             "frag_pos = pos;\n"
             "frag_colour = colour;\n"
+            "frag_resolution = resolution;\n"
             "}\n";
         
         GLchar* glyph_fs =  
@@ -1020,6 +1022,7 @@ init_shaders(){
             "in vec2 frag_uv; \n"
             "in vec2 frag_dim; \n"
             "in vec4 frag_colour; \n"
+            "in vec2 frag_resolution; \n"
             "out vec4 colour;\n"
             "uniform sampler2D atlas;\n"
             "uniform vec4 clip_range;\n"
@@ -1027,12 +1030,18 @@ init_shaders(){
             "float width = 0.45;\n"
             "const float edge = 0.15;\n"
             
-            "void main(){\n"
-            "float distance = 1.0 - texture(atlas, frag_uv).a;\n"
+            "vec4 get_colour(vec2 uv){\n"
+            "float distance = 1.0 - texture(atlas, uv).a;\n"
             "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
+            "vec4 result = vec4(frag_colour.rgb, min(alpha, frag_colour.a));\n"
+            "return result;\n"
+            "}\n"
+            
+            "void main(){\n"
+            
             "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
-            "colour = vec4(frag_colour.rgb, min(alpha, frag_colour.a));\n"
+            "colour = get_colour(frag_uv);\n"
             "}else {\n"
             "discard;\n"
             "}\n"

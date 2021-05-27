@@ -16,6 +16,87 @@ can_advance_cursor(Cursor_Direction dir){
 }
 
 internal void
+set_token_type(Arc_Node* node){
+    Arc_Node* result;
+    auto scope = node;
+    while(scope){
+        Arc_Node* function;
+        if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
+            auto param = function->first_child->first_child;
+            while(param){
+                if(string_eq(param->string, node->string)){
+                    node->token_type = TOKEN_REFERENCE;
+                    node->reference = param;
+                    replace_string(&node->string, node->reference->string);
+                    return;
+                }
+                param = param->next_sibling;
+            }
+        }
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        node->token_type = TOKEN_REFERENCE;
+                        node->reference = member;
+                        replace_string(&node->string, node->reference->string);
+                        return;
+                    }
+                    member = member->prev_sibling;
+                }
+                if(string_eq(node->string, "+") ||
+                   string_eq(node->string, "-") ||
+                   string_eq(node->string, "/") ||
+                   string_eq(node->string, "*") ||
+                   string_eq(node->string, "(") ||
+                   string_eq(node->string, ")") ||
+                   string_eq(node->string, "<") ||
+                   string_eq(node->string, ">") ||
+                   string_eq(node->string, ">=") ||
+                   string_eq(node->string, "<=") ||
+                   string_eq(node->string, "!=") ||
+                   string_eq(node->string, "<<") ||
+                   string_eq(node->string, ">>")){
+                    node->token_type = TOKEN_MISC;
+                }else{
+                    node->token_type = TOKEN_LITERAL;
+                }
+            }
+        }
+        
+        scope = scope->parent;
+    }
+    
+}
+
+internal void
+find_function(Arc_Node* node){
+    Arc_Node* result;
+    auto scope = node;
+    while(scope){
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        node->reference = member;
+                        replace_string(&node->string, node->reference->string);
+                        return;
+                    }
+                    member = member->prev_sibling;
+                }
+                
+            }
+        }
+        scope = scope->parent;
+    }
+    
+}
+
+internal void
 set_next_cursor_pos(){
     int pos;
     for(pos = 0; pos < presenter->buffer_pos; pos++){
@@ -25,6 +106,18 @@ set_next_cursor_pos(){
         }
     }
     int next_pos = pos;
+    if(can_advance_cursor(presenter->direction)){
+        if(arc_has_property(cursor.at, AP_AST)){
+            switch(cursor.at->ast_type){
+                case AST_TOKEN:{
+                    set_token_type(cursor.at);
+                }break;
+                case AST_CALL:{
+                    find_function(cursor.at);
+                }break;
+            }
+        }
+    }
     switch(presenter->direction){
         case CURSOR_LEFT:{
             next_pos = clampi(next_pos-1, 0, presenter->buffer_pos);
@@ -691,17 +784,14 @@ present_if(Arc_Node* node){
 internal void
 present_return(Arc_Node* node){
     ID("return%d", (int)node){
-        
         UI_ROW{
-            present_editable_string(ui->theme.text, node);
+            present_editable_string(ui->theme.text_type, node);
             push_arc(node);
             present_space();
             present_arc(node->first_child->first_child);
-            push_arc(node->first_child->first_child);
             present_space();
             push_newline();
         }
-        
     }
 }
 
@@ -738,7 +828,12 @@ internal void
 present_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            present_editable_reference(ui->theme.text_function, node);
+            if(cursor.at == node){
+                present_editable_string(ui->theme.text_function, node);
+            }else{
+                replace_string(&node->string, node->reference->string);
+                present_editable_reference(ui->theme.text_function, node);
+            }
             push_arc(node);
             present_string(ui->theme.text_misc, make_string("("));
             
@@ -753,7 +848,7 @@ present_call(Arc_Node* node){
                         present_string(ui->theme.text_misc, make_string(": "));
                     }
                     present_arc(expr->first_child);
-                    if(expr->next_sibling){
+                    if(expr->next_sibling && expr->next_sibling->first_child){
                         present_string(ui->theme.text_misc, make_string(","));
                         present_space();
                     }
@@ -803,7 +898,12 @@ present_ast(Arc_Node* node){
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
-                present_editable_reference(ui->theme.text_function, node);
+                if(cursor.at == node){
+                    present_editable_string(ui->theme.text_function, node);
+                }else{
+                    replace_string(&node->string, node->reference->string);
+                    present_editable_reference(ui->theme.text_function, node);
+                }
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
             }else {

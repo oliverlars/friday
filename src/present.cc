@@ -695,8 +695,6 @@ present_declaration(Arc_Node* node){
                 //push_arc(node->last_child->first_child);
                 present_arc(node->last_child->first_child);
             }
-            push_newline();
-            
         }
     }
 }
@@ -906,6 +904,7 @@ present_ast(Arc_Node* node){
             UI_COLUMN{
                 while(member){
                     present_arc(member);
+                    push_newline();
                     member = member->next_sibling;
                 }
             }

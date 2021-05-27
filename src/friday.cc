@@ -99,6 +99,7 @@ PERMANENT_LOAD {
     editor->root = scope;
     cursor.at = first;
     cursor.string = &first->string;
+    
 }
 
 HOT_LOAD {
@@ -141,6 +142,10 @@ UPDATE {
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
         
+        if(has_pressed_key_modified(KEY_J, KEY_MOD_CTRL)){
+            jump_to_declaration();
+        }
+        
         if(presenter->mode == P_EDIT){
             
             if(has_pressed_key(KEY_ENTER)){
@@ -149,10 +154,19 @@ UPDATE {
                 if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
                     set_token_type(cursor.at);
                     presenter->mode = P_EDIT;
-                    if(can_advance_cursor(CURSOR_RIGHT)){
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    if(cursor.at->string.length == 0){
+                        Arc_Node* member;
+                        assert(find_sub_node_of_scope(cursor.at, &member));
+                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                        insert_arc_node_as_sibling(member, next);
+                        cursor.at = next;
+                        
+                    } else if(can_advance_cursor(CURSOR_RIGHT)){
                         advance_cursor(CURSOR_RIGHT);
                     }else {
-                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        arc_set_property(next, AP_AST);
+                        next->ast_type = AST_TOKEN;
                         insert_arc_node_as_sibling(cursor.at, next);
                         cursor.at = next;
                     }
@@ -198,10 +212,12 @@ UPDATE {
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     if(cursor.at->string.length){
                         set_token_type(cursor.at);
-                        arc_set_property(cursor.at, AP_AST);
-                        cursor.at->ast_type = AST_TOKEN;
+                        
+                        arc_set_property(next, AP_AST);
+                        next->ast_type = AST_TOKEN;
                         insert_arc_node_as_sibling(cursor.at, next);
                     }else {
+                        
                         Arc_Node* member;
                         assert(find_sub_node_of_scope(cursor.at, &member));
                         remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
@@ -226,10 +242,13 @@ UPDATE {
                         }else {
                             
                         }
+                        
                         insert_arc_node_as_child(decl->parent, next);
                     }else {
                         cursor.at->ast_type = AST_TYPE_USAGE;
                         insert_arc_node_as_child(expr, next);
+                        arc_set_property(next, AP_AST);
+                        next->ast_type = AST_TOKEN;
                     }
                     
                     cursor.at = next;

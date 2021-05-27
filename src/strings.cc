@@ -146,6 +146,18 @@ string_eq(String8 a, String8 b){
     return true;
 }
 
+internal bool
+is_strict_substring(String8 a, String8 b){
+    if(a.length == 0) return false;
+    if(a.length >= b.length) return false;
+    for(int i = 0; i < a.length; i++){
+        if(a.text[i] != b.text[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
 internal int
 string_to_int(String8 string){
     

@@ -179,14 +179,14 @@ set_next_cursor_pos(){
     int next_pos = pos;
     switch(presenter->direction){
         case CURSOR_LEFT:{
-            next_pos--;
+            next_pos = clampi(next_pos-1, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = cursor.at->string.length;
             
         }break;
         case CURSOR_RIGHT:{
             
-            next_pos++;
+            next_pos = clampi(next_pos+1, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
@@ -195,7 +195,7 @@ set_next_cursor_pos(){
             
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos--;
+            line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             cursor.at = presenter->buffer[next_pos].node;
@@ -205,7 +205,7 @@ set_next_cursor_pos(){
             
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos++;
+            line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             

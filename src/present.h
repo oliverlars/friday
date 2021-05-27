@@ -15,7 +15,11 @@ enum Present_Mode {
 
 struct Present_Node {
     Arc_Node* node;
-    bool newline;
+};
+
+struct Line_Info {
+    int start;
+    int end;
 };
 
 struct Presenter_State {
@@ -25,6 +29,11 @@ struct Presenter_State {
     Present_Node* buffer;
     int buffer_pos;
     int buffer_index;
+    
+    Line_Info* lines;
+    int line_pos;
+    int line_index;
+    
     
     Cursor_Direction direction;
 };

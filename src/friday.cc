@@ -122,6 +122,9 @@ UPDATE {
         presenter->direction = CURSOR_NONE;
         presenter->buffer = (Present_Node*)push_size_zero(&platform->frame_arena, sizeof(Present_Node)*8192);
         
+        presenter->line_pos = 0;
+        presenter->lines = (Line_Info*)push_size_zero(&platform->frame_arena, sizeof(Line_Info)*8192);
+        
         f32 start = platform->get_time();
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 

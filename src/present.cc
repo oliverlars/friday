@@ -140,15 +140,56 @@ set_next_cursor_pos(){
             ui->cursor_pos = 0;
         }break;
         case CURSOR_UP:{
+            
             int distance_from_newline = pos;
-            while(!presenter->buffer[distance_from_newline++].newline);
-            distance_from_newline -= pos;
-            while(!presenter->buffer[next_pos--].newline);
+            while(!presenter->buffer[distance_from_newline].newline){
+                distance_from_newline--;
+            }
+            distance_from_newline = clampi(distance_from_newline-1, 0, presenter->buffer_pos-1);
+            next_pos = distance_from_newline;
+            assert(!presenter->buffer[next_pos].newline);
+            distance_from_newline = pos - distance_from_newline;
+            assert(distance_from_newline > 0);
+            
+            while(!presenter->buffer[next_pos--].newline && next_pos);
+            if(presenter->buffer[next_pos].newline){
+                next_pos++;
+            }
+            assert(!presenter->buffer[next_pos].newline);
+            for(int i = 0; i < distance_from_newline; i++){
+                if(presenter->buffer[i+next_pos].newline){
+                    next_pos = i+next_pos-1;
+                    break;
+                }
+            }
             cursor.at = presenter->buffer[next_pos].node;
+            
         }break;
         case CURSOR_DOWN:{
-            while(!presenter->buffer[next_pos++].newline);
-            cursor.at = presenter->buffer[pos].node;
+            
+            int distance_from_newline = pos;
+            while(!presenter->buffer[distance_from_newline].newline){
+                distance_from_newline++;
+            }
+            distance_from_newline = clampi(distance_from_newline+1, 0, presenter->buffer_pos-1);
+            next_pos = distance_from_newline;
+            assert(!presenter->buffer[next_pos].newline);
+            distance_from_newline = distance_from_newline - pos;
+            assert(distance_from_newline > 0);
+            
+            while(!presenter->buffer[next_pos++].newline && next_pos < presenter->buffer_pos);
+            if(presenter->buffer[next_pos].newline){
+                next_pos--;
+            }
+            assert(!presenter->buffer[next_pos].newline);
+            for(int i = 0; i < distance_from_newline; i++){
+                if(presenter->buffer[i+next_pos].newline){
+                    next_pos = i+next_pos-1;
+                    break;
+                }
+            }
+            cursor.at = presenter->buffer[next_pos].node;
+            
         }break;
     }
     presenter->buffer_index = next_pos;
@@ -677,8 +718,9 @@ present_declaration(Arc_Node* node){
                 present_space();
                 //push_arc(node->last_child->first_child);
                 present_arc(node->last_child->first_child);
-                push_newline();
             }
+            push_newline();
+            
         }
     }
 }
@@ -712,6 +754,7 @@ present_function(Arc_Node* node){
                             present_function(return_type);
                             present_space();
                             present_string(ui->theme.text_misc, make_string("{"));
+                            push_newline();
                         }
                         UI_ROW {
                             present_space();

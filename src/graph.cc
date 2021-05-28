@@ -284,6 +284,17 @@ make_struct_from_node(Arc_Node* _struct, Pool* pool){
 }
 
 internal void
+set_as_ast(Arc_Node* node, Ast_Type type){
+    arc_set_property(node, AP_AST);
+    node->ast_type = type;
+}
+
+internal void
+go_to_or_make_next_in_list(){
+    
+}
+
+internal void
 remove_arc_node_at(Arc_Node** head, Arc_Node* at){
     if (!*head || !at) return;
     

@@ -153,8 +153,11 @@ UPDATE {
                 Arc_Node* result;
                 
                 if(arc_has_property(cursor.at, AP_AST) && cursor.at->ast_type == AST_TOKEN){
-                    Arc_Node* result;
-                    if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
+                    Arc_Node* decl;
+                    Arc_Node* args;
+                    
+                    if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &decl) ||
+                       is_sub_node_of_ast_tag(cursor.at, AT_ARGS, &args)){
                         auto next = make_selectable_arc_node(&editor->arc_pool);
                         if(cursor.at->string.length){
                             set_token_type(cursor.at);
@@ -165,7 +168,11 @@ UPDATE {
                             presenter->mode = P_EDIT;
                         }else {
                             remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-                            insert_arc_node_as_sibling(result, next);
+                            if(decl){
+                                insert_arc_node_as_sibling(decl, next);
+                            }else{
+                                insert_arc_node_as_sibling(args, next);
+                            }
                             cursor.at = next;
                             presenter->mode = P_EDIT;
                         }
@@ -190,8 +197,10 @@ UPDATE {
                         }
                     }
                 }else if(is_sub_node_of_ast_tag(cursor.at, AT_ARGS, &result)){
+                    
                     auto expr = result;
                     auto next = make_selectable_arc_node(&editor->arc_pool);
+                    
                     if(cursor.at->string.length){
                         set_token_type(cursor.at);
                         arc_set_property(cursor.at, AP_AST);
@@ -207,7 +216,6 @@ UPDATE {
                             insert_arc_node_as_child(result, next);
                         }
                         remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-                        
                     }else {
                         Arc_Node* arg;
                         assert(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &arg));
@@ -222,29 +230,10 @@ UPDATE {
                         insert_arc_node_as_child(next_expr, next);
                         
                     }
+                    
                     cursor.at = next;
                     presenter->mode = P_EDIT;
-                }
-                else if(is_sub_node_of_ast_type(cursor.at, AST_EXPR, &result) &&
-                        !is_sub_node_of_ast_tag(cursor.at, AT_PARAMS, &result)){
-                    auto expr = result;
-                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                    if(cursor.at->string.length){
-                        set_token_type(cursor.at);
-                        
-                        arc_set_property(next, AP_AST);
-                        next->ast_type = AST_TOKEN;
-                        insert_arc_node_as_sibling(cursor.at, next);
-                    }else {
-                        
-                        Arc_Node* member;
-                        assert(find_sub_node_of_scope(cursor.at, &member));
-                        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-                        insert_arc_node_as_sibling(member, next);
-                        
-                    }
-                    cursor.at = next;
-                    presenter->mode = P_EDIT;
+                    
                 }
                 else if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
                     auto decl = result;

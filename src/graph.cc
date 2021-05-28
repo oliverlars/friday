@@ -322,6 +322,7 @@ go_to_or_make_next(){
         // NOTE(Oliver): string is empty, we now want to exit the current edit and move
         // on
         if(can_advance_cursor(CURSOR_RIGHT)){
+            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
             advance_cursor(CURSOR_RIGHT);
         }else {
             auto next = make_selectable_arc_node(&editor->arc_pool);

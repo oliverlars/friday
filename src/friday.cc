@@ -121,14 +121,8 @@ UPDATE {
     FRAME
     {
         
-        presenter->buffer_pos = 0;
-        presenter->direction = CURSOR_NONE;
-        presenter->buffer = (Present_Node*)push_size_zero(&platform->frame_arena, sizeof(Present_Node)*8192);
-        
-        presenter->line_pos = 0;
-        presenter->lines = (Line_Info*)push_size_zero(&platform->frame_arena, sizeof(Line_Info)*8192);
-        
         f32 start = platform->get_time();
+        
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -137,13 +131,10 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
-        f32 end = platform->get_time();
-        time_per_gui_update = end - start;
         
-        //NOTE(Oliver): handle input for presenter
-        // put this somewhere else
-        
+        if(cursor.at->ast_type == AST_TOKEN){
+            set_token_type(cursor.at);
+        }
         if(has_pressed_key_modified(KEY_J, KEY_MOD_CTRL)){
             jump_to_declaration();
         }
@@ -151,78 +142,110 @@ UPDATE {
         if(presenter->mode == P_EDIT){
             
             if(has_pressed_key(KEY_ENTER)){
-                presenter->mode = P_CREATE;
+                if(cursor.at->ast_type == AST_INVALID){
+                    presenter->mode = P_CREATE;
+                }else if(cursor.at->ast_type == AST_TOKEN){
+                    if(cursor.at->string.length){
+                        auto token = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(token, AST_TOKEN);
+                        insert_arc_node_as_sibling(cursor.at, token);
+                        advance_cursor(CURSOR_RIGHT);
+                    }else {
+                        
+                        auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
+                        Arc_Node* member;
+                        assert(find_sub_node_of_list(cursor.at, &member));
+                        insert_arc_node_as_sibling(member, next_in_scope);
+                        mark_node_for_deletion(&cursor.at->parent->first_child, cursor.at);
+                        set_cursor_as_node(next_in_scope);
+                    }
+                }else {
+                    advance_cursor(CURSOR_RIGHT);
+                }
+                
             }
+            
         }
         
         if(presenter->mode == P_CREATE){
             
-            Arc_Node* result;
-            if(is_sub_node_of_ast_type(cursor.at, AST_DECLARATION, &result)){
-                auto decl = result;
-                if(cursor.at->ast_type == AST_TYPE_USAGE){
-                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                    insert_arc_node_as_child(decl->last_child, next);
-                    cursor.at = next;
-                    set_as_ast(next, AST_TOKEN);
-                    presenter->mode = P_EDIT;
-                }else if(cursor.at->ast_type == AST_TOKEN){
-                    go_to_or_make_next();
-                    presenter->mode = P_EDIT;
-                }
-            }
-            
-            
-            //~ Node creation tool
+            //~ Node creation keybinds
             if(has_pressed_key(KEY_D)){
                 make_declaration_from_node(cursor.at, &editor->arc_pool);
-                auto next = make_selectable_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.at->first_child, next);
-                set_as_ast(next, AST_TYPE_USAGE);
-                cursor.at = next;
+                auto type = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, type);
+                set_as_ast(type, AST_TYPE_USAGE);
+                auto expr = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->last_child, expr);
+                set_as_ast(expr, AST_TOKEN);
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }
-            
-            if(has_pressed_key(KEY_F)){
+            }else if(has_pressed_key(KEY_F)){
                 make_function_from_node(cursor.at, &editor->arc_pool);
-                auto next = make_selectable_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.at->first_child, next);
-                cursor.at = next;
+                
+                auto param = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, param);
+                
+                auto type = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child->next_sibling, type);
+                set_as_ast(type, AST_TYPE_USAGE);
+                
+                auto empty = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->last_child, empty);
+                
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }
-            if(string_eq(cursor.at->string, "if")){
+            } else if(string_eq(cursor.at->string, "if")){
                 make_if_from_node(cursor.at, &editor->arc_pool);
-                auto next = make_selectable_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.at->first_child, next);
-                cursor.at = next;
+                
+                auto expr = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(expr, AST_TOKEN);
+                insert_arc_node_as_child(cursor.at->first_child, expr);
+                
+                auto empty = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->last_child, empty);
+                
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }
-            if(string_eq(cursor.at->string, "return")){
+            } else if(string_eq(cursor.at->string, "return")){
                 make_return_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;
                 presenter->mode = P_EDIT;
-            }
-            if(has_pressed_key(KEY_S)){
+            }else if(has_pressed_key(KEY_S)){
                 make_struct_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;
                 presenter->mode = P_EDIT;
-            }
-            if(has_pressed_key(KEY_C)){
+            } else if(has_pressed_key(KEY_C)){
                 make_call_from_node(cursor.at, &editor->arc_pool);
                 find_function(cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
-                insert_arc_node_as_child(cursor.at->first_child, next);
+                insert_arc_node_as_child(cursor.at->first_child->first_child, next);
                 cursor.at = next;
+                presenter->mode = P_EDIT;
+            }else if(cursor.at->string.length == 0){
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }
         }
         
-        last_cursor = cursor;
+        //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
+        f32 end = platform->get_time();
+        time_per_gui_update = end - start;
+        
+        //NOTE(Oliver): handle input for presenter
+        // put this somewhere else
+        build_navigation_buffer(editor->root);
         set_next_cursor_pos();
+        presenter->direction = CURSOR_NONE;
+        presenter->direction_count = 0;
+        
+        delete_nodes_marked_for_deletion();
+        
+        last_cursor = cursor;
         highlight_reference = nullptr;
         if(platform->frame_count == 0){
             ui->active = cursor.text_id;

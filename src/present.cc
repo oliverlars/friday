@@ -1,14 +1,51 @@
 
 internal void
-advance_cursor(Cursor_Direction dir){
+mark_node_for_deletion(Arc_Node** head, Arc_Node* at){
+    presenter->delete_head = head;
+    presenter->delete_at = at;
+}
+
+
+internal void
+set_cursor_as_node(Arc_Node* node){
+    cursor.at = node;
+}
+
+internal void
+delete_nodes_marked_for_deletion(){
+    if(presenter->delete_head && presenter->delete_at){
+        remove_arc_node_at(presenter->delete_head, presenter->delete_at);
+    }
+    presenter->delete_head = nullptr;
+    presenter->delete_at = nullptr;
+}
+
+internal void
+advance_cursor(Cursor_Direction dir, int count = 1){
     if(!cursor.at) return;
     presenter->direction = dir;
+    presenter->direction_count = count;
 }
 
 internal b32
 can_advance_cursor(Cursor_Direction dir){
-    for(int i = presenter->buffer_index+1; i < presenter->buffer_pos; i++){
-        return true;
+    int pos_index = presenter->buffer_index;
+    int line_index = presenter->line_index;
+    int count = presenter->direction_count;
+    
+    switch(dir){
+        case CURSOR_RIGHT:{
+            return (pos_index+count) < presenter->buffer_pos;
+        }break;
+        case CURSOR_LEFT:{
+            return pos_index - count >= 0;
+        }break;
+        case CURSOR_UP:{
+            return line_index - count >= 0;
+        }break;
+        case CURSOR_DOWN:{
+            return line_index+count < presenter->line_pos;
+        }break;
     }
     return false;
 }
@@ -149,53 +186,29 @@ tab_completer(Arc_Node* node){
 internal void
 set_next_cursor_pos(){
     
-    if(can_advance_cursor(presenter->direction)){
-        if(arc_has_property(cursor.at, AP_AST)){
-            switch(cursor.at->ast_type){
-                case AST_TOKEN:{
-                    set_token_type(cursor.at);
-                }break;
-                case AST_CALL:{
-                    find_function(cursor.at);
-                }break;
-            }
-        }
-    }
+    auto dir = presenter->direction;
+    auto count = presenter->direction_count;
     
-    int pos;
-    for(pos = 0; pos < presenter->buffer_pos; pos++){
-        
-        if(presenter->buffer[pos].node &&
-           presenter->buffer[pos].node == cursor.at){
-            break;
-        }
-    }
-    int line_pos;
-    for(line_pos = 0; line_pos < presenter->line_pos; line_pos++){
-        if(presenter->lines[line_pos].end >= pos){
-            break;
-        }
-    }
+    auto pos = presenter->buffer_index;
+    auto line_pos = presenter->line_index;
     int next_pos = pos;
-    switch(presenter->direction){
+    switch(dir){
         case CURSOR_LEFT:{
-            next_pos = clampi(next_pos-1, 0, presenter->buffer_pos-1);
+            next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = cursor.at->string.length;
             
         }break;
         case CURSOR_RIGHT:{
-            
-            next_pos = clampi(next_pos+1, 0, presenter->buffer_pos-1);
+            next_pos = clampi(next_pos+count, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
         }break;
         case CURSOR_UP:{
-            
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
+            line_pos = clampi(line_pos-count, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             cursor.at = presenter->buffer[next_pos].node;
@@ -205,7 +218,7 @@ set_next_cursor_pos(){
             
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
+            line_pos = clampi(line_pos+count, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             
@@ -733,18 +746,15 @@ internal void
 present_declaration(Arc_Node* node){
     ID("declaration%d", (int)node){
         UI_ROW {
-            push_arc(node);
             present_editable_string(ui->theme.text, node);
             present_space();
             present_string(ui->theme.text_misc, make_string(":"));
             present_space();
             present_arc(node->first_child->first_child);
-            //push_arc(node->first_child->first_child);
             if(node->last_child->first_child){
                 present_space();
                 present_string(ui->theme.text_misc, make_string("="));
                 present_space();
-                //push_arc(node->last_child->first_child);
                 present_arc(node->last_child->first_child);
             }
         }
@@ -766,7 +776,6 @@ present_function(Arc_Node* node){
                         auto return_type = node->first_child->next_sibling->first_child;
                         auto scope = node->first_child->next_sibling->next_sibling;
                         UI_ROW{
-                            push_arc(node);
                             present_editable_string(ui->theme.text_function, node);
                             present_space();
                             present_string(ui->theme.text_misc, make_string("::"));
@@ -780,7 +789,6 @@ present_function(Arc_Node* node){
                             present_function(return_type);
                             present_space();
                             present_string(ui->theme.text_misc, make_string("{"));
-                            push_newline();
                         }
                         UI_ROW {
                             present_space();
@@ -818,7 +826,6 @@ present_function(Arc_Node* node){
 
 internal void
 present_type_usage(Arc_Node* node){
-    push_arc(node);
     present_editable_string(ui->theme.text_type, node);
 }
 
@@ -829,19 +836,15 @@ present_if(Arc_Node* node){
         UI_COLUMN{
             UI_ROW{
                 present_editable_string(ui->theme.text, node);
-                push_arc(node);
                 present_space();
                 present_arc(node->first_child->first_child);
-                push_arc(node->first_child->first_child);
                 present_space();
                 present_string(ui->theme.text_misc, make_string("{"));
-                push_newline();
             }
             UI_ROW {
                 present_space();
                 present_space();
                 present_arc(node->last_child);
-                push_newline();
             }
             UI_ROW {
                 present_string(ui->theme.text_misc, make_string("}"));
@@ -855,11 +858,9 @@ present_return(Arc_Node* node){
     ID("return%d", (int)node){
         UI_ROW{
             present_editable_string(ui->theme.text_type, node);
-            push_arc(node);
             present_space();
             present_arc(node->first_child->first_child);
             present_space();
-            push_newline();
         }
     }
 }
@@ -875,16 +876,13 @@ present_struct(Arc_Node* node){
                 present_string(ui->theme.text, make_string("::"));
                 present_space();
                 present_string(ui->theme.text, make_string("struct"));
-                push_arc(node);
                 present_space();
                 present_string(ui->theme.text_misc, make_string("{"));
-                push_newline();
             }
             UI_ROW {
                 present_space();
                 present_space();
                 present_arc(node->first_child);
-                push_newline();
             }
             UI_ROW {
                 present_string(ui->theme.text_misc, make_string("}"));
@@ -903,7 +901,6 @@ present_call(Arc_Node* node){
                 replace_string(&node->string, node->reference->string);
                 present_editable_reference(ui->theme.text_function, node);
             }
-            push_arc(node);
             present_string(ui->theme.text_misc, make_string("("));
             
             auto arg = node->first_child;
@@ -927,7 +924,6 @@ present_call(Arc_Node* node){
                 }
             }
             present_string(ui->theme.text_misc, make_string(")"));
-            push_newline();
         }
     }
 }
@@ -956,7 +952,6 @@ present_ast(Arc_Node* node){
             UI_COLUMN{
                 while(member){
                     present_arc(member);
-                    push_newline();
                     member = member->next_sibling;
                 }
             }
@@ -988,7 +983,6 @@ present_ast(Arc_Node* node){
             if(node->next_sibling){
                 present_space();
             }
-            push_arc(node);
             present_arc(node->next_sibling);
         }break;
         case AST_CALL:{
@@ -1006,7 +1000,6 @@ present_arc(Arc_Node* node){
     if(arc_has_property(node, AP_AST)){
         present_ast(node);
     }else {
-        push_arc(node);
         present_editable_string(ui->theme.text, node);
         present_arc(node->next_sibling);
         present_arc(node->first_child);
@@ -1036,4 +1029,88 @@ present_debug_arc(v2f pos, Arc_Node* node){
     return pos.x - start_x;
 }
 
+//~ Build navigation buffer from ARC
+
+internal void
+build_buffer_from_arc(Arc_Node* node){
+    if(!node) return;
+    switch(node->ast_type){
+        case AST_DECLARATION: {
+            push_arc(node);
+            build_buffer_from_arc(node->first_child->first_child);
+            build_buffer_from_arc(node->last_child->first_child);
+        }break;
+        case AST_STRUCT: {
+            push_arc(node);
+            push_newline();
+            build_buffer_from_arc(node->first_child);
+        }break;
+        case AST_FUNCTION: {
+            push_arc(node);
+            
+            auto params = node->first_child->first_child;
+            for(auto decl = params; decl; decl = decl->next_sibling){
+                build_buffer_from_arc(decl);
+            }
+            build_buffer_from_arc(node->first_child->next_sibling->first_child);
+            push_newline();
+            build_buffer_from_arc(node->last_child);
+        }break;
+        case AST_TYPE_USAGE: {
+            push_arc(node);
+        }break;
+        case AST_IF: {
+            push_arc(node);
+            build_buffer_from_arc(node->first_child->first_child);
+            push_arc(node->first_child->first_child);
+            push_newline();
+            build_buffer_from_arc(node->last_child);
+        }break;
+        case AST_SCOPE: {
+            auto member = node->first_child;
+            while(member){
+                build_buffer_from_arc(member);
+                push_newline();
+                member = member->next_sibling;
+            }
+            push_newline();
+        }break;
+        case AST_EXPR:{
+            build_buffer_from_arc(node->first_child);
+        }break;
+        case AST_TOKEN: {
+            push_arc(node);
+            build_buffer_from_arc(node->next_sibling);
+        }break;
+        case AST_CALL:{
+            push_arc(node);
+            auto arg = node->first_child;
+            for(auto expr = arg; expr; expr = expr->next_sibling){
+                build_buffer_from_arc(expr->first_child);
+            }
+        }break;
+        case AST_RETURN:{
+            push_arc(node);
+            build_buffer_from_arc(node->first_child->first_child);
+        }break;
+        default:{
+            if(arc_has_property(node, AP_SELECTABLE)){
+                push_arc(node);
+            }
+            build_buffer_from_arc(node->next_sibling);
+            build_buffer_from_arc(node->first_child);
+        }break;
+    }
+}
+
+internal void
+build_navigation_buffer(Arc_Node* node){
+    presenter->buffer_pos = 0;
+    presenter->buffer = (Present_Node*)push_size_zero(&platform->frame_arena, sizeof(Present_Node)*8192);
+    
+    presenter->line_pos = 0;
+    presenter->lines = (Line_Info*)push_size_zero(&platform->frame_arena, sizeof(Line_Info)*8192);
+    
+    build_buffer_from_arc(node);
+}
 

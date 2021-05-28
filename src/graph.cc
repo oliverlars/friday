@@ -70,7 +70,7 @@ make_if(Pool* pool){
     
     arc_set_property(scope, AP_AST);
     scope->ast_type = AST_SCOPE;
-    scope->ast_tag = AT_BODY;
+    scope->ast_tag = AST_TAG_BODY;
     
     insert_arc_node_as_child(_if, expr);
     insert_arc_node_as_sibling(_if, scope);
@@ -93,7 +93,7 @@ make_if_from_node(Arc_Node* _if, Pool* pool){
     
     arc_set_property(scope, AP_AST);
     scope->ast_type = AST_SCOPE;
-    scope->ast_tag = AT_BODY;
+    scope->ast_tag = AST_TAG_BODY;
     
     insert_arc_node_as_child(_if, expr);
     insert_arc_node_as_sibling(expr, scope);
@@ -147,16 +147,17 @@ make_function_from_node(Arc_Node* func, Pool* pool){
     auto params = make_arc_node(pool);
     arc_set_property(params, AP_AST);
     arc_set_property(params, AP_LIST);
-    params->ast_tag = AT_PARAMS;
+    params->ast_tag = AST_TAG_PARAMS;
     
     auto ret = make_arc_node(pool);
     arc_set_property(ret, AP_AST);
-    ret->ast_tag = AT_RETURN_TYPE;
+    ret->ast_tag = AST_TAG_RETURN_TYPE;
     
     auto scope = make_arc_node(pool);
     arc_set_property(scope, AP_AST);
+    arc_set_property(scope, AP_LIST);
     scope->ast_type = AST_SCOPE;
-    scope->ast_tag = AT_BODY;
+    scope->ast_tag = AST_TAG_BODY;
     
     insert_arc_node_as_child(func, params);
     insert_arc_node_as_sibling(params, ret);
@@ -205,6 +206,7 @@ find_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
     }
     return false;
 }
+
 internal b32
 is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result){
     if(!node) return false;
@@ -235,6 +237,21 @@ is_sub_node_of_ast_tag(Arc_Node* node, Ast_Tag type, Arc_Node** result){
             }
         }
         node = node->parent;
+    }
+    return false;
+}
+internal b32
+find_sub_node_of_list(Arc_Node* node, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(node->parent){
+            if(arc_has_property(node->parent, AP_LIST)){
+                if(result) *result = node;
+                return true;
+            }
+            node = node->parent;
+        }
     }
     return false;
 }
@@ -281,7 +298,7 @@ make_call_from_node(Arc_Node* call, Pool* pool){
     auto expr = make_arc_node(pool);
     arc_set_property(expr, AP_AST);
     expr->ast_type = AST_EXPR;
-    expr->ast_tag = AT_ARGS;
+    expr->ast_tag = AST_TAG_ARGS;
     
     insert_arc_node_as_child(call, args);
     insert_arc_node_as_child(args, expr);
@@ -309,29 +326,21 @@ set_as_ast(Arc_Node* node, Ast_Type type){
     arc_set_property(node, AP_AST);
     node->ast_type = type;
 }
-
 internal void
 go_to_or_make_next(){
-    if(cursor.at->string.length){
-        auto next = make_selectable_arc_node(&editor->arc_pool);
-        set_as_ast(next, AST_TOKEN);
-        set_token_type(cursor.at);
-        insert_arc_node_as_sibling(cursor.at, next);
-        cursor.at = next;
+    
+    // NOTE(Oliver): string is empty, we now want to exit the current edit and move
+    // on
+    if(can_advance_cursor(CURSOR_RIGHT)){
+        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+        advance_cursor(CURSOR_RIGHT);
     }else {
-        // NOTE(Oliver): string is empty, we now want to exit the current edit and move
-        // on
-        if(can_advance_cursor(CURSOR_RIGHT)){
+        auto next = make_selectable_arc_node(&editor->arc_pool);
+        Arc_Node* list;
+        if(is_sub_node_of_list(cursor.at, &list)){
             remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-            advance_cursor(CURSOR_RIGHT);
-        }else {
-            auto next = make_selectable_arc_node(&editor->arc_pool);
-            Arc_Node* list;
-            if(is_sub_node_of_list(cursor.at, &list)){
-                remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-                insert_arc_node_as_sibling(list->last_child, next);
-                cursor.at = next;
-            }
+            insert_arc_node_as_sibling(list->last_child, next);
+            cursor.at = next;
         }
     }
 }
@@ -360,6 +369,7 @@ remove_arc_node_at(Arc_Node** head, Arc_Node* at){
         at->prev_sibling->next_sibling = at->next_sibling;
     
     pool_clear(&editor->arc_pool, at);
+    memset(at, 0, sizeof(Arc_Node));
     return;
 }
 

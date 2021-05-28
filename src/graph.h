@@ -58,12 +58,12 @@ enum Arc_Property {
 #define ARC_PROPERTIES_MAX 256
 
 enum Ast_Tag {
-    AT_INVALID, 
-    AT_PARAMS,
-    AT_RETURN_TYPE,
-    AT_BODY,
+    AST_TAG_INVALID, 
+    AST_TAG_PARAMS,
+    AST_TAG_RETURN_TYPE,
+    AST_TAG_BODY,
+    AST_TAG_ARGS,
     
-    AT_ARGS,
 };
 
 struct Arc_Node {

@@ -157,7 +157,8 @@ UPDATE {
                         assert(find_sub_node_of_list(cursor.at, &member));
                         insert_arc_node_as_sibling(member, next_in_scope);
                         mark_node_for_deletion(&cursor.at->parent->first_child, cursor.at);
-                        set_cursor_as_node(next_in_scope);
+                        advance_cursor(CURSOR_RIGHT);
+                        
                     }
                 }else {
                     advance_cursor(CURSOR_RIGHT);
@@ -227,6 +228,7 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }else if(cursor.at->string.length == 0){
+                mark_node_for_deletion(&cursor.at->parent->first_child, cursor.at);
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }

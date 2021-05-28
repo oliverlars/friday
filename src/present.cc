@@ -1062,7 +1062,6 @@ build_buffer_from_arc(Arc_Node* node){
         case AST_IF: {
             push_arc(node);
             build_buffer_from_arc(node->first_child->first_child);
-            push_arc(node->first_child->first_child);
             push_newline();
             build_buffer_from_arc(node->last_child);
         }break;

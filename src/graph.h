@@ -52,6 +52,7 @@ enum Arc_Property {
     AP_AST,
     AP_AST_TAG,
     AP_SELECTABLE,
+    AP_LIST,
 };
 
 #define ARC_PROPERTIES_MAX 256

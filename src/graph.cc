@@ -146,6 +146,7 @@ make_function_from_node(Arc_Node* func, Pool* pool){
     
     auto params = make_arc_node(pool);
     arc_set_property(params, AP_AST);
+    arc_set_property(params, AP_LIST);
     params->ast_tag = AT_PARAMS;
     
     auto ret = make_arc_node(pool);
@@ -238,6 +239,20 @@ is_sub_node_of_ast_tag(Arc_Node* node, Ast_Tag type, Arc_Node** result){
     return false;
 }
 
+internal b32
+is_sub_node_of_list(Arc_Node* node, Arc_Node** result){
+    if(!node) return false;
+    node = node->parent;
+    while(node){
+        if(arc_has_property(node, AP_LIST)){
+            if(result) *result = node;
+            return true;
+        }
+        node = node->parent;
+    }
+    return false;
+}
+
 internal Arc_Node*
 make_declaration_from_node(Arc_Node* decl, Pool* pool){
     arc_set_property(decl, AP_AST);
@@ -259,12 +274,17 @@ make_call_from_node(Arc_Node* call, Pool* pool){
     arc_set_property(call, AP_AST);
     call->ast_type = AST_CALL;
     
+    auto args = make_arc_node(pool);
+    arc_set_property(args, AP_LIST);
+    arc_set_property(args, AP_AST);
+    
     auto expr = make_arc_node(pool);
     arc_set_property(expr, AP_AST);
     expr->ast_type = AST_EXPR;
     expr->ast_tag = AT_ARGS;
     
-    insert_arc_node_as_child(call, expr);
+    insert_arc_node_as_child(call, args);
+    insert_arc_node_as_child(args, expr);
     
     return call;
 }
@@ -276,6 +296,7 @@ make_struct_from_node(Arc_Node* _struct, Pool* pool){
     
     auto members = make_arc_node(pool);
     arc_set_property(members, AP_AST);
+    arc_set_property(members, AP_LIST);
     members->ast_type = AST_SCOPE;
     
     insert_arc_node_as_child(_struct, members);
@@ -290,8 +311,28 @@ set_as_ast(Arc_Node* node, Ast_Type type){
 }
 
 internal void
-go_to_or_make_next_in_list(){
-    
+go_to_or_make_next(){
+    if(cursor.at->string.length){
+        auto next = make_selectable_arc_node(&editor->arc_pool);
+        set_as_ast(next, AST_TOKEN);
+        set_token_type(cursor.at);
+        insert_arc_node_as_sibling(cursor.at, next);
+        cursor.at = next;
+    }else {
+        // NOTE(Oliver): string is empty, we now want to exit the current edit and move
+        // on
+        if(can_advance_cursor(CURSOR_RIGHT)){
+            advance_cursor(CURSOR_RIGHT);
+        }else {
+            auto next = make_selectable_arc_node(&editor->arc_pool);
+            Arc_Node* list;
+            if(is_sub_node_of_list(cursor.at, &list)){
+                remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+                insert_arc_node_as_sibling(list->last_child, next);
+                cursor.at = next;
+            }
+        }
+    }
 }
 
 internal void

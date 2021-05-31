@@ -53,9 +53,12 @@ enum Arc_Property {
     AP_AST_TAG,
     AP_SELECTABLE,
     AP_LIST,
+    AP_DELETABLE,
+    AP_MARK_DELETE,
 };
 
 #define ARC_PROPERTIES_MAX 256
+#define NUM_PROPERTY_ARRAYS ((ARC_PROPERTIES_MAX+64)/64)
 
 enum Ast_Tag {
     AST_TAG_INVALID, 
@@ -76,7 +79,7 @@ struct Arc_Node {
     Arc_Node* last_child;
     Arc_Node* parent;
     
-    u64 properties[(ARC_PROPERTIES_MAX+63)/64];
+    u64 properties[NUM_PROPERTY_ARRAYS];
     
     Arc_Node* reference;
     Ast_Type ast_type;
@@ -109,3 +112,9 @@ is_direct_sub_node_of_ast_type(Arc_Node* node, Ast_Type type, Arc_Node** result 
 
 internal void
 insert_arc_node_as_child(Arc_Node* at, Arc_Node* node);
+
+internal void
+remove_sub_tree_at(Arc_Node** head, Arc_Node* at);
+
+internal void
+arc_clear_all_properties(Arc_Node* arc);

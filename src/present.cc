@@ -1,8 +1,7 @@
 
 internal void
-mark_node_for_deletion(Arc_Node** head, Arc_Node* at){
-    presenter->delete_head = head;
-    presenter->delete_at = at;
+mark_node_for_deletion(Arc_Node* at){
+    arc_set_property(at, AP_MARK_DELETE);
 }
 
 
@@ -11,13 +10,43 @@ set_cursor_as_node(Arc_Node* node){
     cursor.at = node;
 }
 
+
 internal void
-delete_nodes_marked_for_deletion(){
-    if(presenter->delete_head && presenter->delete_at){
-        remove_arc_node_at(presenter->delete_head, presenter->delete_at);
+delete_sub_tree_marked_for_deletion(Arc_Node* node){
+    
+    while(node){
+        if(node->first_child){
+            delete_sub_tree_marked_for_deletion(node->first_child);
+        }
+        pool_clear(&editor->arc_pool, node);
+        memset(node, 0, sizeof(Arc_Node));
+        node = node->next_sibling;
     }
-    presenter->delete_head = nullptr;
-    presenter->delete_at = nullptr;
+}
+
+internal void
+delete_nodes_marked_for_deletion(Arc_Node* node){
+    while(node){
+        if(arc_has_property(node, AP_MARK_DELETE)){
+            if(node->prev_sibling){
+                remove_arc_node_at(&node->parent->first_child, node);
+            }else{
+                arc_clear_all_properties(node);
+                arc_set_property(node, AP_SELECTABLE);
+                node->ast_type = AST_INVALID;
+            }
+            if(node->first_child){
+                delete_sub_tree_marked_for_deletion(node->first_child);
+                node->first_child = nullptr;
+                node->last_child = nullptr;
+            }
+        }else {
+            if(node->first_child){
+                delete_nodes_marked_for_deletion(node->first_child);
+            }
+        }
+        node = node->next_sibling;
+    }
 }
 
 internal void
@@ -297,107 +326,6 @@ push_newline(){
     presenter->lines[presenter->line_pos++] = line_info;
 }
 
-internal void
-edit_text(Widget* widget){
-    if(presenter->mode == P_CREATE) return;
-    clampi(&ui->cursor_pos, 0, ui->editing_string.length);
-    auto last_widget = get_last_widget(widget->id, widget->string);
-    
-    if(has_pressed_key(KEY_ENTER)){
-        presenter->mode = P_CREATE;
-    }
-    
-    if(has_pressed_key(KEY_UP)){
-        advance_cursor(CURSOR_UP);
-    }
-    if(has_pressed_key(KEY_DOWN)){
-        advance_cursor(CURSOR_DOWN);
-    }
-    
-    if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-            while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-                ui->cursor_pos--;
-            }
-        }else {
-            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
-                  ui->cursor_pos >= 0){
-                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-            }
-        }
-    }
-    
-    if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos] == ' '){
-            while(ui->editing_string.text[ui->cursor_pos] == ' '){
-                ui->cursor_pos++;
-            }
-        }else{
-            while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
-                  ui->cursor_pos <= ui->editing_string.length){
-                ui->cursor_pos++;
-            }
-        }
-    }
-    
-    if(has_pressed_key(KEY_LEFT)){
-        if(ui->cursor_pos == 0){
-            
-            advance_cursor(CURSOR_LEFT);
-        }else {
-            ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-        }
-    }
-    if(has_pressed_key(KEY_RIGHT)){
-        if(ui->cursor_pos == ui->editing_string.length){
-            advance_cursor(CURSOR_RIGHT);
-        }else{
-            ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
-        }
-    }
-    if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-            ui->cursor_pos--;
-        }else {
-            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
-                  ui->cursor_pos >= 0){
-                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-                ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
-            }
-        }
-    }
-    
-    if(has_pressed_key(KEY_BACKSPACE)){
-        if(ui->cursor_pos){
-            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
-            ui->cursor_pos--;
-        }else {
-            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-            advance_cursor(CURSOR_LEFT);
-        }
-    }
-    
-    if(has_pressed_key(KEY_END)){
-        ui->cursor_pos = ui->editing_string.length;
-    }
-    
-    if(has_pressed_key(KEY_HOME)){
-        ui->cursor_pos = 0;
-    }
-    
-    Platform_Event* event = 0;
-    for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-            char c = event->character;
-            insert_in_string(&ui->editing_string.string,
-                             &c,
-                             ui->cursor_pos++);
-            platform_consume_event(event);
-        }
-    }
-}
-
 internal b32
 check_dropdown(char* fmt, ...){
     va_list args;
@@ -518,7 +446,9 @@ edit_text(Arc_Node* node){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+            if(arc_has_property(cursor.at, AP_DELETABLE)){
+                mark_node_for_deletion(cursor.at);
+            }
             advance_cursor(CURSOR_LEFT);
         }
     }
@@ -671,7 +601,7 @@ present_editable_string(Colour colour, Arc_Node* node){
         
         if(!widget->alt_string.length && cursor.text_id != widget->id){
             //push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
-            push_circle(pos + v2f(0, 5), 3, ui->theme.border);
+            //push_circle(pos + v2f(0, 5), 3, ui->theme.border);
             //push_string(pos, make_string("->"), ui->theme.border, widget->style.font_scale);
         }
         
@@ -1012,10 +942,8 @@ present_debug_arc(v2f pos, Arc_Node* node){
     f32 start_x = pos.x;
     while(node) {
         f32 offset = 0;
-        if(node->string.length){
-            push_string(pos + v2f(25, 0), node->string, ui->theme.text, 0.5f);
-            offset = get_text_width(node->string, .5f) + 20;
-        }
+        push_string(pos + v2f(25, 0), node->string, ui->theme.text, 0.5f);
+        offset = get_text_width(node->string, .5f) + 20;
         if(node == cursor.at){
             push_circle(pos, 20, ui->theme.cursor);
         }else {

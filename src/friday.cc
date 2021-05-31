@@ -131,6 +131,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
+        present_debug_arc(v2f(100, 400), editor->root);
         
         if(cursor.at->ast_type == AST_TOKEN){
             set_token_type(cursor.at);
@@ -139,6 +140,7 @@ UPDATE {
             jump_to_declaration();
         }
         
+        //~ Check
         if(presenter->mode == P_EDIT){
             
             if(has_pressed_key(KEY_ENTER)){
@@ -156,22 +158,20 @@ UPDATE {
                         Arc_Node* member;
                         assert(find_sub_node_of_list(cursor.at, &member));
                         insert_arc_node_as_sibling(member, next_in_scope);
-                        mark_node_for_deletion(&cursor.at->parent->first_child, cursor.at);
+                        mark_node_for_deletion(cursor.at);
                         advance_cursor(CURSOR_RIGHT);
-                        
                     }
                 }else {
                     advance_cursor(CURSOR_RIGHT);
                 }
-                
             }
-            
         }
         
         if(presenter->mode == P_CREATE){
             
             //~ Node creation keybinds
             if(has_pressed_key(KEY_D)){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_declaration_from_node(cursor.at, &editor->arc_pool);
                 auto type = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, type);
@@ -182,6 +182,7 @@ UPDATE {
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(has_pressed_key(KEY_F)){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_function_from_node(cursor.at, &editor->arc_pool);
                 
                 auto param = make_selectable_arc_node(&editor->arc_pool);
@@ -197,6 +198,7 @@ UPDATE {
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             } else if(string_eq(cursor.at->string, "if")){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_if_from_node(cursor.at, &editor->arc_pool);
                 
                 auto expr = make_selectable_arc_node(&editor->arc_pool);
@@ -215,12 +217,14 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }else if(has_pressed_key(KEY_S)){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_struct_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             } else if(has_pressed_key(KEY_C)){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_call_from_node(cursor.at, &editor->arc_pool);
                 find_function(cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
@@ -228,7 +232,7 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }else if(cursor.at->string.length == 0){
-                mark_node_for_deletion(&cursor.at->parent->first_child, cursor.at);
+                mark_node_for_deletion(cursor.at);
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }
@@ -240,12 +244,12 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
+        delete_nodes_marked_for_deletion(editor->root);
         build_navigation_buffer(editor->root);
         set_next_cursor_pos();
         presenter->direction = CURSOR_NONE;
         presenter->direction_count = 0;
         
-        delete_nodes_marked_for_deletion();
         
         last_cursor = cursor;
         highlight_reference = nullptr;

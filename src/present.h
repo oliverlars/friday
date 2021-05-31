@@ -38,8 +38,6 @@ struct Presenter_State {
     Cursor_Direction direction;
     int direction_count;
     
-    Arc_Node** delete_head;
-    Arc_Node* delete_at;
 };
 global Arc_Node* highlight_reference;
 

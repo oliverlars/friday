@@ -14,6 +14,13 @@ arc_remove_property(Arc_Node* arc, Arc_Property property){
     arc->properties[property / 64] &= ~(1ll << (property % 64));
 }
 
+internal void
+arc_clear_all_properties(Arc_Node* arc){
+    for(int i = 0; i < NUM_PROPERTY_ARRAYS; i++){
+        arc->properties[i] = 0;
+    }
+}
+
 internal Arc_Node*
 make_arc_node(Pool* pool){
     auto result = (Arc_Node*)pool_allocate(pool);
@@ -368,10 +375,30 @@ remove_arc_node_at(Arc_Node** head, Arc_Node* at){
     if (at->prev_sibling)
         at->prev_sibling->next_sibling = at->next_sibling;
     
+    
     pool_clear(&editor->arc_pool, at);
-    memset(at, 0, sizeof(Arc_Node));
     return;
 }
+internal void
+remove_sub_tree_at_helper(Arc_Node* at){
+    if(!at) return;
+    while(at) {
+        //pool_clear(&editor->arc_pool, at);
+        if(at->first_child){
+            remove_sub_tree_at_helper(at->first_child);
+        }
+        at = at->next_sibling;
+    }
+}
+
+internal void
+remove_sub_tree_at(Arc_Node** head, Arc_Node* at){
+    if(!head && !*head) return;
+    if (!at) return;
+    arc_set_property(at, AP_MARK_DELETE);
+}
+
+
 
 internal void
 insert_arc_node_as_sibling(Arc_Node* at, Arc_Node* node){

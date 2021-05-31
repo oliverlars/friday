@@ -150,6 +150,7 @@ UPDATE {
                     if(cursor.at->string.length){
                         auto token = make_selectable_arc_node(&editor->arc_pool);
                         set_as_ast(token, AST_TOKEN);
+                        arc_set_property(token, AP_DELETABLE);
                         insert_arc_node_as_sibling(cursor.at, token);
                         advance_cursor(CURSOR_RIGHT);
                     }else {

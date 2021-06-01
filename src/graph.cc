@@ -99,6 +99,7 @@ make_if_from_node(Arc_Node* _if, Pool* pool){
     auto scope = make_arc_node(pool);
     
     arc_set_property(scope, AP_AST);
+    arc_set_property(scope, AP_LIST);
     scope->ast_type = AST_SCOPE;
     scope->ast_tag = AST_TAG_BODY;
     
@@ -212,6 +213,34 @@ find_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
         }
     }
     return false;
+}
+
+internal b32
+find_next_sub_node_of_scope(Arc_Node* node, Arc_Node** result){
+    if(!node) return false;
+    while(node){
+        if(arc_has_property(node, AP_LIST) && node->ast_type == AST_SCOPE){
+            if(result) *result = node;
+            return true;
+        }
+        if(node->first_child){
+            find_next_sub_node_of_scope(node->first_child, result);
+        }
+        node = node->next_sibling;
+    }
+    return false;
+}
+
+internal b32
+find_a_nearby_scope(Arc_Node* node, Arc_Node** result){
+    if(!node) return false;
+    auto did_find = false;
+    did_find = find_next_sub_node_of_scope(node, result);
+    if(!did_find){
+        did_find = find_sub_node_of_scope(node, result);
+    }
+    assert(did_find);
+    return did_find;
 }
 
 internal b32

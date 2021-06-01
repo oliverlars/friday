@@ -154,7 +154,6 @@ UPDATE {
                         insert_arc_node_as_sibling(cursor.at, token);
                         advance_cursor(CURSOR_RIGHT);
                     }else {
-                        
                         auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
                         arc_set_property(next_in_scope, AP_DELETABLE);
                         Arc_Node* member;

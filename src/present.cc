@@ -1011,34 +1011,36 @@ present_ast(Arc_Node* node){
             present_ast(node->first_child);
         }break;
         case AST_TOKEN: {
-            if(node->token_type == TOKEN_MISC){
-                present_editable_string(ui->theme.text_misc, node);
-            }else if(node->token_type == TOKEN_REFERENCE){
-                if(cursor.at == node){
-                    present_editable_string(ui->theme.text_function, node);
-                }else{
-                    replace_string(&node->string, node->reference->string);
-                    present_editable_reference(ui->theme.text_function, node);
+            ID("token%d", (int)node){
+                if(node->token_type == TOKEN_MISC){
+                    present_editable_string(ui->theme.text_misc, node);
+                }else if(node->token_type == TOKEN_REFERENCE){
+                    if(cursor.at == node){
+                        present_editable_string(ui->theme.text_function, node);
+                    }else{
+                        replace_string(&node->string, node->reference->string);
+                        present_editable_reference(ui->theme.text_function, node);
+                    }
+                    if(node->first_child){
+                        present_string(ui->theme.text_misc, make_string("."));
+                        present_arc(node->first_child);
+                    }
+                }else if(node->token_type == TOKEN_LITERAL){
+                    present_editable_string(ui->theme.text_literal, node);
+                }else {
+                    present_editable_string(ui->theme.text, node);
                 }
-                if(node->first_child){
-                    present_string(ui->theme.text_misc, make_string("."));
-                    present_arc(node->first_child);
+                ID("tab_completer%d", (int)node){
+                    auto preview = tab_completer(node);
+                    if(preview.length){
+                        present_string(ui->theme.text_misc, preview);
+                    }
                 }
-            }else if(node->token_type == TOKEN_LITERAL){
-                present_editable_string(ui->theme.text_literal, node);
-            }else {
-                present_editable_string(ui->theme.text, node);
-            }
-            ID("tab_completer%d", (int)node){
-                auto preview = tab_completer(node);
-                if(preview.length){
-                    present_string(ui->theme.text_misc, preview);
+                if(node->next_sibling){
+                    present_space();
+                    present_arc(node->next_sibling);
                 }
             }
-            if(node->next_sibling){
-                present_space();
-            }
-            present_arc(node->next_sibling);
         }break;
         case AST_TYPE_TOKEN: {
             if(node->token_type == TOKEN_MISC){

@@ -171,7 +171,9 @@ UPDATE {
                            declaration_type_is_composite(cursor.at->reference)){
                             insert_arc_node_as_child(cursor.at, token);
                         }else {
-                            insert_arc_node_as_sibling(cursor.at, token);
+                            auto parent = cursor.at;
+                            while(parent->parent && parent->parent->ast_type == AST_TOKEN) { parent = parent->parent; }
+                            insert_arc_node_as_sibling(parent, token);
                         }
                         advance_cursor(CURSOR_RIGHT);
                     }else {

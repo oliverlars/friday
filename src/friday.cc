@@ -156,10 +156,10 @@ UPDATE {
                     }else {
                         
                         auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
+                        arc_set_property(next_in_scope, AP_DELETABLE);
                         Arc_Node* member;
                         assert(find_sub_node_of_list(cursor.at, &member));
                         insert_arc_node_as_sibling(member, next_in_scope);
-                        mark_node_for_deletion(cursor.at);
                         advance_cursor(CURSOR_RIGHT);
                     }
                 }else {
@@ -233,7 +233,6 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }else if(cursor.at->string.length == 0){
-                mark_node_for_deletion(cursor.at);
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }

@@ -55,6 +55,8 @@ enum Arc_Property {
     AP_LIST,
     AP_DELETABLE,
     AP_MARK_DELETE,
+    AP_CONTAINS_SCOPE,
+    AP_ROOT,
 };
 
 #define ARC_PROPERTIES_MAX 256

@@ -154,17 +154,7 @@ UPDATE {
                         insert_arc_node_as_sibling(cursor.at, token);
                         advance_cursor(CURSOR_RIGHT);
                     }else {
-                        auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
-                        arc_set_property(next_in_scope, AP_DELETABLE);
-                        Arc_Node* member;
-                        assert(find_sub_node_of_list(cursor.at, &member));
-                        if(arc_has_property(member->parent->last_child, AP_AST)){
-                            insert_arc_node_as_sibling(member, next_in_scope);
-                        }
-                        if(cursor.at->prev_sibling){
-                            mark_node_for_deletion(cursor.at);
-                        }
-                        advance_cursor(CURSOR_RIGHT);
+                        presenter->mode = P_CREATE;
                     }
                 }else {
                     advance_cursor(CURSOR_RIGHT);
@@ -238,7 +228,38 @@ UPDATE {
                 cursor.at = next;
                 presenter->mode = P_EDIT;
             }else if(cursor.at->string.length == 0){
+                
+                auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
+                arc_set_property(next_in_scope, AP_DELETABLE);
+                Arc_Node* member;
+                assert(find_sub_node_of_list(cursor.at, &member));
+                
+                if(cursor.at->prev_sibling && cursor.at->ast_type == AST_TOKEN){
+                    // NOTE(Oliver): if it's not the first chlid in the list then you
+                    // can delete it provided it's a scope member
+                    mark_node_for_deletion(cursor.at);
+                }
+                
+                if(arc_has_property(member, AP_CONTAINS_SCOPE)){
+                    // NOTE(Oliver): if the current node has an inner scope (if, while etc)
+                    // then we don't want to insert into the parent scope, 
+                    // we want to add to it
+                    auto scope = get_scope_of_node(member);
+                    if(is_node_sub_node_of_list(cursor.at, scope)){
+                        //insert_arc_node_as_sibling(member, next_in_scope);
+                        if(!cursor.at->next_sibling){
+                            insert_arc_node_as_sibling(member, next_in_scope);
+                        }
+                    }
+                    
+                }else if(arc_has_property(member->parent->last_child, AP_AST)){
+                    // NOTE(Oliver): if the last node in parent scope is not empty, 
+                    // then we can add an empty node on the end
+                    insert_arc_node_as_sibling(member, next_in_scope);
+                }
+                
                 advance_cursor(CURSOR_RIGHT);
+                
                 presenter->mode = P_EDIT;
             }
         }

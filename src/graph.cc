@@ -91,6 +91,7 @@ make_if(Pool* pool){
 internal Arc_Node*
 make_if_from_node(Arc_Node* _if, Pool* pool){
     arc_set_property(_if, AP_AST);
+    arc_set_property(_if, AP_CONTAINS_SCOPE);
     _if->ast_type = AST_IF;
     
     auto expr = make_arc_node(pool);
@@ -150,6 +151,7 @@ make_function(Pool* pool){
 internal Arc_Node*
 make_function_from_node(Arc_Node* func, Pool* pool){
     arc_set_property(func, AP_AST);
+    arc_set_property(func, AP_CONTAINS_SCOPE);
     func->ast_type = AST_FUNCTION;
     
     auto params = make_arc_node(pool);
@@ -292,6 +294,33 @@ find_sub_node_of_list(Arc_Node* node, Arc_Node** result){
     return false;
 }
 
+internal void
+find_inner_scope(Arc_Node* node, Arc_Node** result){
+    
+    if(!node) return;
+    if(*result) return;
+    node = node->parent;
+    while(node){
+        if(arc_has_property(node->parent, AP_LIST) && arc_has_property(node->parent, AP_AST) &&
+           node->parent->ast_type == AST_SCOPE){
+            if(result) *result = node;
+            return;
+        }
+        if(node->first_child){
+            find_inner_scope(node->first_child, result);
+        }
+        node = node->next_sibling;
+    }
+    return;
+}
+
+internal b32
+find_inner_sub_node_of_list(Arc_Node* node, Arc_Node** result){
+    Arc_Node* sub_node;
+    assert(find_sub_node_of_list(node, &sub_node));
+    return *result != 0;
+}
+
 internal b32
 is_sub_node_of_list(Arc_Node* node, Arc_Node** result){
     if(!node) return false;
@@ -304,6 +333,31 @@ is_sub_node_of_list(Arc_Node* node, Arc_Node** result){
         node = node->parent;
     }
     return false;
+}
+
+internal b32
+is_node_sub_node_of_list(Arc_Node* node, Arc_Node* list){
+    node = node->parent;
+    while(node){
+        if(node == list){
+            return true;
+        }
+        node = node->parent;
+    }
+    return false;
+}
+
+internal Arc_Node*
+get_scope_of_node(Arc_Node* node){
+    auto child = node->first_child;
+    while(child){
+        if(arc_has_property(child, AP_AST) && child->ast_type == AST_SCOPE){
+            return child;
+        }
+        child = child->next_sibling;
+    }
+    assert(0);
+    return nullptr;
 }
 
 internal Arc_Node*

@@ -682,10 +682,13 @@ present_declaration(Arc_Node* node){
             present_space();
             present_arc(node->first_child->first_child);
             if(node->last_child->first_child){
-                present_space();
-                present_string(ui->theme.text_misc, make_string("="));
-                present_space();
-                present_arc(node->last_child->first_child);
+                if(node->last_child->first_child->string.length ||
+                   cursor.at == node->last_child->first_child){
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("="));
+                    present_space();
+                    present_arc(node->last_child->first_child);
+                }
             }
         }
     }

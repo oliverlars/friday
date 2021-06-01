@@ -1355,23 +1355,12 @@ render_panels(Panel* root, v4f rect){
                         UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
                         UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
                         local_persist v4f rect  = {};
-                        local_persist String8 text_string  = make_string("cool beans 1");
-                        local_persist String8 text_string2  = make_string("cool beans 2");
-                        local_persist String8 text_string3  = make_string("cool beans 3");
                         yspacer(20);
                         
-                        UI_WIDTHFILL{
-                            fslider(0, 1, &rect.r, "R");
-                            fslider(0, 1, &rect.g, "G");
-                            fslider(0, 1, &rect.b, "B");
-                            fslider(0, 1, &rect.a, "A");
-                        }
-                        UI_WIDTHFILL fslider(0, 2, &font_scale, "font scale");
                         UI_WIDTHFILL {
-                            text_box(&text_string);
+                            label("font size"); 
+                            fslider(0, 2, &font_scale, "font scale");
                         }
-                        text_box(&text_string2);
-                        text_box(&text_string3);
                         
                         yspacer(20);
                         UI_ROW UI_WIDTHFILL {

@@ -237,7 +237,7 @@ set_next_cursor_pos(){
         case CURSOR_UP:{
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos = clampi(line_pos-count, 0, presenter->line_pos-1);
+            line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             cursor.at = presenter->buffer[next_pos].node;
@@ -247,7 +247,7 @@ set_next_cursor_pos(){
             
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             assert(distance_from_start >= 0);
-            line_pos = clampi(line_pos+count, 0, presenter->line_pos-1);
+            line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             
@@ -321,7 +321,7 @@ push_newline(){
         line_info.start = 0;
     }else{
         line_info.start = presenter->lines[presenter->line_pos-1].end+1;
-        line_info.end = presenter->buffer_pos;
+        line_info.end = presenter->buffer_pos-1;
     }
     presenter->lines[presenter->line_pos++] = line_info;
 }
@@ -737,8 +737,10 @@ present_function(Arc_Node* node){
                     ID("param%d", (int)decl){
                         present_arc(decl);
                         if(decl->next_sibling){
-                            present_string(ui->theme.text_misc, make_string(","));
-                            present_space();
+                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                                present_string(ui->theme.text_misc, make_string(","));
+                                present_space();
+                            }
                         }
                     }
                 }

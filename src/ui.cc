@@ -1407,12 +1407,12 @@ render_panels(Panel* root, v4f rect){
                     ui_panel_header(root, "Debug");
                     if(dropdown("test dropdown")){
                         UI_COLUMN {
-                            button("this");
-                            button("can");
-                            button("be");
-                            button("used");
-                            button("to");
-                            button("debug");
+                            for(int i = 0; i < presenter->line_pos; i++){
+                                label("line %d start: %d end: %d", i, presenter->lines[i].start, presenter->lines[i].end);
+                            }
+                            label("current line: %d", presenter->line_index);
+                            label("current pos: %d", presenter->buffer_pos);
+                            label("current pos on line : %d", presenter->buffer_pos - presenter->lines[presenter->line_index].start);
                         }
                     }
                     if(dropdown("secrets")){

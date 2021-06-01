@@ -131,7 +131,7 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        present_debug_arc(v2f(100, 400), editor->root);
+        //present_debug_arc(v2f(100, 400), editor->root);
         
         if(cursor.at->ast_type == AST_TOKEN){
             set_token_type(cursor.at);
@@ -159,6 +159,9 @@ UPDATE {
                         Arc_Node* member;
                         assert(find_sub_node_of_list(cursor.at, &member));
                         insert_arc_node_as_sibling(member, next_in_scope);
+                        if(cursor.at->prev_sibling){
+                            mark_node_for_deletion(cursor.at);
+                        }
                         advance_cursor(CURSOR_RIGHT);
                     }
                 }else {
@@ -213,6 +216,7 @@ UPDATE {
             } else if(string_eq(cursor.at->string, "return")){
                 make_return_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, AST_TOKEN);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;
                 presenter->mode = P_EDIT;

@@ -1342,6 +1342,23 @@ render_panels(Panel* root, v4f rect){
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
+        auto harea = v4f(rect.x-PADDING, rect.y-rect.height, PADDING*2, rect.height);
+        auto varea = v4f(rect.x, rect.y-rect.height-PADDING*2, rect.width, PADDING*4);
+        
+        push_rectangle(harea, 1, colour_from_v4f(v4f(1,0,0,1)));
+        push_rectangle(varea, 1, colour_from_v4f(v4f(1,0,0,1)));
+        
+        v2f delta = {};
+        if(is_in_rect(platform->mouse_position, harea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            root->parent->first->split_ratio += delta.x/platform->window_size.width;
+            root->parent->second->split_ratio -= delta.x/platform->window_size.width;
+            push_rectangle(harea, 1, colour_from_v4f(v4f(0,1,0,1)));
+        }
+        else if(is_in_rect(platform->mouse_position, varea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            root->parent->first->split_ratio -= delta.y/platform->window_size.height;
+            root->parent->second->split_ratio += delta.y/platform->window_size.height;
+            push_rectangle(varea, 1, colour_from_v4f(v4f(0,1,0,1)));
+        }
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ID("%d", (int)root){

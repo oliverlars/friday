@@ -90,6 +90,28 @@ internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
     auto scope = node;
+    if(node->parent){
+        // NOTE(Oliver): must be a dot operator
+        auto parent = node->parent;
+        Arc_Node* member = nullptr;
+        if(parent->reference){
+            if(declaration_type_is_composite(parent->reference)){
+                auto decl = parent->reference;
+                auto type = decl->first_child->first_child;
+                auto _struct = type->reference;
+                member = _struct->first_child->first_child;
+            }
+            while(member){
+                if(string_eq(node->string, member->string)){
+                    node->token_type = TOKEN_REFERENCE;
+                    node->reference = member;
+                    replace_string(&node->string, member->string);
+                    return;
+                }
+                member = member->next_sibling;
+            }
+        }
+    }
     while(scope){
         Arc_Node* function;
         if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){

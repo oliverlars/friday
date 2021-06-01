@@ -396,7 +396,7 @@ push_default_style(){
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
-    style.font_scale = 1.0f;
+    style.font_scale = .8f;
     push_style(style);
 }
 
@@ -1116,7 +1116,7 @@ internal void
 widget_render_text(Widget* widget, Colour colour){
     v2f pos = widget->pos;
     pos.y -= widget->min.height;
-    v4f bbox = get_text_bbox(pos, widget->string);
+    v4f bbox = get_text_bbox(pos, widget->string, widget->style.font_scale);
     bbox = v4f2(pos, widget->min);
     if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
         push_rectangle(bbox, 1, ui->theme.background);
@@ -1142,7 +1142,7 @@ widget_render_text(Widget* widget, Colour colour){
     }
     
     f32 centre = widget->pos.x + widget->min.x/2.0f;
-    f32 text_centre = get_text_width(widget->string)/2.0f;
+    f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
     f32 text_x = centre - text_centre;
     
     v4f shadow_colour = v4f_from_colour(colour);
@@ -1150,8 +1150,8 @@ widget_render_text(Widget* widget, Colour colour){
     shadow_colour.g /= 8;
     shadow_colour.b /= 8;
     shadow_colour.a = 1;
-    push_string(v2f(text_x+1.5, bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour));
-    push_string(v2f(text_x, bbox.y), widget->string, colour);
+    push_string(v2f(text_x+1.5, bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour), widget->style.font_scale);
+    push_string(v2f(text_x, bbox.y), widget->string, colour, widget->style.font_scale);
 }
 
 internal void

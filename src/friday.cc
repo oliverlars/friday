@@ -86,8 +86,8 @@ PERMANENT_LOAD {
     ui->editing_string.length = 0;
     ui->editing_string.capacity = 8192;
     
-    split_panel(ui->panel, 0.6, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
-    split_panel(ui->panel->first, 0.9, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
+    split_panel(ui->panel, 0.7, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
+    split_panel(ui->panel->first, 0.92, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     

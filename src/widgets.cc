@@ -228,9 +228,9 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
         }
         f32 centre = pos.x + widget->min.x/2.0f;
         String8 string = make_stringf(&platform->frame_arena, "%.2f", widget->value);
-        f32 text_centre = get_text_width(string)/2.0f;
+        f32 text_centre = get_text_width(string, widget->style.font_scale)/2.0f;
         f32 text_x = centre - text_centre;
-        push_string(v2f(text_x, bbox.y), string, ui->theme.text);
+        push_string(v2f(text_x, bbox.y), string, ui->theme.text, widget->style.font_scale);
     };
     
     widget->render_hook = render_hook;
@@ -308,17 +308,17 @@ text_box(String8* string){
         if(ui->active == widget->id){
             String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
             f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(s)/2.0f;
+            f32 text_centre = get_text_width(s, widget->style.font_scale)/2.0f;
             f32 text_x = centre - text_centre;
             push_string(v2f(text_x, bbox.y), s, ui->theme.text);
             
             v2f cursor = {};
-            cursor.x = text_x + get_text_width_n(s, ui->cursor_pos);
+            cursor.x = text_x + get_text_width_n(s, ui->cursor_pos, widget->style.font_scale);
             cursor.y = bbox.y;
             push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
         }else {
             f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(widget->string)/2.0f;
+            f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
             f32 text_x = centre - text_centre;
             push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
         }

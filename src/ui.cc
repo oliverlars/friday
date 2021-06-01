@@ -1,6 +1,30 @@
 global UI_State* ui = 0;
 
 internal b32
+has_left_released(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_RELEASE && event->mouse_button == MOUSE_BUTTON_LEFT){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_left_released(){
+    Platform_Event* event = 0;
+    b32 result = has_left_released(&event);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
+
+
+internal b32
 has_left_clicked(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
@@ -1311,6 +1335,26 @@ internal void
 render_panels(Panel* root, v4f rect){
     if(!root) return;
     
+    if(root->is_dragging){
+        v2f delta = {};
+        has_mouse_moved(&delta);
+        if(has_left_released()){
+            root->is_dragging = false;
+        }
+        // NOTE(Oliver): credit to Max Jordan for giving me the algorithm
+        // to resize panels
+        switch(root->first->split_type){
+            case PANEL_SPLIT_HORIZONTAL:{
+                root->first->split_ratio -= delta.y/platform->window_size.height;
+                root->second->split_ratio += delta.y/platform->window_size.height;
+            }break;
+            case PANEL_SPLIT_VERTICAL:{
+                root->first->split_ratio += delta.x/platform->window_size.width;
+                root->second->split_ratio -= delta.x/platform->window_size.width;
+            }break;
+        }
+    }
+    
     if(root->first && root->second){
         switch(root->first->split_type){
             case PANEL_SPLIT_VERTICAL:{
@@ -1342,23 +1386,19 @@ render_panels(Panel* root, v4f rect){
         rect.y -= PADDING;
         rect.width -= PADDING*2;
         rect.height -= PADDING*2;
-        auto harea = v4f(rect.x-PADDING, rect.y-rect.height, PADDING*2, rect.height);
+        auto harea = v4f(rect.x-PADDING*2, rect.y-rect.height, PADDING*4, rect.height);
         auto varea = v4f(rect.x, rect.y-rect.height-PADDING*2, rect.width, PADDING*4);
         
-        push_rectangle(harea, 1, colour_from_v4f(v4f(1,0,0,1)));
-        push_rectangle(varea, 1, colour_from_v4f(v4f(1,0,0,1)));
         
         v2f delta = {};
-        if(is_in_rect(platform->mouse_position, harea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-            root->parent->first->split_ratio += delta.x/platform->window_size.width;
-            root->parent->second->split_ratio -= delta.x/platform->window_size.width;
-            push_rectangle(harea, 1, colour_from_v4f(v4f(0,1,0,1)));
+        if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            root->parent->is_dragging = true;
+            
+        } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            root->parent->is_dragging = true;
         }
-        else if(is_in_rect(platform->mouse_position, varea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-            root->parent->first->split_ratio -= delta.y/platform->window_size.height;
-            root->parent->second->split_ratio += delta.y/platform->window_size.height;
-            push_rectangle(varea, 1, colour_from_v4f(v4f(0,1,0,1)));
-        }
+        
+        
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ID("%d", (int)root){

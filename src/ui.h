@@ -131,6 +131,7 @@ enum Panel_Type {
 };
 
 struct Panel {
+    b32 is_dragging;
     Panel_Split_Type split_type;
     Panel_Type type;
     f32 split_ratio;
@@ -157,6 +158,7 @@ struct UI_State {
     
     Theme theme;
     
+    
     f32 round_amount;
     
     Layout* layout_stack;
@@ -165,9 +167,6 @@ struct UI_State {
     
     UI_ID hot;
     UI_ID active;
-    
-    Panel* current_panel_resizing;
-    b32 is_resizing;
     
     Widget* root;
     

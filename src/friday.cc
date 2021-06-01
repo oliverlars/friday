@@ -158,7 +158,9 @@ UPDATE {
                         arc_set_property(next_in_scope, AP_DELETABLE);
                         Arc_Node* member;
                         assert(find_sub_node_of_list(cursor.at, &member));
-                        insert_arc_node_as_sibling(member, next_in_scope);
+                        if(arc_has_property(member->parent->last_child, AP_AST)){
+                            insert_arc_node_as_sibling(member, next_in_scope);
+                        }
                         if(cursor.at->prev_sibling){
                             mark_node_for_deletion(cursor.at);
                         }

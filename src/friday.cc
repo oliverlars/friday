@@ -91,6 +91,17 @@ PERMANENT_LOAD {
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     
+    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64"};
+    
+    auto start = make_arc_node(&editor->arc_pool);
+    auto builtin = start;
+    for(int i = 0; i < 10; i++){
+        builtin->string = make_string(builtins[i]);
+        builtin->next_sibling = make_arc_node(&editor->arc_pool);
+        builtin = builtin->next_sibling;
+    }
+    
+    editor->builtins = start;
     
     auto scope = make_scope(&editor->arc_pool);
     set_as_ast(scope, AST_SCOPE);
@@ -136,6 +147,9 @@ UPDATE {
         if(cursor.at->ast_type == AST_TOKEN){
             set_token_type(cursor.at);
         }
+        if(cursor.at->ast_type == AST_TYPE_TOKEN){
+            set_type_token_type(cursor.at);
+        }
         if(has_pressed_key_modified(KEY_J, KEY_MOD_CTRL)){
             jump_to_declaration();
         }
@@ -146,12 +160,19 @@ UPDATE {
             if(has_pressed_key(KEY_ENTER)){
                 if(cursor.at->ast_type == AST_INVALID){
                     presenter->mode = P_CREATE;
-                }else if(cursor.at->ast_type == AST_TOKEN){
+                }else if(cursor.at->ast_type == AST_TOKEN ||
+                         cursor.at->ast_type == AST_TYPE_TOKEN){
                     if(cursor.at->string.length){
+                        
                         auto token = make_selectable_arc_node(&editor->arc_pool);
                         set_as_ast(token, AST_TOKEN);
                         arc_set_property(token, AP_DELETABLE);
-                        insert_arc_node_as_sibling(cursor.at, token);
+                        if(cursor.at->ast_type == AST_TOKEN && 
+                           declaration_type_is_composite(cursor.at->reference)){
+                            insert_arc_node_as_child(cursor.at, token);
+                        }else {
+                            insert_arc_node_as_sibling(cursor.at, token);
+                        }
                         advance_cursor(CURSOR_RIGHT);
                     }else {
                         presenter->mode = P_CREATE;
@@ -166,17 +187,20 @@ UPDATE {
             
             //~ Node creation keybinds
             if(has_pressed_key(KEY_D)){
+                
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_declaration_from_node(cursor.at, &editor->arc_pool);
                 auto type = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, type);
-                set_as_ast(type, AST_TYPE_USAGE);
+                set_as_ast(type, AST_TYPE_TOKEN);
                 auto expr = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->last_child, expr);
                 set_as_ast(expr, AST_TOKEN);
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             }else if(has_pressed_key(KEY_F)){
+                
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_function_from_node(cursor.at, &editor->arc_pool);
                 
@@ -192,7 +216,9 @@ UPDATE {
                 
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             } else if(string_eq(cursor.at->string, "if")){
+                
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_if_from_node(cursor.at, &editor->arc_pool);
                 
@@ -205,28 +231,35 @@ UPDATE {
                 
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             } else if(string_eq(cursor.at->string, "return")){
+                
                 make_return_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TOKEN);
                 insert_arc_node_as_child(cursor.at->first_child, next);
                 cursor.at = next;
                 presenter->mode = P_EDIT;
+                
             }else if(has_pressed_key(KEY_S)){
+                
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_struct_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child, next);
-                cursor.at = next;
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             } else if(has_pressed_key(KEY_C)){
+                
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_call_from_node(cursor.at, &editor->arc_pool);
                 find_function(cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child->first_child, next);
-                cursor.at = next;
+                advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             }else if(cursor.at->string.length == 0){
                 
                 auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
@@ -234,7 +267,8 @@ UPDATE {
                 Arc_Node* member;
                 assert(find_sub_node_of_list(cursor.at, &member));
                 
-                if(cursor.at->prev_sibling && cursor.at->ast_type == AST_TOKEN){
+                if(cursor.at->prev_sibling && (cursor.at->ast_type == AST_TOKEN ||
+                                               cursor.at->ast_type == AST_TYPE_TOKEN)){
                     // NOTE(Oliver): if it's not the first chlid in the list then you
                     // can delete it provided it's a scope member
                     mark_node_for_deletion(cursor.at);

@@ -7,6 +7,8 @@ struct Editor_State {
     
     Arc_Node* root;
     
+    Arc_Node* builtins;
+    
     Pool string_pool;
 };
 

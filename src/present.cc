@@ -143,6 +143,49 @@ set_token_type(Arc_Node* node){
 }
 
 internal void
+set_type_token_type(Arc_Node* node){
+    Arc_Node* result;
+    
+    auto builtin = editor->builtins;
+    while(builtin){
+        if(string_eq(node->string, builtin->string)){
+            node->token_type = TOKEN_REFERENCE;
+            node->reference = builtin;
+            replace_string(&node->string, node->reference->string);
+            return;
+        }
+        builtin = builtin->next_sibling;
+    }
+    auto scope = node;
+    while(scope){
+        Arc_Node* function;
+        
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        node->token_type = TOKEN_REFERENCE;
+                        node->reference = member;
+                        replace_string(&node->string, node->reference->string);
+                        return;
+                    }
+                    member = member->prev_sibling;
+                }
+                if(string_eq(node->string, "*")){
+                    node->token_type = TOKEN_MISC;
+                }else{
+                    node->token_type = TOKEN_LITERAL;
+                }
+            }
+        }
+        scope = scope->parent;
+    }
+    
+}
+
+internal void
 find_function(Arc_Node* node){
     Arc_Node* result;
     auto scope = node;
@@ -170,6 +213,26 @@ find_function(Arc_Node* node){
 internal String8
 tab_completer(Arc_Node* node){
     Arc_Node* result;
+    if(node->parent->ast_type == AST_TOKEN){
+        auto parent = node->parent;
+        Arc_Node* member = nullptr;
+        if(declaration_type_is_composite(parent->reference)){
+            auto decl = parent->reference;
+            auto type = decl->first_child->first_child;
+            auto _struct = type->reference;
+            member = _struct->first_child->first_child;
+        }
+        while(member){
+            if(is_strict_substring(node->string, member->string)){
+                auto ref = parent->reference;
+                
+                return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
+                                    member->string.text+node->string.length);
+                
+            }
+            member = member->next_sibling;
+        }
+    }
     auto scope = node;
     while(scope){
         Arc_Node* function;
@@ -177,12 +240,65 @@ tab_completer(Arc_Node* node){
             auto param = function->first_child->first_child;
             while(param){
                 if(is_strict_substring(node->string, param->string)){
+                    
                     return make_stringf(&platform->frame_arena, "%.*s", param->string.length-node->string.length,
                                         param->string.text+node->string.length);
+                    
                 }
                 param = param->next_sibling;
             }
         }
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(is_strict_substring(node->string, member->string)){
+                        if(has_pressed_key(KEY_TAB)){
+                            node->token_type = TOKEN_REFERENCE;
+                            node->reference = member;
+                            replace_string(&node->string, node->reference->string);
+                            ui->cursor_pos = cursor.at->string.length;
+                            return {};
+                        }else{
+                            return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
+                                                member->string.text+node->string.length);
+                        }
+                    }
+                    member = member->prev_sibling;
+                }
+                
+            }
+        }
+        
+        scope = scope->parent;
+        
+    }
+    return {};
+}
+
+internal String8
+tab_completer_type(Arc_Node* node){
+    Arc_Node* result;
+    
+    auto builtin = editor->builtins;
+    while(builtin){
+        if(is_strict_substring(node->string, builtin->string)){
+            if(has_pressed_key(KEY_TAB)){
+                node->token_type = TOKEN_REFERENCE;
+                node->reference = builtin;
+                replace_string(&node->string, node->reference->string);
+                ui->cursor_pos = cursor.at->string.length;
+                return {};
+            }else{
+                return make_stringf(&platform->frame_arena, "%.*s", builtin->string.length-node->string.length,
+                                    builtin->string.text+node->string.length);
+            }
+        }
+        builtin = builtin->next_sibling;
+    }
+    auto scope = node;
+    while(scope){
         if(scope->parent && arc_has_property(scope->parent, AP_AST)){
             if(scope->parent->ast_type == AST_SCOPE){
                 result = scope;
@@ -904,6 +1020,10 @@ present_ast(Arc_Node* node){
                     replace_string(&node->string, node->reference->string);
                     present_editable_reference(ui->theme.text_function, node);
                 }
+                if(node->first_child){
+                    present_string(ui->theme.text_misc, make_string("."));
+                    present_arc(node->first_child);
+                }
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
             }else {
@@ -911,6 +1031,33 @@ present_ast(Arc_Node* node){
             }
             ID("tab_completer%d", (int)node){
                 auto preview = tab_completer(node);
+                if(preview.length){
+                    present_string(ui->theme.text_misc, preview);
+                }
+            }
+            if(node->next_sibling){
+                present_space();
+            }
+            present_arc(node->next_sibling);
+        }break;
+        case AST_TYPE_TOKEN: {
+            if(node->token_type == TOKEN_MISC){
+                present_editable_string(ui->theme.text_misc, node);
+            }else if(node->token_type == TOKEN_REFERENCE){
+                if(cursor.at == node){
+                    present_editable_string(ui->theme.text_type, node);
+                }else{
+                    replace_string(&node->string, node->reference->string);
+                    present_editable_reference(ui->theme.text_type, node);
+                }
+                
+            }else if(node->token_type == TOKEN_LITERAL){
+                present_editable_string(ui->theme.text_literal, node);
+            }else {
+                present_editable_string(ui->theme.text, node);
+            }
+            ID("tab_completer%d", (int)node){
+                auto preview = tab_completer_type(node);
                 if(preview.length){
                     present_string(ui->theme.text_misc, preview);
                 }
@@ -1012,6 +1159,7 @@ build_buffer_from_arc(Arc_Node* node){
         }break;
         case AST_TOKEN: {
             push_arc(node);
+            build_buffer_from_arc(node->first_child);
             build_buffer_from_arc(node->next_sibling);
         }break;
         case AST_CALL:{

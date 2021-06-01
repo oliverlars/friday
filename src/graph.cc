@@ -45,50 +45,6 @@ make_scope(Pool* pool){
 }
 
 internal Arc_Node*
-make_declaration(Pool* pool){
-    auto decl = make_arc_node(pool);
-    arc_set_property(decl, AP_AST);
-    decl->ast_type = AST_DECLARATION;
-    
-    auto type = make_arc_node(pool);
-    auto expr = make_arc_node(pool);
-    arc_set_property(expr, AP_AST);
-    expr->ast_type = AST_EXPR;
-    
-    insert_arc_node_as_child(decl, type);
-    insert_arc_node_as_sibling(type, expr);
-    
-    assert(is_sub_node_of_ast_type(type, AST_DECLARATION));
-    assert(is_sub_node_of_ast_type(expr, AST_DECLARATION));
-    
-    return decl;
-}
-
-internal Arc_Node*
-make_if(Pool* pool){
-    auto _if = make_arc_node(pool);
-    arc_set_property(_if, AP_AST);
-    _if->ast_type = AST_IF;
-    
-    auto expr = make_arc_node(pool);
-    arc_set_property(expr, AP_AST);
-    expr->ast_type = AST_EXPR;
-    auto scope = make_arc_node(pool);
-    
-    arc_set_property(scope, AP_AST);
-    scope->ast_type = AST_SCOPE;
-    scope->ast_tag = AST_TAG_BODY;
-    
-    insert_arc_node_as_child(_if, expr);
-    insert_arc_node_as_sibling(_if, scope);
-    
-    assert(is_sub_node_of_ast_type(expr, AST_IF));
-    assert(is_sub_node_of_ast_type(scope, AST_IF));
-    
-    return _if;
-}
-
-internal Arc_Node*
 make_if_from_node(Arc_Node* _if, Pool* pool){
     arc_set_property(_if, AP_AST);
     arc_set_property(_if, AP_CONTAINS_SCOPE);
@@ -125,27 +81,6 @@ make_return_from_node(Arc_Node* ret, Pool* pool){
     insert_arc_node_as_child(ret, expr);
     
     return ret;
-}
-
-internal Arc_Node*
-make_function(Pool* pool){
-    auto func = make_arc_node(pool);
-    arc_set_property(func, AP_AST);
-    func->ast_type = AST_FUNCTION;
-    
-    auto params = make_arc_node(pool);
-    auto ret = make_arc_node(pool);
-    auto scope = make_arc_node(pool);
-    
-    insert_arc_node_as_child(func, params);
-    insert_arc_node_as_sibling(params, ret);
-    insert_arc_node_as_sibling(ret, scope);
-    
-    assert(is_sub_node_of_ast_type(params, AST_FUNCTION));
-    assert(is_sub_node_of_ast_type(ret, AST_FUNCTION));
-    assert(is_sub_node_of_ast_type(scope, AST_FUNCTION));
-    
-    return func;
 }
 
 internal Arc_Node*
@@ -416,6 +351,7 @@ set_as_ast(Arc_Node* node, Ast_Type type){
     arc_set_property(node, AP_AST);
     node->ast_type = type;
 }
+
 internal void
 go_to_or_make_next(){
     
@@ -433,6 +369,13 @@ go_to_or_make_next(){
             cursor.at = next;
         }
     }
+}
+
+internal b32
+declaration_type_is_composite(Arc_Node* node){
+    if(!node) return false;
+    assert(node->ast_type == AST_DECLARATION);
+    return node->first_child->first_child->reference->ast_type == AST_STRUCT;
 }
 
 internal void
@@ -462,6 +405,7 @@ remove_arc_node_at(Arc_Node** head, Arc_Node* at){
     pool_clear(&editor->arc_pool, at);
     return;
 }
+
 internal void
 remove_sub_tree_at_helper(Arc_Node* at){
     if(!at) return;

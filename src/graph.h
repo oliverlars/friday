@@ -16,6 +16,7 @@ enum Ast_Type {
     AST_LOOP,
     AST_CALL,
     AST_TOKEN,
+    AST_TYPE_TOKEN,
     AST_DUMMY,
     AST_EXPR,
     AST_RETURN,
@@ -120,3 +121,6 @@ remove_sub_tree_at(Arc_Node** head, Arc_Node* at);
 
 internal void
 arc_clear_all_properties(Arc_Node* arc);
+
+internal b32
+declaration_type_is_composite(Arc_Node* node);

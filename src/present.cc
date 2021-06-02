@@ -10,6 +10,17 @@ set_cursor_as_node(Arc_Node* node){
     cursor.at = node;
 }
 
+internal b32
+is_after_cursor_of_ast_type(Ast_Type type){
+    int current_index = presenter->buffer_index;
+    if(presenter->buffer[current_index+1].node){
+        if(arc_has_property(presenter->buffer[current_index+1].node, AP_AST),
+           presenter->buffer[current_index+1].node->ast_type == type){
+            return true;
+        }
+    }
+    return false;
+}
 
 internal void
 delete_sub_tree_marked_for_deletion(Arc_Node* node){
@@ -326,7 +337,8 @@ tab_completer_type(Arc_Node* node){
                 result = scope;
                 auto member = result->prev_sibling;
                 while(member){
-                    if(is_strict_substring(node->string, member->string)){
+                    if(is_strict_substring(node->string, member->string) &&
+                       arc_has_property(member, AP_AST) && member->ast_type == AST_STRUCT){
                         if(has_pressed_key(KEY_TAB)){
                             node->token_type = TOKEN_REFERENCE;
                             node->reference = member;

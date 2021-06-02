@@ -144,9 +144,16 @@ UPDATE {
         }
         //present_debug_arc(v2f(100, 400), editor->root);
         
+        if(last_cursor.at && last_cursor.at != cursor.at && 
+           (last_cursor.at->ast_type == AST_TOKEN ||
+            last_cursor.at->ast_type == AST_TYPE_TOKEN) &&
+           last_cursor.at->string.length == 0){
+            mark_node_for_deletion(last_cursor.at);
+        }
         if(cursor.at->ast_type == AST_TOKEN){
             set_token_type(cursor.at);
         }
+        
         if(cursor.at->ast_type == AST_TYPE_TOKEN){
             set_type_token_type(cursor.at);
         }
@@ -288,7 +295,8 @@ UPDATE {
                         }
                     }
                     
-                }else if(arc_has_property(member->parent->last_child, AP_AST)){
+                }else if(arc_has_property(member->parent->last_child, AP_AST)&&
+                         !is_after_cursor_of_ast_type(AST_TOKEN)){
                     // NOTE(Oliver): if the last node in parent scope is not empty, 
                     // then we can add an empty node on the end
                     insert_arc_node_as_sibling(member, next_in_scope);

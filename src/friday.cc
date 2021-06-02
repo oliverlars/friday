@@ -133,7 +133,7 @@ UPDATE {
     {
         
         f32 start = platform->get_time();
-        
+        presenter->number_of_deletions = 0;
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -275,14 +275,15 @@ UPDATE {
                 arc_set_property(next_in_scope, AP_DELETABLE);
                 Arc_Node* member;
                 assert(find_sub_node_of_list(cursor.at, &member));
-                
+                b32 did_delete = false;
                 if(cursor.at->prev_sibling && (cursor.at->ast_type == AST_TOKEN ||
                                                cursor.at->ast_type == AST_TYPE_TOKEN)){
                     // NOTE(Oliver): if it's not the first chlid in the list then you
                     // can delete it provided it's a scope member
                     mark_node_for_deletion(cursor.at);
+                    did_delete = true;
                 }
-                
+                Arc_Node* result;
                 if(arc_has_property(member, AP_CONTAINS_SCOPE)){
                     // NOTE(Oliver): if the current node has an inner scope (if, while etc)
                     // then we don't want to insert into the parent scope, 
@@ -294,16 +295,13 @@ UPDATE {
                             insert_arc_node_as_sibling(member, next_in_scope);
                         }
                     }
-                    
-                }else if(arc_has_property(member->parent->last_child, AP_AST)&&
+                }else if(arc_has_property(member->parent->last_child, AP_AST) &&
                          !is_after_cursor_of_ast_type(AST_TOKEN)){
                     // NOTE(Oliver): if the last node in parent scope is not empty, 
                     // then we can add an empty node on the end
                     insert_arc_node_as_sibling(member, next_in_scope);
                 }
-                
                 advance_cursor(CURSOR_RIGHT);
-                
                 presenter->mode = P_EDIT;
             }
         }

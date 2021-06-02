@@ -1453,12 +1453,27 @@ render_panels(Panel* root, v4f rect){
                     ui_panel_header(root, "Debug");
                     if(dropdown("test dropdown")){
                         UI_COLUMN {
+                            
+#if 0
                             for(int i = 0; i < presenter->line_pos; i++){
                                 label("line %d start: %d end: %d", i, presenter->lines[i].start, presenter->lines[i].end);
                             }
                             label("current line: %d", presenter->line_index);
                             label("current pos: %d", presenter->buffer_pos);
                             label("current pos on line : %d", presenter->buffer_pos - presenter->lines[presenter->line_index].start);
+#endif
+                            
+                            for(int i = 0; i < presenter->buffer_pos; i++){
+                                ID("buffer%d", (int)presenter->buffer[i].node){
+                                    if(presenter->buffer[i].node->string.length){
+                                        label("%.*s %d", presenter->buffer[i].node->string.length,
+                                              presenter->buffer[i].node->string.text, 
+                                              presenter->buffer[i].node->ast_type);
+                                    }else {
+                                        label("empty %d", presenter->buffer[i].node->ast_type);
+                                    }
+                                }
+                            }
                         }
                     }
                     if(dropdown("secrets")){

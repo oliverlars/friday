@@ -34,6 +34,7 @@ struct Presenter_State {
     int line_pos;
     int line_index;
     
+    int number_of_deletions;
     
     Cursor_Direction direction;
     int direction_count;

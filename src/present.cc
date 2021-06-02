@@ -29,6 +29,7 @@ delete_sub_tree_marked_for_deletion(Arc_Node* node){
         if(node->first_child){
             delete_sub_tree_marked_for_deletion(node->first_child);
         }
+        presenter->number_of_deletions++;
         pool_clear(&editor->arc_pool, node);
         memset(node, 0, sizeof(Arc_Node));
         node = node->next_sibling;
@@ -41,6 +42,7 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
         if(arc_has_property(node, AP_MARK_DELETE)){
             if(node->prev_sibling){
                 remove_arc_node_at(&node->parent->first_child, node);
+                presenter->number_of_deletions++;
             }else{
                 arc_clear_all_properties(node);
                 arc_set_property(node, AP_SELECTABLE);
@@ -64,7 +66,7 @@ internal void
 advance_cursor(Cursor_Direction dir, int count = 1){
     if(!cursor.at) return;
     presenter->direction = dir;
-    presenter->direction_count = count;
+    presenter->direction_count = 1;
 }
 
 internal b32
@@ -368,7 +370,7 @@ set_next_cursor_pos(){
     auto dir = presenter->direction;
     auto count = presenter->direction_count;
     
-    auto pos = presenter->buffer_index;
+    auto pos = presenter->buffer_index - presenter->number_of_deletions;
     auto line_pos = presenter->line_index;
     int next_pos = pos;
     switch(dir){

@@ -221,7 +221,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
                     lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
                 }
             }
-            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
+            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(border_colour));
             
             pos.x += 1;
             pos.y -= 1;

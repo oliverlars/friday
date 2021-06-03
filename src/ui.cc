@@ -1160,7 +1160,7 @@ widget_render_text(Widget* widget, Colour colour){
             }
         }
         
-        push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
+        push_rectangle_outline(bbox, 1, 3, colour_from_v4f(border_colour));
         widget->pos.x += 1;
         widget->pos.y -= 1;
     }

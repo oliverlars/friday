@@ -84,6 +84,20 @@ make_return_from_node(Arc_Node* ret, Pool* pool){
 }
 
 internal Arc_Node*
+make_assignment_from_node(Arc_Node* assign, Pool* pool){
+    arc_set_property(assign, AP_AST);
+    assign->ast_type = AST_ASSIGNMENT;
+    
+    auto expr = make_arc_node(pool);
+    arc_set_property(expr, AP_AST);
+    expr->ast_type = AST_EXPR;
+    
+    insert_arc_node_as_child(assign, expr);
+    
+    return assign;
+}
+
+internal Arc_Node*
 make_function_from_node(Arc_Node* func, Pool* pool){
     arc_set_property(func, AP_AST);
     arc_set_property(func, AP_CONTAINS_SCOPE);
@@ -111,8 +125,6 @@ make_function_from_node(Arc_Node* func, Pool* pool){
     assert(is_sub_node_of_ast_type(params, AST_FUNCTION));
     assert(is_sub_node_of_ast_type(ret, AST_FUNCTION));
     assert(is_sub_node_of_ast_type(scope, AST_FUNCTION));
-    
-    
     
     
     return func;

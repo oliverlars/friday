@@ -220,7 +220,7 @@ UPDATE {
                 
                 auto type = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->first_child->next_sibling, type);
-                set_as_ast(type, AST_TYPE_USAGE);
+                set_as_ast(type, AST_TYPE_TOKEN);
                 
                 auto empty = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(cursor.at->last_child, empty);
@@ -277,13 +277,11 @@ UPDATE {
                 arc_set_property(next_in_scope, AP_DELETABLE);
                 Arc_Node* member;
                 assert(find_sub_node_of_list(cursor.at, &member));
-                b32 did_delete = false;
                 if(cursor.at->prev_sibling && (cursor.at->ast_type == AST_TOKEN ||
                                                cursor.at->ast_type == AST_TYPE_TOKEN)){
                     // NOTE(Oliver): if it's not the first chlid in the list then you
                     // can delete it provided it's a scope member
                     mark_node_for_deletion(cursor.at);
-                    did_delete = true;
                 }
                 Arc_Node* result;
                 if(arc_has_property(member, AP_CONTAINS_SCOPE)){
@@ -305,6 +303,12 @@ UPDATE {
                 }
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+            }else if(cursor.at->reference){
+                make_assignment_from_node(cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, AST_TOKEN);
+                insert_arc_node_as_child(cursor.at->first_child, next);
+                advance_cursor(CURSOR_RIGHT);
             }
         }
         

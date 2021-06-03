@@ -893,6 +893,19 @@ present_declaration(Arc_Node* node){
 }
 
 internal void
+present_assignment(Arc_Node* node){
+    ID("declaration%d", (int)node){
+        UI_ROW {
+            present_editable_string(ui->theme.text, node);
+            present_space();
+            present_string(ui->theme.text_misc, make_string("="));
+            present_space();
+            present_arc(node->first_child);
+        }
+    }
+}
+
+internal void
 present_function(Arc_Node* node){
     if(!node) return;
     if(arc_has_property(node, AP_AST)){
@@ -1290,15 +1303,24 @@ present_pascal_function(Arc_Node* node){
                         auto return_type = node->first_child->next_sibling->first_child;
                         auto scope = node->first_child->next_sibling->next_sibling;
                         UI_ROW{
-                            present_pascal_function(return_type);
+                            if(return_type->string.length){
+                                present_string(ui->theme.text_misc, make_string("function"));
+                            }else{
+                                present_string(ui->theme.text_misc, make_string("procedure"));
+                            }
                             present_space();
                             present_editable_string(ui->theme.text_function, node);
                             present_space();
                             present_string(ui->theme.text_misc, make_string("("));
                             present_pascal_function(params);
                             present_string(ui->theme.text_misc, make_string(")"));
+                            present_string(ui->theme.text_misc, make_string(":"));
                             present_space();
-                            present_string(ui->theme.text_misc, make_string("{"));
+                            present_pascal_function(return_type);
+                            
+                        }
+                        UI_ROW{
+                            present_string(ui->theme.text_misc, make_string("begin"));
                         }
                         UI_ROW {
                             present_space();
@@ -1306,7 +1328,7 @@ present_pascal_function(Arc_Node* node){
                             present_arc(scope);
                         }
                         UI_ROW {
-                            present_string(ui->theme.text_misc, make_string("}"));
+                            present_string(ui->theme.text_misc, make_string("end;"));
                         }
                     }
                 }
@@ -1448,6 +1470,9 @@ present_ast(Arc_Node* node){
         case AST_DECLARATION: {
             present_declaration(node);
         }break;
+        case AST_ASSIGNMENT:{
+            present_assignment(node);
+        }break;
         case AST_STRUCT: {
             present_struct(node);
         }break;
@@ -1492,6 +1517,7 @@ present_ast(Arc_Node* node){
                 }else {
                     present_editable_string(ui->theme.text, node);
                 }
+                
                 ID("tab_completer%d", (int)node){
                     auto preview = tab_completer(node);
                     if(preview.length){
@@ -1752,7 +1778,15 @@ present_arc(Arc_Node* node){
             present_pascal_ast(node);
         }
     }else {
-        present_editable_string(ui->theme.text, node);
+        UI_ROW{
+            present_editable_string(ui->theme.text, node);
+            ID("tab_completer%d", (int)node){
+                auto preview = tab_completer(node);
+                if(preview.length){
+                    present_string(ui->theme.text_misc, preview);
+                }
+            }
+        }
         present_arc(node->next_sibling);
         present_arc(node->first_child);
     }

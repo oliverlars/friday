@@ -1327,7 +1327,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     panel->second->split_type = split_type;
 }
 
-static int present_style;
+static int present_style = 0;
 internal void present_arc(Arc_Node* node);
 static f32 font_scale = 1.0f;
 
@@ -1407,10 +1407,11 @@ render_panels(Panel* root, v4f rect){
                     
                     UI_COLUMN ID("%d", (int)root) {
                         label("Syntax Style");
-                        UI_WIDTHFILL { if(button("Render as C")) present_style = 0;}
-                        UI_WIDTHFILL { if(button("Render as Jai")) present_style = 1;}
-                        UI_WIDTHFILL { if(button("Render as Python")) present_style = 2;}
-                        UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 3;}
+                        UI_WIDTHFILL { if(button("Render as Default")) present_style = 0;}
+                        UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
+                        UI_WIDTHFILL { if(button("Render as Jai")) present_style = 2;}
+                        UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
+                        UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 4;}
                         local_persist v4f rect  = {};
                         yspacer(20);
                         

@@ -4,7 +4,6 @@ mark_node_for_deletion(Arc_Node* at){
     arc_set_property(at, AP_MARK_DELETE);
 }
 
-
 internal void
 set_cursor_as_node(Arc_Node* node){
     cursor.at = node;
@@ -97,7 +96,7 @@ internal void
 advance_cursor(Cursor_Direction dir, int count = 1){
     if(!cursor.at) return;
     presenter->direction = dir;
-    presenter->direction_count = 1;
+    presenter->direction_count = count;
 }
 
 internal b32
@@ -409,13 +408,18 @@ set_next_cursor_pos(){
             next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = cursor.at->string.length;
-            
+            if(next_pos < presenter->lines[line_pos].start){
+                line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
+            }
         }break;
         case CURSOR_RIGHT:{
             next_pos = clampi(next_pos+count, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
+            if(next_pos > presenter->lines[line_pos].start){
+                line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
+            }
         }break;
         case CURSOR_UP:{
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
@@ -745,8 +749,22 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     if(result.clicked){
         ui->cursor_pos = string.length;
-        cursor.at = widget->arc;
+        int clicked_pos = 0;
+        int cursor_pos = presenter->buffer_index;
+        for(int i = 0; i < presenter->buffer_pos; i++){
+            if(widget->arc == presenter->buffer[i].node){
+                clicked_pos = i;
+                break;
+            }
+        }
+        if(clicked_pos - cursor_pos <= 0){
+            advance_cursor(CURSOR_LEFT, abs(clicked_pos - cursor_pos));
+        }else {
+            advance_cursor(CURSOR_RIGHT, clicked_pos - cursor_pos);
+        }
+        //cursor.at = widget->arc;
         cursor.text_id = widget->id;
+        
     }
     
     if(result.hovered && node->reference){
@@ -852,8 +870,9 @@ present_editable_string(Colour colour, Arc_Node* node){
     
 }
 
-
 internal void present_arc(Arc_Node* node);
+
+//~  DEFAULT SYNTAX 
 
 internal void
 present_declaration(Arc_Node* node){
@@ -873,6 +892,7 @@ present_declaration(Arc_Node* node){
                     present_arc(node->last_child->first_child);
                 }
             }
+            
         }
     }
 }
@@ -1046,6 +1066,386 @@ present_call(Arc_Node* node){
     }
 }
 
+//~ C SYNTAX
+
+internal void
+present_c_declaration(Arc_Node* node){
+    ID("declaration%d", (int)node){
+        UI_ROW {
+            present_arc(node->first_child->first_child);
+            present_space();
+            present_editable_string(ui->theme.text, node);
+            if(node->last_child->first_child){
+                if(node->last_child->first_child->string.length ||
+                   cursor.at == node->last_child->first_child){
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("="));
+                    present_space();
+                    present_arc(node->last_child->first_child);
+                }
+            }
+            if(node->parent && node->parent->ast_type == AST_SCOPE){
+                present_string(ui->theme.text_misc, make_string(";"));
+            }
+        }
+    }
+}
+
+internal void
+present_c_function(Arc_Node* node){
+    if(!node) return;
+    if(arc_has_property(node, AP_AST)){
+        
+        switch(node->ast_type){
+            case AST_FUNCTION: {
+                
+                ID("function%d", (int)node){
+                    UI_COLUMN {
+                        
+                        auto params = node->first_child->first_child;
+                        auto return_type = node->first_child->next_sibling->first_child;
+                        auto scope = node->first_child->next_sibling->next_sibling;
+                        UI_ROW{
+                            present_c_function(return_type);
+                            present_space();
+                            present_editable_string(ui->theme.text_function, node);
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("("));
+                            present_c_function(params);
+                            present_string(ui->theme.text_misc, make_string(")"));
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("{"));
+                        }
+                        UI_ROW {
+                            present_space();
+                            present_space();
+                            present_arc(scope);
+                        }
+                        UI_ROW {
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
+                    }
+                }
+            }break;
+            case AST_DECLARATION: {
+                auto params = node;
+                for(auto decl = params; decl; decl = decl->next_sibling){
+                    ID("param%d", (int)decl){
+                        present_arc(decl);
+                        if(decl->next_sibling){
+                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                                present_string(ui->theme.text_misc, make_string(","));
+                                present_space();
+                            }
+                        }
+                    }
+                }
+            }break;
+            default: {
+                present_arc(node);
+            }break;
+            
+        }
+    }else {
+        present_arc(node);
+    }
+    
+}
+
+internal void
+present_c_type_usage(Arc_Node* node){
+    present_editable_string(ui->theme.text_type, node);
+}
+
+internal void
+present_c_if(Arc_Node* node){
+    ID("if%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_editable_string(ui->theme.text, node);
+                present_space();
+                present_string(ui->theme.text_misc, make_string("("));
+                present_arc(node->first_child->first_child);
+                present_string(ui->theme.text_misc, make_string(")"));
+                present_space();
+                present_string(ui->theme.text_misc, make_string("{"));
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->last_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
+present_c_return(Arc_Node* node){
+    ID("return%d", (int)node){
+        UI_ROW{
+            present_editable_string(ui->theme.text_type, node);
+            present_space();
+            present_arc(node->first_child->first_child);
+            present_space();
+        }
+    }
+}
+
+internal void
+present_c_struct(Arc_Node* node){
+    ID("struct%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_string(ui->theme.text, make_string("struct"));
+                present_space();
+                present_editable_string(ui->theme.text_type, node);
+                present_space();
+                present_string(ui->theme.text_misc, make_string("{"));
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->first_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
+present_c_call(Arc_Node* node){
+    ID("call%d", (int)node){
+        UI_ROW{
+            if(cursor.at == node){
+                present_editable_string(ui->theme.text_function, node);
+            }else{
+                replace_string(&node->string, node->reference->string);
+                present_editable_reference(ui->theme.text_function, node);
+            }
+            present_string(ui->theme.text_misc, make_string("("));
+            
+            auto arg = node->first_child;
+            assert(node->reference);
+            auto param = node->reference->first_child->first_child;
+            
+            for(auto expr = arg; expr; expr = expr->next_sibling){
+                ID("args%d", (int)expr){
+                    if(param){
+                        present_string(ui->theme.text_misc, param->string);
+                        present_string(ui->theme.text_misc, make_string(": "));
+                    }
+                    present_arc(expr->first_child);
+                    if(expr->next_sibling && expr->next_sibling->first_child){
+                        present_string(ui->theme.text_misc, make_string(","));
+                        present_space();
+                    }
+                }
+                if(param){
+                    param = param->next_sibling;
+                }
+            }
+            present_string(ui->theme.text_misc, make_string(")"));
+        }
+    }
+}
+
+//~ PASCAL SYNAX
+
+internal void
+present_pascal_declaration(Arc_Node* node){
+    ID("declaration%d", (int)node){
+        UI_ROW {
+            present_arc(node->first_child->first_child);
+            present_space();
+            present_editable_string(ui->theme.text, node);
+            if(node->last_child->first_child){
+                if(node->last_child->first_child->string.length ||
+                   cursor.at == node->last_child->first_child){
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("="));
+                    present_space();
+                    present_arc(node->last_child->first_child);
+                }
+            }
+            present_string(ui->theme.text_misc, make_string(";"));
+            
+        }
+    }
+}
+
+internal void
+present_pascal_function(Arc_Node* node){
+    if(!node) return;
+    if(arc_has_property(node, AP_AST)){
+        
+        switch(node->ast_type){
+            case AST_FUNCTION: {
+                
+                ID("function%d", (int)node){
+                    UI_COLUMN {
+                        
+                        auto params = node->first_child->first_child;
+                        auto return_type = node->first_child->next_sibling->first_child;
+                        auto scope = node->first_child->next_sibling->next_sibling;
+                        UI_ROW{
+                            present_pascal_function(return_type);
+                            present_space();
+                            present_editable_string(ui->theme.text_function, node);
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("("));
+                            present_pascal_function(params);
+                            present_string(ui->theme.text_misc, make_string(")"));
+                            present_space();
+                            present_string(ui->theme.text_misc, make_string("{"));
+                        }
+                        UI_ROW {
+                            present_space();
+                            present_space();
+                            present_arc(scope);
+                        }
+                        UI_ROW {
+                            present_string(ui->theme.text_misc, make_string("}"));
+                        }
+                    }
+                }
+            }break;
+            case AST_DECLARATION: {
+                auto params = node;
+                for(auto decl = params; decl; decl = decl->next_sibling){
+                    ID("param%d", (int)decl){
+                        present_arc(decl);
+                        if(decl->next_sibling){
+                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                                present_string(ui->theme.text_misc, make_string(","));
+                                present_space();
+                            }
+                        }
+                    }
+                }
+            }break;
+            default: {
+                present_arc(node);
+            }break;
+            
+        }
+    }else {
+        present_arc(node);
+    }
+    
+}
+
+internal void
+present_pascal_type_usage(Arc_Node* node){
+    present_editable_string(ui->theme.text_type, node);
+}
+
+internal void
+present_pascal_if(Arc_Node* node){
+    ID("if%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_editable_string(ui->theme.text, node);
+                present_space();
+                present_string(ui->theme.text_misc, make_string("("));
+                present_arc(node->first_child->first_child);
+                present_string(ui->theme.text_misc, make_string(")"));
+                present_space();
+                present_string(ui->theme.text_misc, make_string("{"));
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->last_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
+present_pascal_return(Arc_Node* node){
+    ID("return%d", (int)node){
+        UI_ROW{
+            present_editable_string(ui->theme.text_type, node);
+            present_space();
+            present_arc(node->first_child->first_child);
+            present_space();
+        }
+    }
+}
+
+internal void
+present_pascal_struct(Arc_Node* node){
+    ID("struct%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                present_string(ui->theme.text, make_string("struct"));
+                present_space();
+                present_editable_string(ui->theme.text_type, node);
+                present_space();
+                present_string(ui->theme.text_misc, make_string("{"));
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->first_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
+present_pascal_call(Arc_Node* node){
+    ID("call%d", (int)node){
+        UI_ROW{
+            if(cursor.at == node){
+                present_editable_string(ui->theme.text_function, node);
+            }else{
+                replace_string(&node->string, node->reference->string);
+                present_editable_reference(ui->theme.text_function, node);
+            }
+            present_string(ui->theme.text_misc, make_string("("));
+            
+            auto arg = node->first_child;
+            assert(node->reference);
+            auto param = node->reference->first_child->first_child;
+            
+            for(auto expr = arg; expr; expr = expr->next_sibling){
+                ID("args%d", (int)expr){
+                    if(param){
+                        present_string(ui->theme.text_misc, param->string);
+                        present_string(ui->theme.text_misc, make_string(": "));
+                    }
+                    present_arc(expr->first_child);
+                    if(expr->next_sibling && expr->next_sibling->first_child){
+                        present_string(ui->theme.text_misc, make_string(","));
+                        present_space();
+                    }
+                }
+                if(param){
+                    param = param->next_sibling;
+                }
+            }
+            present_string(ui->theme.text_misc, make_string(")"));
+        }
+    }
+}
+
+
 internal void
 present_ast(Arc_Node* node){
     if(!node) return;
@@ -1146,10 +1546,216 @@ present_ast(Arc_Node* node){
 }
 
 internal void
+present_c_ast(Arc_Node* node){
+    if(!node) return;
+    switch(node->ast_type){
+        case AST_DECLARATION: {
+            present_c_declaration(node);
+        }break;
+        case AST_STRUCT: {
+            present_c_struct(node);
+        }break;
+        case AST_FUNCTION: {
+            present_c_function(node);
+        }break;
+        case AST_TYPE_USAGE: {
+            present_c_type_usage(node);
+        }break;
+        case AST_IF: {
+            present_c_if(node);
+        }break;
+        case AST_SCOPE: {
+            auto member = node->first_child;
+            UI_COLUMN{
+                present_arc(member);
+                member = member->next_sibling;
+            }
+        }break;
+        case AST_EXPR:{
+            present_c_ast(node->first_child);
+        }break;
+        case AST_TOKEN: {
+            ID("token%d", (int)node){
+                if(node->token_type == TOKEN_MISC){
+                    present_editable_string(ui->theme.text_misc, node);
+                }else if(node->token_type == TOKEN_REFERENCE){
+                    if(cursor.at == node){
+                        present_editable_string(ui->theme.text_function, node);
+                    }else{
+                        replace_string(&node->string, node->reference->string);
+                        present_editable_reference(ui->theme.text_function, node);
+                    }
+                    if(node->first_child){
+                        present_string(ui->theme.text_misc, make_string("."));
+                        present_arc(node->first_child);
+                    }
+                }else if(node->token_type == TOKEN_LITERAL){
+                    present_editable_string(ui->theme.text_literal, node);
+                }else {
+                    present_editable_string(ui->theme.text, node);
+                }
+                ID("tab_completer%d", (int)node){
+                    auto preview = tab_completer(node);
+                    if(preview.length){
+                        present_string(ui->theme.text_misc, preview);
+                    }
+                }
+                if(node->next_sibling){
+                    present_space();
+                    present_arc(node->next_sibling);
+                }
+            }
+        }break;
+        case AST_TYPE_TOKEN: {
+            if(node->token_type == TOKEN_MISC){
+                present_editable_string(ui->theme.text_misc, node);
+            }else if(node->token_type == TOKEN_REFERENCE){
+                if(cursor.at == node){
+                    present_editable_string(ui->theme.text_type, node);
+                }else{
+                    replace_string(&node->string, node->reference->string);
+                    present_editable_reference(ui->theme.text_type, node);
+                }
+                
+            }else if(node->token_type == TOKEN_LITERAL){
+                present_editable_string(ui->theme.text_literal, node);
+            }else {
+                present_editable_string(ui->theme.text, node);
+            }
+            ID("tab_completer%d", (int)node){
+                auto preview = tab_completer_type(node);
+                if(preview.length){
+                    present_string(ui->theme.text_misc, preview);
+                }
+            }
+            if(node->next_sibling){
+                present_space();
+            }
+            present_arc(node->next_sibling);
+        }break;
+        case AST_CALL:{
+            present_c_call(node);
+        }break;
+        case AST_RETURN:{
+            present_c_return(node);
+        }break;
+    }
+}
+
+internal void
+present_pascal_ast(Arc_Node* node){
+    if(!node) return;
+    switch(node->ast_type){
+        case AST_DECLARATION: {
+            present_pascal_declaration(node);
+        }break;
+        case AST_STRUCT: {
+            present_pascal_struct(node);
+        }break;
+        case AST_FUNCTION: {
+            present_pascal_function(node);
+        }break;
+        case AST_TYPE_USAGE: {
+            present_pascal_type_usage(node);
+        }break;
+        case AST_IF: {
+            present_pascal_if(node);
+        }break;
+        case AST_SCOPE: {
+            auto member = node->first_child;
+            UI_COLUMN{
+                while(member){
+                    present_arc(member);
+                    if(member->ast_type == AST_DECLARATION){
+                        present_string(ui->theme.text_misc, make_string(";"));
+                    }
+                    member = member->next_sibling;
+                    
+                }
+            }
+        }break;
+        case AST_EXPR:{
+            present_pascal_ast(node->first_child);
+        }break;
+        case AST_TOKEN: {
+            ID("token%d", (int)node){
+                if(node->token_type == TOKEN_MISC){
+                    present_editable_string(ui->theme.text_misc, node);
+                }else if(node->token_type == TOKEN_REFERENCE){
+                    if(cursor.at == node){
+                        present_editable_string(ui->theme.text_function, node);
+                    }else{
+                        replace_string(&node->string, node->reference->string);
+                        present_editable_reference(ui->theme.text_function, node);
+                    }
+                    if(node->first_child){
+                        present_string(ui->theme.text_misc, make_string("."));
+                        present_arc(node->first_child);
+                    }
+                }else if(node->token_type == TOKEN_LITERAL){
+                    present_editable_string(ui->theme.text_literal, node);
+                }else {
+                    present_editable_string(ui->theme.text, node);
+                }
+                ID("tab_completer%d", (int)node){
+                    auto preview = tab_completer(node);
+                    if(preview.length){
+                        present_string(ui->theme.text_misc, preview);
+                    }
+                }
+                if(node->next_sibling){
+                    present_space();
+                    present_arc(node->next_sibling);
+                }
+            }
+        }break;
+        case AST_TYPE_TOKEN: {
+            if(node->token_type == TOKEN_MISC){
+                present_editable_string(ui->theme.text_misc, node);
+            }else if(node->token_type == TOKEN_REFERENCE){
+                if(cursor.at == node){
+                    present_editable_string(ui->theme.text_type, node);
+                }else{
+                    replace_string(&node->string, node->reference->string);
+                    present_editable_reference(ui->theme.text_type, node);
+                }
+                
+            }else if(node->token_type == TOKEN_LITERAL){
+                present_editable_string(ui->theme.text_literal, node);
+            }else {
+                present_editable_string(ui->theme.text, node);
+            }
+            ID("tab_completer%d", (int)node){
+                auto preview = tab_completer_type(node);
+                if(preview.length){
+                    present_string(ui->theme.text_misc, preview);
+                }
+            }
+            if(node->next_sibling){
+                present_space();
+            }
+            present_arc(node->next_sibling);
+        }break;
+        case AST_CALL:{
+            present_pascal_call(node);
+        }break;
+        case AST_RETURN:{
+            present_pascal_return(node);
+        }break;
+    }
+}
+
+internal void
 present_arc(Arc_Node* node){
     if(!node) return;
     if(arc_has_property(node, AP_AST)){
-        present_ast(node);
+        if(present_style == 0){
+            present_ast(node);
+        }else if(present_style == 1){
+            present_c_ast(node);
+        }else if(present_style == 2){
+            present_pascal_ast(node);
+        }
     }else {
         present_editable_string(ui->theme.text, node);
         present_arc(node->next_sibling);

@@ -22,6 +22,22 @@ is_after_cursor_of_ast_type(Ast_Type type){
     return false;
 }
 
+internal int
+is_node_before_or_after_cursor(Arc_Node* node){
+    if(!node) return 0;
+    for(int i = 0; i < presenter->buffer_index; i++){
+        if(presenter->buffer[i].node == node){
+            return -1;
+        }
+    }
+    for(int i = presenter->buffer_index +1; i < presenter->buffer_pos; i++){
+        if(presenter->buffer[i].node == node){
+            return 1;
+        }
+    }
+    return 0;
+}
+
 internal void
 delete_sub_tree_marked_for_deletion(Arc_Node* node){
     
@@ -29,6 +45,14 @@ delete_sub_tree_marked_for_deletion(Arc_Node* node){
         if(node->first_child){
             delete_sub_tree_marked_for_deletion(node->first_child);
         }
+        
+        int before_or_after_cursor = is_node_before_or_after_cursor(node);
+        if(before_or_after_cursor > 0){
+            presenter->number_of_deletions_before_cursor++;
+        }else {
+            presenter->number_of_deletions_after_cursor++;
+        }
+        
         presenter->number_of_deletions++;
         pool_clear(&editor->arc_pool, node);
         memset(node, 0, sizeof(Arc_Node));
@@ -42,7 +66,14 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
         if(arc_has_property(node, AP_MARK_DELETE)){
             if(node->prev_sibling){
                 remove_arc_node_at(&node->parent->first_child, node);
-                presenter->number_of_deletions++;
+                
+                int before_or_after_cursor = is_node_before_or_after_cursor(node);
+                if(before_or_after_cursor >= 0){
+                    presenter->number_of_deletions_before_cursor++;
+                }else {
+                    presenter->number_of_deletions_after_cursor++;
+                }
+                
             }else{
                 arc_clear_all_properties(node);
                 arc_set_property(node, AP_SELECTABLE);
@@ -370,7 +401,7 @@ set_next_cursor_pos(){
     auto dir = presenter->direction;
     auto count = presenter->direction_count;
     
-    auto pos = presenter->buffer_index - presenter->number_of_deletions;
+    auto pos = presenter->buffer_index - presenter->number_of_deletions_before_cursor;
     auto line_pos = presenter->line_index;
     int next_pos = pos;
     switch(dir){

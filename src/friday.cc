@@ -134,6 +134,8 @@ UPDATE {
         
         f32 start = platform->get_time();
         presenter->number_of_deletions = 0;
+        presenter->number_of_deletions_before_cursor = 0;
+        presenter->number_of_deletions_after_cursor = 0;
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));

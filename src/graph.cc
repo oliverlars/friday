@@ -216,15 +216,15 @@ is_sub_node_of_ast_tag(Arc_Node* node, Ast_Tag type, Arc_Node** result){
 internal b32
 find_sub_node_of_list(Arc_Node* node, Arc_Node** result){
     if(!node) return false;
-    node = node->parent;
     while(node){
         if(node->parent){
             if(arc_has_property(node->parent, AP_LIST)){
                 if(result) *result = node;
                 return true;
             }
-            node = node->parent;
         }
+        node = node->parent;
+        
     }
     return false;
 }

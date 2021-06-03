@@ -24,6 +24,7 @@ is_after_cursor_of_ast_type(Ast_Type type){
 internal int
 is_node_before_or_after_cursor(Arc_Node* node){
     if(!node) return 0;
+    if(node == cursor.at) return 0;
     for(int i = 0; i < presenter->buffer_index; i++){
         if(presenter->buffer[i].node == node){
             return -1;
@@ -67,9 +68,9 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
                 remove_arc_node_at(&node->parent->first_child, node);
                 
                 int before_or_after_cursor = is_node_before_or_after_cursor(node);
-                if(before_or_after_cursor >= 0){
+                if(before_or_after_cursor > 0){
                     presenter->number_of_deletions_before_cursor++;
-                }else {
+                }else if(before_or_after_cursor < 0) {
                     presenter->number_of_deletions_after_cursor++;
                 }
                 
@@ -761,7 +762,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
         // as it needs to update presenter->buffer_index and presenter->line_index
         if(clicked_pos - cursor_pos <= 0){
             advance_cursor(CURSOR_LEFT, abs(clicked_pos - cursor_pos));
-        }else {
+        }else if(clicked_pos - cursor_pos > 0){
             advance_cursor(CURSOR_RIGHT, clicked_pos - cursor_pos);
         }
         cursor.text_id = widget->id;
@@ -1588,8 +1589,10 @@ present_c_ast(Arc_Node* node){
         case AST_SCOPE: {
             auto member = node->first_child;
             UI_COLUMN{
-                present_arc(member);
-                member = member->next_sibling;
+                while(member){
+                    present_arc(member);
+                    member = member->next_sibling;
+                }
             }
         }break;
         case AST_EXPR:{

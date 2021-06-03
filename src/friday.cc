@@ -249,8 +249,8 @@ UPDATE {
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TOKEN);
                 insert_arc_node_as_child(cursor.at->first_child, next);
-                cursor.at = next;
                 presenter->mode = P_EDIT;
+                advance_cursor(CURSOR_RIGHT);
                 
             }else if(has_pressed_key(KEY_S)){
                 
@@ -276,7 +276,7 @@ UPDATE {
                 auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
                 arc_set_property(next_in_scope, AP_DELETABLE);
                 Arc_Node* member;
-                assert(find_sub_node_of_list(cursor.at, &member));
+                assert(find_parent_list(cursor.at, &member));
                 if(cursor.at->prev_sibling && (cursor.at->ast_type == AST_TOKEN ||
                                                cursor.at->ast_type == AST_TYPE_TOKEN)){
                     // NOTE(Oliver): if it's not the first chlid in the list then you

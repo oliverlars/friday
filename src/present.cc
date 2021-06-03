@@ -1824,6 +1824,9 @@ build_buffer_from_arc(Arc_Node* node){
             build_buffer_from_arc(node->first_child->first_child);
             build_buffer_from_arc(node->last_child->first_child);
         }break;
+        case AST_ASSIGNMENT:{
+            
+        }break;
         case AST_STRUCT: {
             push_arc(node);
             push_newline();

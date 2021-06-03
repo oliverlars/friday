@@ -68,7 +68,7 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
                 remove_arc_node_at(&node->parent->first_child, node);
                 
                 int before_or_after_cursor = is_node_before_or_after_cursor(node);
-                if(before_or_after_cursor > 0){
+                if(before_or_after_cursor >= 0){
                     presenter->number_of_deletions_before_cursor++;
                 }else if(before_or_after_cursor < 0) {
                     presenter->number_of_deletions_after_cursor++;
@@ -400,8 +400,11 @@ set_next_cursor_pos(){
     
     auto dir = presenter->direction;
     auto count = presenter->direction_count;
-    
-    auto pos = presenter->buffer_index - presenter->number_of_deletions_before_cursor;
+    auto offset = presenter->number_of_deletions_before_cursor;
+    if(dir == CURSOR_LEFT){
+        if(offset) offset--;
+    }
+    auto pos = presenter->buffer_index - offset;
     auto line_pos = presenter->line_index;
     int next_pos = pos;
     switch(dir){
@@ -424,7 +427,6 @@ set_next_cursor_pos(){
         }break;
         case CURSOR_UP:{
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
-            assert(distance_from_start >= 0);
             line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
@@ -434,7 +436,6 @@ set_next_cursor_pos(){
         case CURSOR_DOWN:{
             
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
-            assert(distance_from_start >= 0);
             line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);

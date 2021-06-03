@@ -1022,7 +1022,7 @@ layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
         
     }
     f32 available_space =  widget->parent->min.width;
-    f32 width = (available_space - total_width + PADDING)/(f32)number_of_children;
+    f32 width = (available_space - total_width + PADDING)/(f32)number_of_children - PADDING;
     
     
     width = width >= 0 ? width : 0;
@@ -1409,9 +1409,8 @@ render_panels(Panel* root, v4f rect){
                         label("Syntax Style");
                         UI_WIDTHFILL { if(button("Render as Default")) present_style = 0;}
                         UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
-                        UI_WIDTHFILL { if(button("Render as Jai")) present_style = 2;}
+                        UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 2;}
                         UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
-                        UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 4;}
                         local_persist v4f rect  = {};
                         yspacer(20);
                         

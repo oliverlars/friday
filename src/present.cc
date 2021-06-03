@@ -757,12 +757,13 @@ present_editable_reference(Colour colour, Arc_Node* node){
                 break;
             }
         }
+        // NOTE(Oliver): use navigation system to find where to click to
+        // as it needs to update presenter->buffer_index and presenter->line_index
         if(clicked_pos - cursor_pos <= 0){
             advance_cursor(CURSOR_LEFT, abs(clicked_pos - cursor_pos));
         }else {
             advance_cursor(CURSOR_RIGHT, clicked_pos - cursor_pos);
         }
-        //cursor.at = widget->arc;
         cursor.text_id = widget->id;
         
     }
@@ -799,12 +800,6 @@ present_editable_string(Colour colour, Arc_Node* node){
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
-        
-        if(!widget->alt_string.length && cursor.text_id != widget->id){
-            //push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
-            //push_circle(pos + v2f(0, 5), 3, ui->theme.border);
-            //push_string(pos, make_string("->"), ui->theme.border, widget->style.font_scale);
-        }
         
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         

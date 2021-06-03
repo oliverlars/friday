@@ -21,6 +21,12 @@ arc_clear_all_properties(Arc_Node* arc){
     }
 }
 
+internal void
+set_as_ast(Arc_Node* node, Ast_Type type){
+    arc_set_property(node, AP_AST);
+    node->ast_type = type;
+}
+
 internal Arc_Node*
 make_arc_node(Pool* pool){
     auto result = (Arc_Node*)pool_allocate(pool);
@@ -88,11 +94,14 @@ make_assignment_from_node(Arc_Node* assign, Pool* pool){
     arc_set_property(assign, AP_AST);
     assign->ast_type = AST_ASSIGNMENT;
     
-    auto expr = make_arc_node(pool);
-    arc_set_property(expr, AP_AST);
-    expr->ast_type = AST_EXPR;
+    auto lhs = make_arc_node(pool);
+    set_as_ast(lhs, AST_EXPR);
     
-    insert_arc_node_as_child(assign, expr);
+    auto rhs = make_arc_node(pool);
+    set_as_ast(rhs, AST_EXPR);
+    
+    insert_arc_node_as_child(assign, lhs);
+    insert_arc_node_as_sibling(lhs, rhs);
     
     return assign;
 }
@@ -374,12 +383,6 @@ make_struct_from_node(Arc_Node* _struct, Pool* pool){
     insert_arc_node_as_child(_struct, members);
     
     return _struct;
-}
-
-internal void
-set_as_ast(Arc_Node* node, Ast_Type type){
-    arc_set_property(node, AP_AST);
-    node->ast_type = type;
 }
 
 internal void

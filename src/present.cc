@@ -407,6 +407,7 @@ set_next_cursor_pos(){
     auto pos = presenter->buffer_index - offset;
     auto line_pos = presenter->line_index;
     int next_pos = pos;
+    cursor.at = presenter->buffer[next_pos].node;
     switch(dir){
         case CURSOR_LEFT:{
             next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
@@ -444,6 +445,7 @@ set_next_cursor_pos(){
             
         }break;
     }
+    assert(cursor.at);
     presenter->buffer_index = next_pos;
     presenter->line_index = line_pos;
 }
@@ -896,13 +898,13 @@ present_declaration(Arc_Node* node){
 
 internal void
 present_assignment(Arc_Node* node){
-    ID("declaration%d", (int)node){
+    ID("assignment%d", (int)node){
         UI_ROW {
-            present_editable_string(ui->theme.text, node);
+            present_arc(node->first_child);
             present_space();
             present_string(ui->theme.text_misc, make_string("="));
             present_space();
-            present_arc(node->first_child);
+            present_arc(node->last_child);
         }
     }
 }
@@ -1829,7 +1831,8 @@ build_buffer_from_arc(Arc_Node* node){
             build_buffer_from_arc(node->last_child->first_child);
         }break;
         case AST_ASSIGNMENT:{
-            
+            build_buffer_from_arc(node->first_child);
+            build_buffer_from_arc(node->last_child);
         }break;
         case AST_STRUCT: {
             push_arc(node);

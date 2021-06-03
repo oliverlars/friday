@@ -125,3 +125,4 @@ arc_clear_all_properties(Arc_Node* arc);
 
 internal b32
 declaration_type_is_composite(Arc_Node* node);
+

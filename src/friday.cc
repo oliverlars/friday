@@ -168,6 +168,12 @@ UPDATE {
            cursor.at->reference){
             if(has_pressed_key_modified(KEY_P, KEY_MOD_CTRL)){
                 cursor.at->number_of_pointers++;
+            }else if(has_pressed_key_modified(KEY_P, KEY_MOD_SHIFT | KEY_MOD_CTRL)){
+                if(cursor.at->number_of_pointers <= 0){
+                    cursor.at->number_of_pointers = 0;
+                }else {
+                    cursor.at->number_of_pointers--;
+                }
             }
         }
         //~ Check

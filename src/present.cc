@@ -412,6 +412,7 @@ find_matching_reference_in_composite(Arc_Node* node, b32* found){
 internal String8
 tab_completer(Arc_Node* node){
     Arc_Node* result = nullptr;
+    if(node->reference) return {};
     b32 found = false;
     if(node->parent->ast_type == AST_TOKEN){
         auto string = find_matching_reference_in_composite(node->parent->reference, &found);
@@ -781,8 +782,16 @@ edit_text(Arc_Node* node){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
+            Arc_Node* result;
             if(arc_has_property(cursor.at, AP_DELETABLE)){
                 mark_node_for_deletion(cursor.at);
+                if(is_sub_node_of_ast_type(cursor.at, AST_ASSIGNMENT, &result)){
+                    // NOTE(Oliver): assignment nodes are weird, they need special casing
+                    // to delete because the root node isn't the first editable node
+                    if(result->first_child == cursor.at->parent){
+                        mark_node_for_deletion(result);
+                    }
+                }
             }
             advance_cursor(CURSOR_LEFT);
         }

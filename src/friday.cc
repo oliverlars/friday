@@ -163,6 +163,13 @@ UPDATE {
             jump_to_declaration();
         }
         
+        if(arc_has_property(cursor.at, AP_AST) &&
+           cursor.at->ast_type == AST_TYPE_TOKEN &&
+           cursor.at->reference){
+            if(has_pressed_key_modified(KEY_P, KEY_MOD_CTRL)){
+                cursor.at->number_of_pointers++;
+            }
+        }
         //~ Check
         if(presenter->mode == P_EDIT){
             

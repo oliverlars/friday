@@ -260,7 +260,7 @@ can_resolve_reference(Arc_Node* node){
         Arc_Node* function;
         if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
             auto param = function->first_child->first_child;
-            if(!is_child_of_node(node, param)){
+            if(!is_child_of_node(node, function->first_child)){
                 while(param){
                     if(string_eq(param->string, node->string)){
                         return true;
@@ -369,9 +369,16 @@ tab_completer(Arc_Node* node){
         while(member){
             if(is_strict_substring(node->string, member->string)){
                 auto ref = parent->reference;
-                
-                return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
-                                    member->string.text+node->string.length);
+                if(has_pressed_key(KEY_TAB)){
+                    node->token_type = TOKEN_REFERENCE;
+                    node->reference = member;
+                    replace_string(&node->string, node->reference->string);
+                    ui->cursor_pos = cursor.at->string.length;
+                    return {};
+                }else {
+                    return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
+                                        member->string.text+node->string.length);
+                }
                 
             }
             member = member->next_sibling;
@@ -383,9 +390,16 @@ tab_completer(Arc_Node* node){
         auto init = function->first_child->first_child;
         assert(init);
         if(is_strict_substring(node->string, init->string)){
-            
-            return make_stringf(&platform->frame_arena, "%.*s", init->string.length,
-                                init->string.text+node->string.length);
+            if(has_pressed_key(KEY_TAB)){
+                node->token_type = TOKEN_REFERENCE;
+                node->reference = init;
+                replace_string(&node->string, node->reference->string);
+                ui->cursor_pos = cursor.at->string.length;
+                return {};
+            }else{
+                return make_stringf(&platform->frame_arena, "%.*s", init->string.length,
+                                    init->string.text+node->string.length);
+            }
         }
     }
     
@@ -396,9 +410,16 @@ tab_completer(Arc_Node* node){
             auto param = function->first_child->first_child;
             while(param){
                 if(is_strict_substring(node->string, param->string)){
-                    
-                    return make_stringf(&platform->frame_arena, "%.*s", param->string.length-node->string.length,
-                                        param->string.text+node->string.length);
+                    if(has_pressed_key(KEY_TAB)){
+                        node->token_type = TOKEN_REFERENCE;
+                        node->reference = param;
+                        replace_string(&node->string, node->reference->string);
+                        ui->cursor_pos = cursor.at->string.length;
+                        return {};
+                    }else{
+                        return make_stringf(&platform->frame_arena, "%.*s", param->string.length-node->string.length,
+                                            param->string.text+node->string.length);
+                    }
                     
                 }
                 param = param->next_sibling;
@@ -1672,11 +1693,17 @@ present_ast(Arc_Node* node){
             }else if(node->token_type == TOKEN_REFERENCE){
                 if(cursor.at == node){
                     present_editable_string(ui->theme.text_type, node);
+                    
                 }else{
                     replace_string(&node->string, node->reference->string);
                     present_editable_reference(ui->theme.text_type, node);
                 }
                 
+                for(int i = 0; i < node->number_of_pointers; i++){
+                    ID("pointers%d", i){
+                        present_string(ui->theme.text_misc, make_string("*"));
+                    }
+                }
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
             }else {

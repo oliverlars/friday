@@ -126,3 +126,6 @@ arc_clear_all_properties(Arc_Node* arc);
 internal b32
 declaration_type_is_composite(Arc_Node* node);
 
+internal b32
+is_child_of_node(Arc_Node* node, Arc_Node* parent);
+

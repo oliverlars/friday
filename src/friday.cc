@@ -326,7 +326,11 @@ UPDATE {
                 }
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }else if(cursor.at->reference){
+            }else if(can_resolve_reference(cursor.at)){
+                if(!cursor.at->reference){
+                    set_as_ast(cursor.at, AST_TOKEN);
+                    set_token_type(cursor.at);
+                }
                 arc_set_property(cursor.at, AP_DELETABLE);
                 make_assignment_from_node(cursor.at, &editor->arc_pool);
                 auto name = cursor.at->string;

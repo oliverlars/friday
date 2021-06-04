@@ -321,6 +321,18 @@ is_node_sub_node_of_list(Arc_Node* node, Arc_Node* list){
     return false;
 }
 
+internal b32
+is_child_of_node(Arc_Node* node, Arc_Node* parent){
+    node = node;
+    while(node){
+        if(node == parent){
+            return true;
+        }
+        node = node->parent;
+    }
+    return false;
+}
+
 internal Arc_Node*
 get_scope_of_node(Arc_Node* node){
     auto child = node->first_child;

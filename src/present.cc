@@ -156,6 +156,20 @@ set_token_type(Arc_Node* node){
             }
         }
     }
+    
+    Arc_Node* function;
+    if(is_sub_node_of_ast_type(node, AST_FOR, &function)){
+        auto init = function->first_child->first_child;
+        if(!is_child_of_node(node, init)){
+            if(string_eq(node->string, init->string)){
+                node->token_type = TOKEN_REFERENCE;
+                node->reference = init;
+                replace_string(&node->string, init->string);
+                return;
+            }
+        }
+    }
+    
     while(scope){
         Arc_Node* function;
         if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
@@ -206,6 +220,70 @@ set_token_type(Arc_Node* node){
         scope = scope->parent;
     }
     
+}
+
+internal b32
+can_resolve_reference(Arc_Node* node){
+    Arc_Node* result;
+    auto scope = node;
+    if(node->parent){
+        // NOTE(Oliver): must be a dot operator
+        auto parent = node->parent;
+        Arc_Node* member = nullptr;
+        if(parent->reference){
+            if(declaration_type_is_composite(parent->reference)){
+                auto decl = parent->reference;
+                auto type = decl->first_child->first_child;
+                auto _struct = type->reference;
+                member = _struct->first_child->first_child;
+            }
+            while(member){
+                if(string_eq(node->string, member->string)){
+                    return true;
+                }
+                member = member->next_sibling;
+            }
+        }
+    }
+    
+    Arc_Node* function;
+    if(is_sub_node_of_ast_type(node, AST_FOR, &function)){
+        auto init = function->first_child->first_child;
+        if(!is_child_of_node(node, init)){
+            if(string_eq(node->string, init->string)){
+                return true;
+            }
+        }
+    }
+    
+    while(scope){
+        Arc_Node* function;
+        if(is_sub_node_of_ast_type(scope, AST_FUNCTION, &function)){
+            auto param = function->first_child->first_child;
+            if(!is_child_of_node(node, param)){
+                while(param){
+                    if(string_eq(param->string, node->string)){
+                        return true;
+                    }
+                    param = param->next_sibling;
+                }
+            }
+        }
+        if(scope->parent && arc_has_property(scope->parent, AP_AST)){
+            if(scope->parent->ast_type == AST_SCOPE){
+                result = scope;
+                auto member = result->prev_sibling;
+                while(member){
+                    if(string_eq(member->string, node->string)){
+                        return true;
+                    }
+                    member = member->prev_sibling;
+                }
+            }
+        }
+        scope = scope->parent;
+    }
+    return false;
 }
 
 internal void
@@ -299,6 +377,18 @@ tab_completer(Arc_Node* node){
             member = member->next_sibling;
         }
     }
+    
+    Arc_Node* function;
+    if(is_sub_node_of_ast_type(node, AST_FOR, &function)){
+        auto init = function->first_child->first_child;
+        assert(init);
+        if(is_strict_substring(node->string, init->string)){
+            
+            return make_stringf(&platform->frame_arena, "%.*s", init->string.length,
+                                init->string.text+node->string.length);
+        }
+    }
+    
     auto scope = node;
     while(scope){
         Arc_Node* function;
@@ -985,7 +1075,7 @@ present_if(Arc_Node* node){
         
         UI_COLUMN{
             UI_ROW{
-                present_editable_string(ui->theme.text, node);
+                present_editable_string(ui->theme.text_type, node);
                 present_space();
                 present_arc(node->first_child->first_child);
                 present_space();
@@ -1008,30 +1098,32 @@ present_for(Arc_Node* node){
     ID("for%d", (int)node){
         UI_COLUMN{
             UI_ROW {
-                present_editable_string(ui->theme.text, node);
-                ID("init"){
+                present_editable_string(ui->theme.text_type, node);
+                ID("init%d"){
                     present_space();
                     present_arc(node->first_child->first_child);
                     present_string(ui->theme.text_misc, make_string(";"));
                     present_space();
                 }
                 
-                ID("cond", (int)node){
-                    present_arc(node->first_child->next_sibling);
+                ID("cond%d", (int)node){
+                    present_arc(node->first_child->next_sibling->first_child);
                     present_string(ui->theme.text_misc, make_string(";"));
                     present_space();
                 }
                 
-                ID("stmt", (int)node){
-                    present_arc(node->first_child->next_sibling->next_sibling);
+                ID("stmt%d", (int)node){
+                    present_arc(node->first_child->next_sibling->next_sibling->first_child);
                     present_space();
                     present_string(ui->theme.text_misc, make_string("{"));
                 }
             }
             UI_ROW {
-                present_space();
-                present_space();
-                present_arc(node->last_child);
+                ID("body%d", (int)node){
+                    present_space();
+                    present_space();
+                    present_arc(node->last_child);
+                }
             }
             UI_ROW {
                 present_string(ui->theme.text_misc, make_string("}"));

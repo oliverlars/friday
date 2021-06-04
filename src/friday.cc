@@ -243,8 +243,28 @@ UPDATE {
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
-            } else if(string_eq(cursor.at->string, "return")){
+            }else if(string_eq(cursor.at->string, "for")){
+                arc_set_property(cursor.at, AP_DELETABLE);
+                make_for_from_node(cursor.at, &editor->arc_pool);
                 
+                auto init = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child, init);
+                
+                auto cond = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child->next_sibling, cond);
+                set_as_ast(cond, AST_TOKEN);
+                
+                auto stmt = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->first_child->next_sibling->next_sibling, stmt);
+                
+                auto body = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at->last_child, body);
+                
+                advance_cursor(CURSOR_RIGHT);
+                presenter->mode = P_EDIT;
+                
+            } else if(string_eq(cursor.at->string, "return")){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_return_from_node(cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TOKEN);
@@ -307,6 +327,7 @@ UPDATE {
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(cursor.at->reference){
+                arc_set_property(cursor.at, AP_DELETABLE);
                 make_assignment_from_node(cursor.at, &editor->arc_pool);
                 auto name = cursor.at->string;
                 cursor.at->string = {};

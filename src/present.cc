@@ -1004,6 +1004,43 @@ present_if(Arc_Node* node){
 }
 
 internal void
+present_for(Arc_Node* node){
+    ID("for%d", (int)node){
+        UI_COLUMN{
+            UI_ROW {
+                present_editable_string(ui->theme.text, node);
+                ID("init"){
+                    present_space();
+                    present_arc(node->first_child->first_child);
+                    present_string(ui->theme.text_misc, make_string(";"));
+                    present_space();
+                }
+                
+                ID("cond", (int)node){
+                    present_arc(node->first_child->next_sibling);
+                    present_string(ui->theme.text_misc, make_string(";"));
+                    present_space();
+                }
+                
+                ID("stmt", (int)node){
+                    present_arc(node->first_child->next_sibling->next_sibling);
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("{"));
+                }
+            }
+            UI_ROW {
+                present_space();
+                present_space();
+                present_arc(node->last_child);
+            }
+            UI_ROW {
+                present_string(ui->theme.text_misc, make_string("}"));
+            }
+        }
+    }
+}
+
+internal void
 present_return(Arc_Node* node){
     ID("return%d", (int)node){
         UI_ROW{
@@ -1486,6 +1523,9 @@ present_ast(Arc_Node* node){
         case AST_TYPE_USAGE: {
             present_type_usage(node);
         }break;
+        case AST_FOR: {
+            present_for(node);
+        }break;
         case AST_IF: {
             present_if(node);
         }break;
@@ -1856,6 +1896,14 @@ build_buffer_from_arc(Arc_Node* node){
         case AST_IF: {
             push_arc(node);
             build_buffer_from_arc(node->first_child->first_child);
+            push_newline();
+            build_buffer_from_arc(node->last_child);
+        }break;
+        case AST_FOR: {
+            push_arc(node);
+            build_buffer_from_arc(node->first_child->first_child);
+            build_buffer_from_arc(node->first_child->next_sibling->first_child);
+            build_buffer_from_arc(node->first_child->next_sibling->next_sibling->first_child);
             push_newline();
             build_buffer_from_arc(node->last_child);
         }break;

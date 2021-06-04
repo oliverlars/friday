@@ -341,13 +341,38 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     
     auto type = make_arc_node(pool);
     auto expr = make_arc_node(pool);
-    arc_set_property(expr, AP_AST);
-    expr->ast_type = AST_EXPR;
+    set_as_ast(expr, AST_EXPR);
     
     insert_arc_node_as_child(decl, type);
     insert_arc_node_as_sibling(type, expr);
     
     return decl;
+}
+
+internal Arc_Node*
+make_for_from_node(Arc_Node* _for, Pool* pool){
+    arc_set_property(_for, AP_AST);
+    arc_set_property(_for, AP_CONTAINS_SCOPE);
+    _for->ast_type = AST_FOR;
+    
+    auto init = make_arc_node(pool);
+    auto cond = make_arc_node(pool);
+    auto stmt = make_arc_node(pool);
+    auto body = make_arc_node(pool);
+    
+    set_as_ast(cond, AST_EXPR);
+    
+    arc_set_property(body, AP_AST);
+    arc_set_property(body, AP_LIST);
+    body->ast_type = AST_SCOPE;
+    body->ast_tag = AST_TAG_BODY;
+    
+    insert_arc_node_as_child(_for, init);
+    insert_arc_node_as_sibling(init, cond);
+    insert_arc_node_as_sibling(cond, stmt);
+    insert_arc_node_as_sibling(stmt, body);
+    
+    return _for;
 }
 
 internal Arc_Node*

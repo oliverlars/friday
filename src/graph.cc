@@ -90,6 +90,13 @@ make_return_from_node(Arc_Node* ret, Pool* pool){
 }
 
 internal Arc_Node*
+make_using_from_node(Arc_Node* _using, Pool* pool){
+    arc_set_property(_using, AP_AST);
+    _using->ast_type = AST_USING;
+    return _using;
+}
+
+internal Arc_Node*
 make_assignment_from_node(Arc_Node* assign, Pool* pool){
     arc_set_property(assign, AP_AST);
     assign->ast_type = AST_ASSIGNMENT;

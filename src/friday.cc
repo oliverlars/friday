@@ -255,6 +255,13 @@ UPDATE {
                 
                 advance_cursor(CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+            }else if(string_eq(cursor.at->string, "using")){
+                arc_set_property(cursor.at, AP_DELETABLE);
+                make_using_from_node(cursor.at, &editor->arc_pool);
+                
+                auto empty = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_child(cursor.at, empty);
+                advance_cursor(CURSOR_RIGHT);
                 
             }else if(string_eq(cursor.at->string, "for")){
                 arc_set_property(cursor.at, AP_DELETABLE);
@@ -350,6 +357,7 @@ UPDATE {
                 cursor.at->string = {};
                 
                 auto token = make_selectable_arc_node(&editor->arc_pool);
+                arc_set_property(token, AP_DELETABLE);
                 token->string = name;
                 set_as_ast(token, AST_TOKEN);
                 

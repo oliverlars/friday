@@ -21,6 +21,7 @@ enum Ast_Type {
     AST_DUMMY,
     AST_EXPR,
     AST_RETURN,
+    AST_USING,
 };
 
 enum Operator_Type {

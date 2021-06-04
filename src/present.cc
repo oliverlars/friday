@@ -131,6 +131,35 @@ jump_to_declaration(){
 }
 
 internal void
+set_matching_reference_in_composite(Arc_Node* node, b32* found){
+    if(!found) return;
+    if(*found) return;
+    if(!node) return;
+    auto parent = node->parent;
+    Arc_Node* member = nullptr;
+    if(declaration_type_is_composite(node)){
+        auto decl = node;
+        auto type = decl->first_child->first_child;
+        auto _struct = type->reference;
+        member = _struct->first_child->first_child;
+    }
+    while(member && !*found){
+        if(arc_has_property(member, AP_AST) && member->ast_type == AST_USING){
+            set_matching_reference_in_composite(member->first_child, found);
+            if(*found) return;
+        }else if(string_eq(cursor.at->string, member->string)){
+            cursor.at->token_type = TOKEN_REFERENCE;
+            cursor.at->reference = member;
+            replace_string(&cursor.at->string, member->string);
+            *found = true;
+            return;
+        }
+        member = member->next_sibling;
+    }
+    return;
+}
+
+internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
     auto scope = node;
@@ -139,21 +168,9 @@ set_token_type(Arc_Node* node){
         auto parent = node->parent;
         Arc_Node* member = nullptr;
         if(parent->reference){
-            if(declaration_type_is_composite(parent->reference)){
-                auto decl = parent->reference;
-                auto type = decl->first_child->first_child;
-                auto _struct = type->reference;
-                member = _struct->first_child->first_child;
-            }
-            while(member){
-                if(string_eq(node->string, member->string)){
-                    node->token_type = TOKEN_REFERENCE;
-                    node->reference = member;
-                    replace_string(&node->string, member->string);
-                    return;
-                }
-                member = member->next_sibling;
-            }
+            b32 found = false;
+            set_matching_reference_in_composite(parent->reference, &found);
+            if(found) return;
         }
     }
     
@@ -355,34 +372,50 @@ find_function(Arc_Node* node){
 }
 
 internal String8
-tab_completer(Arc_Node* node){
-    Arc_Node* result;
-    if(node->parent->ast_type == AST_TOKEN){
-        auto parent = node->parent;
-        Arc_Node* member = nullptr;
-        if(declaration_type_is_composite(parent->reference)){
-            auto decl = parent->reference;
-            auto type = decl->first_child->first_child;
-            auto _struct = type->reference;
-            member = _struct->first_child->first_child;
-        }
-        while(member){
-            if(is_strict_substring(node->string, member->string)){
-                auto ref = parent->reference;
-                if(has_pressed_key(KEY_TAB)){
-                    node->token_type = TOKEN_REFERENCE;
-                    node->reference = member;
-                    replace_string(&node->string, node->reference->string);
-                    ui->cursor_pos = cursor.at->string.length;
-                    return {};
-                }else {
-                    return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
-                                        member->string.text+node->string.length);
-                }
-                
+find_matching_reference_in_composite(Arc_Node* node, b32* found){
+    if(!found) return {};
+    if(*found) return {};
+    if(!node) return {};
+    auto parent = node->parent;
+    Arc_Node* member = nullptr;
+    if(declaration_type_is_composite(node)){
+        auto decl = node;
+        auto type = decl->first_child->first_child;
+        auto _struct = type->reference;
+        member = _struct->first_child->first_child;
+    }
+    while(member && !*found){
+        if(arc_has_property(member, AP_AST) && member->ast_type == AST_USING){
+            auto result = find_matching_reference_in_composite(member->first_child, found);
+            if(*found) return result;
+        }else if(is_strict_substring(cursor.at->string, member->string)){
+            
+            if(has_pressed_key(KEY_TAB)){
+                cursor.at->token_type = TOKEN_REFERENCE;
+                cursor.at->reference = member;
+                replace_string(&cursor.at->string, cursor.at->reference->string);
+                ui->cursor_pos = cursor.at->string.length;
+                *found = true;
+                return {};
+            }else{
+                *found = true;
+                return make_stringf(&platform->frame_arena, "%.*s", member->string.length,
+                                    member->string.text+cursor.at->string.length);
             }
-            member = member->next_sibling;
+            
         }
+        member = member->next_sibling;
+    }
+    return {};
+}
+
+internal String8
+tab_completer(Arc_Node* node){
+    Arc_Node* result = nullptr;
+    b32 found = false;
+    if(node->parent->ast_type == AST_TOKEN){
+        auto string = find_matching_reference_in_composite(node->parent->reference, &found);
+        if(found) return string;
     }
     
     Arc_Node* function;
@@ -1166,6 +1199,17 @@ present_return(Arc_Node* node){
 }
 
 internal void
+present_using(Arc_Node* node){
+    ID("using%d", (int)node){
+        UI_ROW{
+            present_editable_string(ui->theme.text_type, node);
+            present_space();
+            present_arc(node->first_child);
+        }
+    }
+}
+
+internal void
 present_struct(Arc_Node* node){
     ID("struct%d", (int)node){
         
@@ -1691,6 +1735,12 @@ present_ast(Arc_Node* node){
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
+                
+                for(int i = 0; i < node->number_of_pointers; i++){
+                    ID("pointers%d", i){
+                        present_string(ui->theme.text_misc, make_string("^"));
+                    }
+                }
                 if(cursor.at == node){
                     present_editable_string(ui->theme.text_type, node);
                     
@@ -1699,11 +1749,6 @@ present_ast(Arc_Node* node){
                     present_editable_reference(ui->theme.text_type, node);
                 }
                 
-                for(int i = 0; i < node->number_of_pointers; i++){
-                    ID("pointers%d", i){
-                        present_string(ui->theme.text_misc, make_string("*"));
-                    }
-                }
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
             }else {
@@ -1722,6 +1767,9 @@ present_ast(Arc_Node* node){
         }break;
         case AST_CALL:{
             present_call(node);
+        }break;
+        case AST_USING: {
+            present_using(node);
         }break;
         case AST_RETURN:{
             present_return(node);

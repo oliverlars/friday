@@ -261,6 +261,7 @@ find_sub_node_of_list(Arc_Node* node, Arc_Node** result){
 internal b32
 find_parent_list(Arc_Node* node, Arc_Node** result){
     if(!node) return false;
+    
     node = node->parent;
     while(node){
         if(node->parent){

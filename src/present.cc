@@ -584,9 +584,12 @@ set_next_cursor_pos(){
             int distance_from_start = next_pos - presenter->lines[line_pos].start;
             line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_pos];
-            next_pos = clampi(line.start+distance_from_start, line.start, line.end);
-            
-            cursor.at = presenter->buffer[next_pos].node;
+            if(line.end > line.start){
+                next_pos = clampi(line.start+distance_from_start, line.start, line.end);
+                cursor.at = presenter->buffer[next_pos].node;
+            }else {
+                line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
+            }
             
         }break;
     }

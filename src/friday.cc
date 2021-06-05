@@ -139,6 +139,23 @@ UPDATE {
         presenter->number_of_deletions = 0;
         presenter->number_of_deletions_before_cursor = 0;
         presenter->number_of_deletions_after_cursor = 0;
+        presenter->pos = 0;
+        
+        if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
+            if(!presenter->select_start.at && !presenter->select_end.at){
+                presenter->select_start = presenter->cursor;
+                presenter->select_end = presenter->cursor;
+            }
+            advance_cursor(&presenter->select_end, CURSOR_RIGHT);
+            advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+        }
+        
+        if(has_pressed_key(KEY_ESC)){
+            presenter->select_start = {};
+            presenter->select_end = {};
+            presenter->start_pos = 0;
+            presenter->end_pos = 0;
+        }
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -146,13 +163,6 @@ UPDATE {
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);
-        }
-        
-        if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_SHIFT)){
-            if(!presenter->select_start.at && !presenter->select_end.at){
-                presenter->select_start = presenter->cursor;
-                presenter->select_end = presenter->cursor;
-            }
         }
         
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
@@ -212,12 +222,12 @@ UPDATE {
                             while(parent->parent && parent->parent->ast_type == AST_TOKEN) { parent = parent->parent; }
                             insert_arc_node_as_sibling(parent, token);
                         }
-                        advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                     }else {
                         presenter->mode = P_CREATE;
                     }
                 }else {
-                    advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 }
             }
         }
@@ -235,7 +245,7 @@ UPDATE {
                 auto expr = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, expr);
                 set_as_ast(expr, AST_TOKEN);
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
             }else if(has_pressed_key(KEY_F)){
@@ -253,7 +263,7 @@ UPDATE {
                 auto empty = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
             } else if(string_eq(presenter->cursor.at->string, "if")){
@@ -268,7 +278,7 @@ UPDATE {
                 auto empty = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(string_eq(presenter->cursor.at->string, "using")){
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
@@ -276,7 +286,7 @@ UPDATE {
                 
                 auto empty = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at, empty);
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 
             }else if(string_eq(presenter->cursor.at->string, "for")){
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
@@ -295,7 +305,7 @@ UPDATE {
                 auto body = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, body);
                 
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
             } else if(string_eq(presenter->cursor.at->string, "return")){
@@ -305,7 +315,7 @@ UPDATE {
                 set_as_ast(next, AST_TOKEN);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, next);
                 presenter->mode = P_EDIT;
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 
             }else if(has_pressed_key(KEY_S)){
                 
@@ -313,7 +323,7 @@ UPDATE {
                 make_struct_from_node(presenter->cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, next);
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
             } else if(has_pressed_key(KEY_C)){
@@ -323,7 +333,7 @@ UPDATE {
                 find_function(presenter->cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
             }else if(presenter->cursor.at->string.length == 0){
@@ -362,7 +372,7 @@ UPDATE {
                         insert_arc_node_as_sibling(member, next_in_scope);
                     }
                 }
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(can_resolve_reference(presenter->cursor.at)){
                 if(!presenter->cursor.at->reference){
@@ -393,7 +403,7 @@ UPDATE {
                     insert_arc_node_as_child(token, next);
                 }
                 
-                advance_cursor(presenter->cursor, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }
         }
@@ -407,8 +417,13 @@ UPDATE {
         delete_nodes_marked_for_deletion(editor->root);
         build_navigation_buffer(editor->root);
         set_next_cursor_pos(&presenter->cursor);
-        presenter->direction = CURSOR_NONE;
-        presenter->direction_count = 0;
+        set_next_cursor_pos(&presenter->select_start);
+        set_next_cursor_pos(&presenter->select_end);
+        
+        for(int i = 1; i < 4; i++){
+            presenter->cursors[i].direction = CURSOR_NONE;
+            presenter->cursors[i].direction_count = 0;
+        }
         
         
         presenter->last_cursor = presenter->cursor;

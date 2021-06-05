@@ -437,7 +437,7 @@ go_to_or_make_next(){
     // on
     if(can_advance_cursor(&presenter->cursor, CURSOR_RIGHT)){
         remove_arc_node_at(&presenter->cursor.at->parent->first_child, presenter->cursor.at);
-        advance_cursor(presenter->cursor, CURSOR_RIGHT);
+        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
     }else {
         auto next = make_selectable_arc_node(&editor->arc_pool);
         Arc_Node* list;

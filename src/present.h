@@ -31,6 +31,9 @@ struct Cursor {
     int buffer_index;
     
     v2f pos;
+    
+    Cursor_Direction direction;
+    int direction_count;
 };
 
 struct Presenter_State {
@@ -49,9 +52,6 @@ struct Presenter_State {
     int number_of_deletions_before_cursor;
     int number_of_deletions_after_cursor;
     
-    Cursor_Direction direction;
-    int direction_count;
-    
     Arc_Node* select_first;
     Arc_Node* select_second;
     
@@ -59,10 +59,19 @@ struct Presenter_State {
     f32 select_furthest_right;
     f32 select_height;
     
-    Cursor last_cursor;
-    Cursor cursor;
-    Cursor select_start;
-    Cursor select_end;
+    int pos;
+    int start_pos;
+    int end_pos;
+    
+    union {
+        struct {
+            Cursor last_cursor;
+            Cursor cursor;
+            Cursor select_start;
+            Cursor select_end;
+        };
+        Cursor cursors[4];
+    };
     
 };
 global Arc_Node* highlight_reference;

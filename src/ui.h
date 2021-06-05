@@ -84,6 +84,7 @@ struct Widget {
     u64 properties[(PROPERTIES_MAX-63)/64];
     
     Arc_Node* arc;
+    int present_pos;
     
     v2f min;
     v2f max;

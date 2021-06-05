@@ -94,17 +94,17 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
 }
 
 internal void
-advance_cursor(Cursor cursor, Cursor_Direction dir, int count = 1){
-    if(!cursor.at) return;
-    presenter->direction = dir;
-    presenter->direction_count = count;
+advance_cursor(Cursor* cursor, Cursor_Direction dir, int count = 1){
+    if(!cursor->at) return;
+    cursor->direction = dir;
+    cursor->direction_count = count;
 }
 
 internal b32
 can_advance_cursor(Cursor* cursor,Cursor_Direction dir){
     int pos_index = cursor->buffer_index;
     int line_index = cursor->line_index;
-    int count = presenter->direction_count;
+    int count = cursor->direction_count;
     
     switch(dir){
         case CURSOR_RIGHT:{
@@ -125,6 +125,7 @@ can_advance_cursor(Cursor* cursor,Cursor_Direction dir){
 
 internal void
 jump_to_declaration(){
+    // TODO(Oliver): use new cursor api to find the reference location
     if(presenter->cursor.at->reference){
         presenter->cursor.at = presenter->cursor.at->reference;
     }
@@ -542,9 +543,9 @@ tab_completer_type(Arc_Node* node){
 
 internal void
 set_next_cursor_pos(Cursor* cursor){
-    
-    auto dir = presenter->direction;
-    auto count = presenter->direction_count;
+    if(!cursor->at) return;
+    auto dir = cursor->direction;
+    auto count = cursor->direction_count;
     auto offset = presenter->number_of_deletions_before_cursor;
     if(dir == CURSOR_LEFT){
         if(offset) offset--;
@@ -724,10 +725,10 @@ edit_text(Arc_Node* node){
     
     
     if(has_pressed_key(KEY_UP)){
-        advance_cursor(presenter->cursor,CURSOR_UP);
+        advance_cursor(&presenter->cursor,CURSOR_UP);
     }
     if(has_pressed_key(KEY_DOWN)){
-        advance_cursor(presenter->cursor,CURSOR_DOWN);
+        advance_cursor(&presenter->cursor,CURSOR_DOWN);
     }
     
     if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
@@ -758,14 +759,14 @@ edit_text(Arc_Node* node){
     
     if(has_pressed_key(KEY_LEFT)){
         if(ui->cursor_pos == 0){
-            advance_cursor(presenter->cursor,CURSOR_LEFT);
+            advance_cursor(&presenter->cursor,CURSOR_LEFT);
         }else {
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
         }
     }
     if(has_pressed_key(KEY_RIGHT)){
         if(ui->cursor_pos == string->length){
-            advance_cursor(presenter->cursor,CURSOR_RIGHT);
+            advance_cursor(&presenter->cursor,CURSOR_RIGHT);
         }else{
             ui->cursor_pos = ui->cursor_pos < string->length ? ui->cursor_pos +1: string->length;
         }
@@ -799,7 +800,7 @@ edit_text(Arc_Node* node){
                     }
                 }
             }
-            advance_cursor(presenter->cursor, CURSOR_LEFT);
+            advance_cursor(&presenter->cursor, CURSOR_LEFT);
         }
     }
     
@@ -844,6 +845,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     widget->style.text_colour.a = 0;
     
     widget->arc = node;
+    widget->present_pos = presenter->pos;
     
     if(ui->hot == widget->id){
         highlight_reference = node->reference;
@@ -857,7 +859,11 @@ present_editable_reference(Colour colour, Arc_Node* node){
         if(!widget->alt_string.length && presenter->cursor.text_id != widget->id){
             push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
-        
+        if(presenter->start_pos && presenter->end_pos &&
+           widget->present_pos >= presenter->start_pos &&
+           widget->present_pos <= presenter->end_pos){
+            push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));
+        }
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
@@ -923,9 +929,9 @@ present_editable_reference(Colour colour, Arc_Node* node){
         // NOTE(Oliver): use navigation system to find where to click to
         // as it needs to update presenter->buffer_index and presenter->line_index
         if(clicked_pos - cursor_pos <= 0){
-            advance_cursor(presenter->cursor,CURSOR_LEFT, abs(clicked_pos - cursor_pos));
+            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(clicked_pos - cursor_pos));
         }else if(clicked_pos - cursor_pos > 0){
-            advance_cursor(presenter->cursor,CURSOR_RIGHT, clicked_pos - cursor_pos);
+            advance_cursor(&presenter->cursor,CURSOR_RIGHT, clicked_pos - cursor_pos);
         }
         presenter->cursor.text_id = widget->id;
         
@@ -939,7 +945,6 @@ present_editable_reference(Colour colour, Arc_Node* node){
 
 internal void
 present_editable_string(Colour colour, Arc_Node* node){
-    
     auto string = &node->string;
     auto widget_string = make_stringf(&platform->frame_arena, "edit_string%d", (int)node);
     auto widget = push_widget(widget_string);
@@ -951,25 +956,20 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->alt_string = node->string;
     widget->style.text_colour = v4f_from_colour(colour);
-    widget->style.text_colour.a = 0;
     
     widget->arc = node;
     
+    if(presenter->select_start.at == node){
+        presenter->start_pos = presenter->pos;
+    }
+    if(presenter->select_end.at == node){
+        presenter->end_pos = presenter->pos;
+    }
     if(ui->hot == widget->id){
         highlight_reference = node->reference;
     }
     
-    if(presenter->select_first == node){
-        presenter->select_top_left = widget->pos;
-    }
-    
-    if(presenter->select_second == node){
-        presenter->select_height = widget->pos.y;
-    }
-    
-    if(widget->pos.x > presenter->select_furthest_right){
-        presenter->select_furthest_right = widget->pos.x;
-    }
+    widget->present_pos = presenter->pos;
     
     auto render_hook = [](Widget* widget ){
         v2f pos = widget->pos;
@@ -980,6 +980,11 @@ present_editable_string(Colour colour, Arc_Node* node){
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
         if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
+        }
+        if(presenter->start_pos && presenter->end_pos &&
+           widget->present_pos >= presenter->start_pos &&
+           widget->present_pos <= presenter->end_pos){
+            push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));
         }
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
@@ -1037,7 +1042,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     if(result.hovered && node->reference){
         highlight_reference = node->reference;
     }
-    
+    presenter->pos++;
 }
 
 internal void present_arc(Arc_Node* node);
@@ -2058,6 +2063,7 @@ present_debug_arc(v2f pos, Arc_Node* node){
 internal void
 build_buffer_from_arc(Arc_Node* node){
     if(!node) return;
+    
     switch(node->ast_type){
         case AST_DECLARATION: {
             push_arc(node);

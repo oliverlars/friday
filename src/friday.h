@@ -10,6 +10,9 @@ struct Editor_State {
     Arc_Node* builtins;
     
     Pool string_pool;
+    
+    String8 views[256];
+    int view_count;
 };
 
 Editor_State* editor;

@@ -113,6 +113,8 @@ PERMANENT_LOAD {
     cursor.at = first;
     cursor.string = &first->string;
     
+    editor->views[editor->view_count++] = make_stringf(&editor->string_pool, "default");
+    
 }
 
 HOT_LOAD {

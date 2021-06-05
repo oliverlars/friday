@@ -41,6 +41,9 @@ struct Presenter_State {
     Cursor_Direction direction;
     int direction_count;
     
+    Arc_Node* select_first;
+    Arc_Node* select_second;
+    
 };
 global Arc_Node* highlight_reference;
 
@@ -53,5 +56,6 @@ struct Cursor {
 
 global Cursor last_cursor;
 global Cursor cursor;
+global Cursor mark;
 
 Presenter_State* presenter;

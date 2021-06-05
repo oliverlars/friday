@@ -154,7 +154,7 @@ clampf(f32* value, f32 min, f32 max){
 
 internal int
 clampi(int value, int min, int max){
-    if(max< min) max = min;
+    assert(max >= min);
     if(value < min) return min;
     if(value > max) return max;
     return value;
@@ -162,7 +162,7 @@ clampi(int value, int min, int max){
 
 internal void
 clampi(int* value, int min, int max){
-    if(max< min) max = min;
+    assert(max >= min);
     if(*value < min) *value = min;
     if(*value > max) *value = max;
 }

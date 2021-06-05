@@ -1430,8 +1430,22 @@ render_panels(Panel* root, v4f rect){
             
         }else if(root->type == PANEL_EDITOR) {
             UI_WINDOW(rect, "Code Editor#%d", (int)root) {
+                
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor#%d", (int)root);
+                    UI_ROW {
+                        label("view");
+                        xspacer(10);
+                        for(int i = 0; i < editor->view_count; i++){
+                            button("%.*s", editor->views[i].length, editor->views[i].text);
+                            xspacer(10);
+                        }
+                        xspacer(30);
+                        if(button("+")){
+                            editor->views[editor->view_count] = make_stringf(&editor->string_pool, "view %d", editor->view_count);
+                            editor->view_count++;
+                        }
+                    }
                     UI_CONTAINER("snippet"){
                         if(!dropdown("Snippet#%d", (int)root)){
                             //present_graph(editor->program, present_style);
@@ -1463,17 +1477,21 @@ render_panels(Panel* root, v4f rect){
                             label("current pos on line : %d", presenter->buffer_pos - presenter->lines[presenter->line_index].start);
 #endif
                             
-                            for(int i = 0; i < presenter->buffer_pos; i++){
-                                ID("buffer%d", (int)presenter->buffer[i].node){
-                                    if(presenter->buffer[i].node->string.length){
-                                        label("%.*s %d", presenter->buffer[i].node->string.length,
-                                              presenter->buffer[i].node->string.text, 
-                                              presenter->buffer[i].node->ast_type);
-                                    }else {
-                                        label("empty %d", presenter->buffer[i].node->ast_type);
+                            for(int j = 0; j < presenter->line_pos; j++){
+                                UI_ROW {
+                                    for(int i = presenter->lines[j].start; i <= presenter->lines[j].end; i++){
+                                        ID("buffer%d", (int)presenter->buffer[i].node){
+                                            if(presenter->buffer[i].node->string.length){
+                                                label("%.*s", presenter->buffer[i].node->string.length,
+                                                      presenter->buffer[i].node->string.text);
+                                            }else {
+                                                label("empty %d", presenter->buffer[i].node->ast_type);
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            
                         }
                     }
                     if(dropdown("secrets")){

@@ -550,7 +550,7 @@ set_next_cursor_pos(){
         if(offset) offset--;
     }
     auto pos = presenter->buffer_index - offset;
-    auto line_pos = presenter->line_index;
+    auto line_index = presenter->line_index;
     int next_pos = pos;
     cursor.at = presenter->buffer[next_pos].node;
     switch(dir){
@@ -558,8 +558,8 @@ set_next_cursor_pos(){
             next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = cursor.at->string.length;
-            if(next_pos < presenter->lines[line_pos].start){
-                line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
+            if(next_pos < presenter->lines[line_index].start){
+                line_index = clampi(line_index-1, 0, presenter->line_pos-1);
             }
         }break;
         case CURSOR_RIGHT:{
@@ -567,35 +567,35 @@ set_next_cursor_pos(){
             cursor.at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
-            if(next_pos > presenter->lines[line_pos].start){
-                line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
+            if(next_pos > presenter->lines[line_index].end){
+                line_index = clampi(line_index+1, 0, presenter->line_pos-1);
             }
         }break;
         case CURSOR_UP:{
-            int distance_from_start = next_pos - presenter->lines[line_pos].start;
-            line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
-            auto line = presenter->lines[line_pos];
+            int distance_from_start = next_pos - presenter->lines[line_index].start;
+            line_index = clampi(line_index-1, 0, presenter->line_pos-1);
+            auto line = presenter->lines[line_index];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             cursor.at = presenter->buffer[next_pos].node;
             
         }break;
         case CURSOR_DOWN:{
             
-            int distance_from_start = next_pos - presenter->lines[line_pos].start;
-            line_pos = clampi(line_pos+1, 0, presenter->line_pos-1);
-            auto line = presenter->lines[line_pos];
-            if(line.end > line.start){
-                next_pos = clampi(line.start+distance_from_start, line.start, line.end);
+            int distance_from_start = next_pos - presenter->lines[line_index].start;
+            line_index = clampi(line_index+1, 0, presenter->line_pos-1);
+            auto line = presenter->lines[line_index];
+            next_pos = clampi(line.start+distance_from_start, line.start, line.end);
+            if(presenter->buffer[next_pos].node){
                 cursor.at = presenter->buffer[next_pos].node;
             }else {
-                line_pos = clampi(line_pos-1, 0, presenter->line_pos-1);
+                next_pos = pos;
+                line_index--;
             }
-            
         }break;
     }
     assert(cursor.at);
     presenter->buffer_index = next_pos;
-    presenter->line_index = line_pos;
+    presenter->line_index = line_index;
 }
 
 internal void
@@ -661,6 +661,9 @@ push_newline(){
     }else{
         line_info.start = presenter->lines[presenter->line_pos-1].end+1;
         line_info.end = presenter->buffer_pos-1;
+        if(line_info.end < line_info.start){
+            line_info.end = line_info.start;
+        }
     }
     presenter->lines[presenter->line_pos++] = line_info;
 }

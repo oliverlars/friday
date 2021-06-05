@@ -594,7 +594,7 @@ set_next_cursor_pos(Cursor* cursor){
             }
         }break;
     }
-    assert(cursor->at);
+    //assert(cursor->at);
     cursor->buffer_index = next_pos;
     cursor->line_index = line_index;
 }
@@ -842,9 +842,16 @@ present_editable_reference(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->alt_string = string;
     widget->style.text_colour = v4f_from_colour(colour);
-    widget->style.text_colour.a = 0;
     
     widget->arc = node;
+    
+    if(presenter->select_start.at == node){
+        presenter->start_pos = presenter->pos;
+    }
+    if(presenter->select_end.at == node){
+        presenter->end_pos = presenter->pos;
+    }
+    
     widget->present_pos = presenter->pos;
     
     if(ui->hot == widget->id){
@@ -859,7 +866,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
         if(!widget->alt_string.length && presenter->cursor.text_id != widget->id){
             push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
-        if(presenter->start_pos && presenter->end_pos &&
+        if(presenter->start_pos != presenter->end_pos &&
            widget->present_pos >= presenter->start_pos &&
            widget->present_pos <= presenter->end_pos){
             push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));
@@ -940,6 +947,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     if(result.hovered && node->reference){
         highlight_reference = node->reference;
     }
+    presenter->pos++;
     
 }
 
@@ -965,6 +973,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     if(presenter->select_end.at == node){
         presenter->end_pos = presenter->pos;
     }
+    
     if(ui->hot == widget->id){
         highlight_reference = node->reference;
     }
@@ -981,7 +990,7 @@ present_editable_string(Colour colour, Arc_Node* node){
         if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
-        if(presenter->start_pos && presenter->end_pos &&
+        if(presenter->start_pos != presenter->end_pos &&
            widget->present_pos >= presenter->start_pos &&
            widget->present_pos <= presenter->end_pos){
             push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));

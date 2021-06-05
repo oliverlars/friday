@@ -464,22 +464,13 @@ remove_arc_node_at(Arc_Node** head, Arc_Node* at){
         *head = at->next_sibling;
     }
     
-    if(at->parent){
-        if(at->parent->first_child == at){
-            at->parent->first_child = at->next_sibling;
-        }
-        if(at->parent->last_child == at){
-            at->parent->last_child = at->prev_sibling;
-        }
-    }
-    
     if (at->next_sibling)
         at->next_sibling->prev_sibling = at->prev_sibling;
     
     if (at->prev_sibling)
         at->prev_sibling->next_sibling = at->next_sibling;
     
-    
+    memset(at, 0, sizeof(Arc_Node));
     pool_clear(&editor->arc_pool, at);
     return;
 }

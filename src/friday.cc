@@ -140,21 +140,95 @@ UPDATE {
         presenter->number_of_deletions_before_cursor = 0;
         presenter->number_of_deletions_after_cursor = 0;
         presenter->pos = 0;
+        presenter->delete_queue = nullptr;
+        presenter->delete_queue_size = 0;
         
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
             if(!presenter->select_start.at && !presenter->select_end.at){
                 presenter->select_start = presenter->cursor;
                 presenter->select_end = presenter->cursor;
             }
-            advance_cursor(&presenter->select_end, CURSOR_RIGHT);
-            advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+            
+            
+            if(presenter->select_start.at == presenter->cursor.at &&
+               presenter->select_end.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_end, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                
+            }else if(presenter->select_end.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_end, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                
+            }else if(presenter->select_start.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_start, CURSOR_RIGHT);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                
+            }else {
+                assert(0);
+            }
+            
         }
         
-        if(has_pressed_key(KEY_ESC)){
+        if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_SHIFT)){
+            if(!presenter->select_start.at && !presenter->select_end.at){
+                presenter->select_start = presenter->cursor;
+                presenter->select_end = presenter->cursor;
+                
+            }
+            
+            if(presenter->select_start.at == presenter->cursor.at &&
+               presenter->select_end.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_start, CURSOR_LEFT);
+                advance_cursor(&presenter->cursor, CURSOR_LEFT);
+                
+            }else if(presenter->select_end.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_end, CURSOR_LEFT);
+                advance_cursor(&presenter->cursor, CURSOR_LEFT);
+                
+            }else if(presenter->select_start.at == presenter->cursor.at){
+                
+                advance_cursor(&presenter->select_start, CURSOR_LEFT);
+                advance_cursor(&presenter->cursor, CURSOR_LEFT);
+                
+            }else {
+                
+                assert(0);
+            }
+            
+        }
+        
+        if(has_pressed_key_modified(KEY_D, KEY_MOD_CTRL)){
+            presenter->delete_queue_size = (presenter->end_pos - presenter->start_pos)+1;
+            presenter->delete_queue = (Arc_Node**)push_size(&platform->frame_arena, 
+                                                            presenter->delete_queue_size*sizeof(Arc_Node*));
+            for(int i = 0; i < presenter->delete_queue_size; i++){
+                //mark_node_for_deletion(presenter->buffer[i].node);
+                presenter->delete_queue[i] = presenter->buffer[i+presenter->start_pos].node;
+                log("name: %.*s", presenter->delete_queue[i]->string.length,
+                    presenter->delete_queue[i]->string.text);
+                
+            }
+            advance_cursor(&presenter->cursor, CURSOR_LEFT, 1);
+            
             presenter->select_start = {};
             presenter->select_end = {};
             presenter->start_pos = 0;
             presenter->end_pos = 0;
+            
+        }
+        
+        if(has_pressed_key(KEY_ESC)){
+            
+            presenter->select_start = {};
+            presenter->select_end = {};
+            presenter->start_pos = 0;
+            presenter->end_pos = 0;
+            
         }
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
@@ -164,12 +238,6 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
-        
-        if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
-            
-        }
-        
-        //present_debug_arc(v2f(100, 400), editor->root);
         
         if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
            (presenter->last_cursor.at->ast_type == AST_TOKEN ||
@@ -414,19 +482,22 @@ UPDATE {
         
         //NOTE(Oliver): handle input for presenter
         // put this somewhere else
+        for(int i = presenter->delete_queue_size-1; i >= 0; i--){
+            remove_arc_node_at(&presenter->delete_queue[i]->parent->first_child, 
+                               presenter->delete_queue[i]);
+        }
         delete_nodes_marked_for_deletion(editor->root);
         build_navigation_buffer(editor->root);
         set_next_cursor_pos(&presenter->cursor);
         set_next_cursor_pos(&presenter->select_start);
         set_next_cursor_pos(&presenter->select_end);
+        presenter->last_cursor = presenter->cursor;
         
         for(int i = 1; i < 4; i++){
             presenter->cursors[i].direction = CURSOR_NONE;
             presenter->cursors[i].direction_count = 0;
         }
         
-        
-        presenter->last_cursor = presenter->cursor;
         highlight_reference = nullptr;
         if(platform->frame_count == 0){
             ui->active = presenter->cursor.text_id;

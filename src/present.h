@@ -73,6 +73,8 @@ struct Presenter_State {
         Cursor cursors[4];
     };
     
+    Arc_Node** delete_queue;
+    int delete_queue_size;
 };
 global Arc_Node* highlight_reference;
 

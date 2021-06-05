@@ -435,16 +435,16 @@ go_to_or_make_next(){
     
     // NOTE(Oliver): string is empty, we now want to exit the current edit and move
     // on
-    if(can_advance_cursor(CURSOR_RIGHT)){
-        remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
-        advance_cursor(CURSOR_RIGHT);
+    if(can_advance_cursor(&presenter->cursor, CURSOR_RIGHT)){
+        remove_arc_node_at(&presenter->cursor.at->parent->first_child, presenter->cursor.at);
+        advance_cursor(presenter->cursor, CURSOR_RIGHT);
     }else {
         auto next = make_selectable_arc_node(&editor->arc_pool);
         Arc_Node* list;
-        if(is_sub_node_of_list(cursor.at, &list)){
-            remove_arc_node_at(&cursor.at->parent->first_child, cursor.at);
+        if(is_sub_node_of_list(presenter->cursor.at, &list)){
+            remove_arc_node_at(&presenter->cursor.at->parent->first_child, presenter->cursor.at);
             insert_arc_node_as_sibling(list->last_child, next);
-            cursor.at = next;
+            presenter->cursor.at = next;
         }
     }
 }

@@ -6,7 +6,7 @@ mark_node_for_deletion(Arc_Node* at){
 
 internal void
 set_cursor_as_node(Arc_Node* node){
-    cursor.at = node;
+    presenter->cursor.at = node;
 }
 
 internal b32
@@ -24,7 +24,7 @@ is_after_cursor_of_ast_type(Ast_Type type){
 internal int
 is_node_before_or_after_cursor(Arc_Node* node){
     if(!node) return 0;
-    if(node == cursor.at) return 0;
+    if(node == presenter->cursor.at) return 0;
     for(int i = 0; i < presenter->buffer_index; i++){
         if(presenter->buffer[i].node == node){
             return -1;
@@ -94,16 +94,16 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
 }
 
 internal void
-advance_cursor(Cursor_Direction dir, int count = 1){
+advance_cursor(Cursor cursor, Cursor_Direction dir, int count = 1){
     if(!cursor.at) return;
     presenter->direction = dir;
     presenter->direction_count = count;
 }
 
 internal b32
-can_advance_cursor(Cursor_Direction dir){
-    int pos_index = presenter->buffer_index;
-    int line_index = presenter->line_index;
+can_advance_cursor(Cursor* cursor,Cursor_Direction dir){
+    int pos_index = cursor->buffer_index;
+    int line_index = cursor->line_index;
     int count = presenter->direction_count;
     
     switch(dir){
@@ -125,8 +125,8 @@ can_advance_cursor(Cursor_Direction dir){
 
 internal void
 jump_to_declaration(){
-    if(cursor.at->reference){
-        cursor.at = cursor.at->reference;
+    if(presenter->cursor.at->reference){
+        presenter->cursor.at = presenter->cursor.at->reference;
     }
 }
 
@@ -147,10 +147,10 @@ set_matching_reference_in_composite(Arc_Node* node, b32* found){
         if(arc_has_property(member, AP_AST) && member->ast_type == AST_USING){
             set_matching_reference_in_composite(member->first_child, found);
             if(*found) return;
-        }else if(string_eq(cursor.at->string, member->string)){
-            cursor.at->token_type = TOKEN_REFERENCE;
-            cursor.at->reference = member;
-            replace_string(&cursor.at->string, member->string);
+        }else if(string_eq(presenter->cursor.at->string, member->string)){
+            presenter->cursor.at->token_type = TOKEN_REFERENCE;
+            presenter->cursor.at->reference = member;
+            replace_string(&presenter->cursor.at->string, member->string);
             *found = true;
             return;
         }
@@ -388,19 +388,19 @@ find_matching_reference_in_composite(Arc_Node* node, b32* found){
         if(arc_has_property(member, AP_AST) && member->ast_type == AST_USING){
             auto result = find_matching_reference_in_composite(member->first_child, found);
             if(*found) return result;
-        }else if(is_strict_substring(cursor.at->string, member->string)){
+        }else if(is_strict_substring(presenter->cursor.at->string, member->string)){
             
             if(has_pressed_key(KEY_TAB)){
-                cursor.at->token_type = TOKEN_REFERENCE;
-                cursor.at->reference = member;
-                replace_string(&cursor.at->string, cursor.at->reference->string);
-                ui->cursor_pos = cursor.at->string.length;
+                presenter->cursor.at->token_type = TOKEN_REFERENCE;
+                presenter->cursor.at->reference = member;
+                replace_string(&presenter->cursor.at->string, presenter->cursor.at->reference->string);
+                ui->cursor_pos = presenter->cursor.at->string.length;
                 *found = true;
                 return {};
             }else{
                 *found = true;
                 return make_stringf(&platform->frame_arena, "%.*s", member->string.length,
-                                    member->string.text+cursor.at->string.length);
+                                    member->string.text+presenter->cursor.at->string.length);
             }
             
         }
@@ -428,7 +428,7 @@ tab_completer(Arc_Node* node){
                 node->token_type = TOKEN_REFERENCE;
                 node->reference = init;
                 replace_string(&node->string, node->reference->string);
-                ui->cursor_pos = cursor.at->string.length;
+                ui->cursor_pos = presenter->cursor.at->string.length;
                 return {};
             }else{
                 return make_stringf(&platform->frame_arena, "%.*s", init->string.length,
@@ -448,7 +448,7 @@ tab_completer(Arc_Node* node){
                         node->token_type = TOKEN_REFERENCE;
                         node->reference = param;
                         replace_string(&node->string, node->reference->string);
-                        ui->cursor_pos = cursor.at->string.length;
+                        ui->cursor_pos = presenter->cursor.at->string.length;
                         return {};
                     }else{
                         return make_stringf(&platform->frame_arena, "%.*s", param->string.length-node->string.length,
@@ -469,7 +469,7 @@ tab_completer(Arc_Node* node){
                             node->token_type = TOKEN_REFERENCE;
                             node->reference = member;
                             replace_string(&node->string, node->reference->string);
-                            ui->cursor_pos = cursor.at->string.length;
+                            ui->cursor_pos = presenter->cursor.at->string.length;
                             return {};
                         }else{
                             return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
@@ -499,7 +499,7 @@ tab_completer_type(Arc_Node* node){
                 node->token_type = TOKEN_REFERENCE;
                 node->reference = builtin;
                 replace_string(&node->string, node->reference->string);
-                ui->cursor_pos = cursor.at->string.length;
+                ui->cursor_pos = presenter->cursor.at->string.length;
                 return {};
             }else{
                 return make_stringf(&platform->frame_arena, "%.*s", builtin->string.length-node->string.length,
@@ -521,7 +521,7 @@ tab_completer_type(Arc_Node* node){
                             node->token_type = TOKEN_REFERENCE;
                             node->reference = member;
                             replace_string(&node->string, node->reference->string);
-                            ui->cursor_pos = cursor.at->string.length;
+                            ui->cursor_pos = presenter->cursor.at->string.length;
                             return {};
                         }else{
                             return make_stringf(&platform->frame_arena, "%.*s", member->string.length-node->string.length,
@@ -541,7 +541,7 @@ tab_completer_type(Arc_Node* node){
 }
 
 internal void
-set_next_cursor_pos(){
+set_next_cursor_pos(Cursor* cursor){
     
     auto dir = presenter->direction;
     auto count = presenter->direction_count;
@@ -549,22 +549,22 @@ set_next_cursor_pos(){
     if(dir == CURSOR_LEFT){
         if(offset) offset--;
     }
-    auto pos = presenter->buffer_index - offset;
-    auto line_index = presenter->line_index;
+    auto pos = cursor->buffer_index - offset;
+    auto line_index = cursor->line_index;
     int next_pos = pos;
-    cursor.at = presenter->buffer[next_pos].node;
+    cursor->at = presenter->buffer[next_pos].node;
     switch(dir){
         case CURSOR_LEFT:{
             next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
-            cursor.at = presenter->buffer[next_pos].node;
-            ui->cursor_pos = cursor.at->string.length;
+            cursor->at = presenter->buffer[next_pos].node;
+            ui->cursor_pos = cursor->at->string.length;
             if(next_pos < presenter->lines[line_index].start){
                 line_index = clampi(line_index-1, 0, presenter->line_pos-1);
             }
         }break;
         case CURSOR_RIGHT:{
             next_pos = clampi(next_pos+count, 0, presenter->buffer_pos-1);
-            cursor.at = presenter->buffer[next_pos].node;
+            cursor->at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
             if(next_pos > presenter->lines[line_index].end){
@@ -576,7 +576,7 @@ set_next_cursor_pos(){
             line_index = clampi(line_index-1, 0, presenter->line_pos-1);
             auto line = presenter->lines[line_index];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
-            cursor.at = presenter->buffer[next_pos].node;
+            cursor->at = presenter->buffer[next_pos].node;
             
         }break;
         case CURSOR_DOWN:{
@@ -586,16 +586,16 @@ set_next_cursor_pos(){
             auto line = presenter->lines[line_index];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             if(presenter->buffer[next_pos].node){
-                cursor.at = presenter->buffer[next_pos].node;
+                cursor->at = presenter->buffer[next_pos].node;
             }else {
                 next_pos = pos;
                 line_index--;
             }
         }break;
     }
-    assert(cursor.at);
-    presenter->buffer_index = next_pos;
-    presenter->line_index = line_index;
+    assert(cursor->at);
+    cursor->buffer_index = next_pos;
+    cursor->line_index = line_index;
 }
 
 internal void
@@ -724,10 +724,10 @@ edit_text(Arc_Node* node){
     
     
     if(has_pressed_key(KEY_UP)){
-        advance_cursor(CURSOR_UP);
+        advance_cursor(presenter->cursor,CURSOR_UP);
     }
     if(has_pressed_key(KEY_DOWN)){
-        advance_cursor(CURSOR_DOWN);
+        advance_cursor(presenter->cursor,CURSOR_DOWN);
     }
     
     if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
@@ -758,14 +758,14 @@ edit_text(Arc_Node* node){
     
     if(has_pressed_key(KEY_LEFT)){
         if(ui->cursor_pos == 0){
-            advance_cursor(CURSOR_LEFT);
+            advance_cursor(presenter->cursor,CURSOR_LEFT);
         }else {
             ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
         }
     }
     if(has_pressed_key(KEY_RIGHT)){
         if(ui->cursor_pos == string->length){
-            advance_cursor(CURSOR_RIGHT);
+            advance_cursor(presenter->cursor,CURSOR_RIGHT);
         }else{
             ui->cursor_pos = ui->cursor_pos < string->length ? ui->cursor_pos +1: string->length;
         }
@@ -789,17 +789,17 @@ edit_text(Arc_Node* node){
             ui->cursor_pos--;
         }else {
             Arc_Node* result;
-            if(arc_has_property(cursor.at, AP_DELETABLE)){
-                mark_node_for_deletion(cursor.at);
-                if(is_sub_node_of_ast_type(cursor.at, AST_ASSIGNMENT, &result)){
+            if(arc_has_property(presenter->cursor.at, AP_DELETABLE)){
+                mark_node_for_deletion(presenter->cursor.at);
+                if(is_sub_node_of_ast_type(presenter->cursor.at, AST_ASSIGNMENT, &result)){
                     // NOTE(Oliver): assignment nodes are weird, they need special casing
                     // to delete because the root node isn't the first editable node
-                    if(result->first_child == cursor.at->parent){
+                    if(result->first_child == presenter->cursor.at->parent){
                         mark_node_for_deletion(result);
                     }
                 }
             }
-            advance_cursor(CURSOR_LEFT);
+            advance_cursor(presenter->cursor, CURSOR_LEFT);
         }
     }
     
@@ -854,7 +854,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
-        if(!widget->alt_string.length && cursor.text_id != widget->id){
+        if(!widget->alt_string.length && presenter->cursor.text_id != widget->id){
             push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
         
@@ -865,17 +865,17 @@ present_editable_reference(Colour colour, Arc_Node* node){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
         
-        if(cursor.text_id == widget->id){
+        if(presenter->cursor.text_id == widget->id){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
-            lerp(&cursor.pos.x, next.x, 0.4f);
-            lerp(&cursor.pos.y, next.y, 0.4f);
+            lerp(&presenter->cursor.pos.x, next.x, 0.4f);
+            lerp(&presenter->cursor.pos.y, next.y, 0.4f);
             
             if(presenter->mode == P_CREATE){
-                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
+                push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
             }else {
-                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+                push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
             }
             
         }
@@ -886,10 +886,10 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(cursor.at == node){
-            cursor.text_id = widget->id;
+        if(presenter->cursor.at == node){
+            presenter->cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
-            edit_text(cursor.at);
+            edit_text(presenter->cursor.at);
         }
     }
     
@@ -902,7 +902,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     };
     widget->style = style;
     
-    if(cursor.text_id == widget->id){
+    if(presenter->cursor.text_id == widget->id){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {
@@ -923,11 +923,11 @@ present_editable_reference(Colour colour, Arc_Node* node){
         // NOTE(Oliver): use navigation system to find where to click to
         // as it needs to update presenter->buffer_index and presenter->line_index
         if(clicked_pos - cursor_pos <= 0){
-            advance_cursor(CURSOR_LEFT, abs(clicked_pos - cursor_pos));
+            advance_cursor(presenter->cursor,CURSOR_LEFT, abs(clicked_pos - cursor_pos));
         }else if(clicked_pos - cursor_pos > 0){
-            advance_cursor(CURSOR_RIGHT, clicked_pos - cursor_pos);
+            advance_cursor(presenter->cursor,CURSOR_RIGHT, clicked_pos - cursor_pos);
         }
-        cursor.text_id = widget->id;
+        presenter->cursor.text_id = widget->id;
         
     }
     
@@ -983,17 +983,17 @@ present_editable_string(Colour colour, Arc_Node* node){
         }
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
-        if(cursor.text_id == widget->id){
+        if(presenter->cursor.text_id == widget->id){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
-            lerp(&cursor.pos.x, next.x, 0.4f);
-            lerp(&cursor.pos.y, next.y, 0.4f);
+            lerp(&presenter->cursor.pos.x, next.x, 0.4f);
+            lerp(&presenter->cursor.pos.y, next.y, 0.4f);
             
             if(presenter->mode == P_CREATE){
-                push_rectangle(v4f2(cursor.pos, v2f(3, widget->min.height*0.9f)), 2, colour_from_v4f(v4f(1,0,0,1)));
+                push_rectangle(v4f2(presenter->cursor.pos, v2f(3, widget->min.height*0.9f)), 2, colour_from_v4f(v4f(1,0,0,1)));
             }else {
-                push_rectangle(v4f2(cursor.pos, v2f(3, widget->min.height*0.9f)), 2, ui->theme.cursor);
+                push_rectangle(v4f2(presenter->cursor.pos, v2f(3, widget->min.height*0.9f)), 2, ui->theme.cursor);
             }
             
         }
@@ -1004,10 +1004,10 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(cursor.at == node){
-            cursor.text_id = widget->id;
+        if(presenter->cursor.at == node){
+            presenter->cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
-            edit_text(cursor.at);
+            edit_text(presenter->cursor.at);
         }
     }
     
@@ -1020,7 +1020,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     };
     widget->style = style;
     
-    if(cursor.text_id == widget->id){
+    if(presenter->cursor.text_id == widget->id){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {
@@ -1030,8 +1030,8 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     if(result.clicked){
         ui->cursor_pos = string->length;
-        cursor.at = widget->arc;
-        cursor.text_id = widget->id;
+        presenter->cursor.at = widget->arc;
+        presenter->cursor.text_id = widget->id;
     }
     
     if(result.hovered && node->reference){
@@ -1055,7 +1055,7 @@ present_declaration(Arc_Node* node){
             present_arc(node->first_child->first_child);
             if(node->last_child->first_child){
                 if(node->last_child->first_child->string.length ||
-                   cursor.at == node->last_child->first_child){
+                   presenter->cursor.at == node->last_child->first_child){
                     present_space();
                     present_string(ui->theme.text_misc, make_string("="));
                     present_space();
@@ -1126,7 +1126,7 @@ present_function(Arc_Node* node){
                     ID("param%d", (int)decl){
                         present_arc(decl);
                         if(decl->next_sibling){
-                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                            if(decl->next_sibling->string.length || presenter->cursor.at == decl->next_sibling){
                                 present_string(ui->theme.text_misc, make_string(","));
                                 present_space();
                             }
@@ -1266,7 +1266,7 @@ internal void
 present_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            if(cursor.at == node){
+            if(presenter->cursor.at == node){
                 present_editable_string(ui->theme.text_function, node);
             }else{
                 replace_string(&node->string, node->reference->string);
@@ -1310,7 +1310,7 @@ present_c_declaration(Arc_Node* node){
             present_editable_string(ui->theme.text, node);
             if(node->last_child->first_child){
                 if(node->last_child->first_child->string.length ||
-                   cursor.at == node->last_child->first_child){
+                   presenter->cursor.at == node->last_child->first_child){
                     present_space();
                     present_string(ui->theme.text_misc, make_string("="));
                     present_space();
@@ -1366,7 +1366,7 @@ present_c_function(Arc_Node* node){
                     ID("param%d", (int)decl){
                         present_arc(decl);
                         if(decl->next_sibling){
-                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                            if(decl->next_sibling->string.length || presenter->cursor.at == decl->next_sibling){
                                 present_string(ui->theme.text_misc, make_string(","));
                                 present_space();
                             }
@@ -1456,7 +1456,7 @@ internal void
 present_c_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            if(cursor.at == node){
+            if(presenter->cursor.at == node){
                 present_editable_string(ui->theme.text_function, node);
             }else{
                 replace_string(&node->string, node->reference->string);
@@ -1500,7 +1500,7 @@ present_pascal_declaration(Arc_Node* node){
             present_editable_string(ui->theme.text, node);
             if(node->last_child->first_child){
                 if(node->last_child->first_child->string.length ||
-                   cursor.at == node->last_child->first_child){
+                   presenter->cursor.at == node->last_child->first_child){
                     present_space();
                     present_string(ui->theme.text_misc, make_string("="));
                     present_space();
@@ -1564,7 +1564,7 @@ present_pascal_function(Arc_Node* node){
                     ID("param%d", (int)decl){
                         present_arc(decl);
                         if(decl->next_sibling){
-                            if(decl->next_sibling->string.length || cursor.at == decl->next_sibling){
+                            if(decl->next_sibling->string.length || presenter->cursor.at == decl->next_sibling){
                                 present_string(ui->theme.text_misc, make_string(","));
                                 present_space();
                             }
@@ -1654,7 +1654,7 @@ internal void
 present_pascal_call(Arc_Node* node){
     ID("call%d", (int)node){
         UI_ROW{
-            if(cursor.at == node){
+            if(presenter->cursor.at == node){
                 present_editable_string(ui->theme.text_function, node);
             }else{
                 replace_string(&node->string, node->reference->string);
@@ -1730,7 +1730,7 @@ present_ast(Arc_Node* node){
                 if(node->token_type == TOKEN_MISC){
                     present_editable_string(ui->theme.text_misc, node);
                 }else if(node->token_type == TOKEN_REFERENCE){
-                    if(cursor.at == node){
+                    if(presenter->cursor.at == node){
                         present_editable_string(ui->theme.text_function, node);
                     }else{
                         replace_string(&node->string, node->reference->string);
@@ -1768,7 +1768,7 @@ present_ast(Arc_Node* node){
                         present_string(ui->theme.text_misc, make_string("^"));
                     }
                 }
-                if(cursor.at == node){
+                if(presenter->cursor.at == node){
                     present_editable_string(ui->theme.text_type, node);
                     
                 }else{
@@ -1840,7 +1840,7 @@ present_c_ast(Arc_Node* node){
                 if(node->token_type == TOKEN_MISC){
                     present_editable_string(ui->theme.text_misc, node);
                 }else if(node->token_type == TOKEN_REFERENCE){
-                    if(cursor.at == node){
+                    if(presenter->cursor.at == node){
                         present_editable_string(ui->theme.text_function, node);
                     }else{
                         replace_string(&node->string, node->reference->string);
@@ -1871,7 +1871,7 @@ present_c_ast(Arc_Node* node){
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
-                if(cursor.at == node){
+                if(presenter->cursor.at == node){
                     present_editable_string(ui->theme.text_type, node);
                 }else{
                     replace_string(&node->string, node->reference->string);
@@ -1943,7 +1943,7 @@ present_pascal_ast(Arc_Node* node){
                 if(node->token_type == TOKEN_MISC){
                     present_editable_string(ui->theme.text_misc, node);
                 }else if(node->token_type == TOKEN_REFERENCE){
-                    if(cursor.at == node){
+                    if(presenter->cursor.at == node){
                         present_editable_string(ui->theme.text_function, node);
                     }else{
                         replace_string(&node->string, node->reference->string);
@@ -1974,7 +1974,7 @@ present_pascal_ast(Arc_Node* node){
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
-                if(cursor.at == node){
+                if(presenter->cursor.at == node){
                     present_editable_string(ui->theme.text_type, node);
                 }else{
                     replace_string(&node->string, node->reference->string);
@@ -2040,7 +2040,7 @@ present_debug_arc(v2f pos, Arc_Node* node){
         f32 offset = 0;
         push_string(pos + v2f(25, 0), node->string, ui->theme.text, 0.5f);
         offset = get_text_width(node->string, .5f) + 20;
-        if(node == cursor.at){
+        if(node == presenter->cursor.at){
             push_circle(pos, 20, ui->theme.cursor);
         }else {
             push_circle(pos, 20, ui->theme.text);

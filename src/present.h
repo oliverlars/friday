@@ -22,6 +22,17 @@ struct Line_Info {
     int end;
 };
 
+struct Cursor {
+    String8* string;
+    Arc_Node* at;
+    UI_ID text_id;
+    
+    int line_index;
+    int buffer_index;
+    
+    v2f pos;
+};
+
 struct Presenter_State {
     
     Present_Mode mode;
@@ -48,18 +59,13 @@ struct Presenter_State {
     f32 select_furthest_right;
     f32 select_height;
     
+    Cursor last_cursor;
+    Cursor cursor;
+    Cursor select_start;
+    Cursor select_end;
+    
 };
 global Arc_Node* highlight_reference;
 
-struct Cursor {
-    String8* string;
-    Arc_Node* at;
-    UI_ID text_id;
-    v2f pos;
-};
-
-global Cursor last_cursor;
-global Cursor cursor;
-global Cursor mark;
 
 Presenter_State* presenter;

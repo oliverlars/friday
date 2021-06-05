@@ -1450,10 +1450,7 @@ render_panels(Panel* root, v4f rect){
                     }
                     
                     UI_CONTAINER("snippet"){
-                        if(!dropdown("Snippet#%d", (int)root)){
-                            
-                            present_arc(editor->root);
-                        }
+                        present_arc(editor->root);
                     }
                 }
             }

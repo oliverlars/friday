@@ -7,6 +7,8 @@ struct Theme {
     Colour sub_colour;
     Colour border;
     
+    Colour select;
+    
     Colour text_comment;
     Colour text_function;
     Colour text_type;

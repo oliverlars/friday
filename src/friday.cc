@@ -115,6 +115,7 @@ PERMANENT_LOAD {
     
     editor->views[editor->view_count++] = make_stringf(&editor->string_pool, "default");
     
+    presenter->select_first = first;
 }
 
 HOT_LOAD {
@@ -139,6 +140,7 @@ UPDATE {
         presenter->number_of_deletions_before_cursor = 0;
         presenter->number_of_deletions_after_cursor = 0;
         //update_panel_split(ui->panel, platform->mouse_position.x/platform->window_size.width);
+        presenter->select_second = cursor.at;
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
         

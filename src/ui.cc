@@ -278,6 +278,8 @@ load_theme_dots(){
     ui->theme.sub_colour.packed = 0x676e8aff;
     ui->theme.border.packed = 0xE7E7E7ff;
     
+    ui->theme.select.packed = 0x85C3E5ff;
+    
     ui->theme.text_comment.packed = 0xffc2d94d;
     ui->theme.text_literal.packed = 0x54CB8Fff;
     ui->theme.text_function.packed = 0x47C7F3ff;
@@ -1446,9 +1448,10 @@ render_panels(Panel* root, v4f rect){
                             editor->view_count++;
                         }
                     }
+                    
                     UI_CONTAINER("snippet"){
                         if(!dropdown("Snippet#%d", (int)root)){
-                            //present_graph(editor->program, present_style);
+                            
                             present_arc(editor->root);
                         }
                     }

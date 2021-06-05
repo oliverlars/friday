@@ -44,6 +44,10 @@ struct Presenter_State {
     Arc_Node* select_first;
     Arc_Node* select_second;
     
+    v2f select_top_left;
+    f32 select_furthest_right;
+    f32 select_height;
+    
 };
 global Arc_Node* highlight_reference;
 

@@ -959,17 +959,29 @@ present_editable_string(Colour colour, Arc_Node* node){
         highlight_reference = node->reference;
     }
     
+    if(presenter->select_first == node){
+        presenter->select_top_left = widget->pos;
+    }
+    
+    if(presenter->select_second == node){
+        presenter->select_height = widget->pos.y;
+    }
+    
+    if(widget->pos.x > presenter->select_furthest_right){
+        presenter->select_furthest_right = widget->pos.x;
+    }
+    
     auto render_hook = [](Widget* widget ){
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
-        push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
-        
+        Colour colour = colour_from_v4f(widget->style.text_colour);
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
         if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
+        push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
         if(cursor.text_id == widget->id){
             v2f next = {};
@@ -979,9 +991,9 @@ present_editable_string(Colour colour, Arc_Node* node){
             lerp(&cursor.pos.y, next.y, 0.4f);
             
             if(presenter->mode == P_CREATE){
-                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
+                push_rectangle(v4f2(cursor.pos, v2f(3, widget->min.height*0.9f)), 2, colour_from_v4f(v4f(1,0,0,1)));
             }else {
-                push_rectangle(v4f2(cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
+                push_rectangle(v4f2(cursor.pos, v2f(3, widget->min.height*0.9f)), 2, ui->theme.cursor);
             }
             
         }

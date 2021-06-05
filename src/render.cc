@@ -745,11 +745,11 @@ init_shaders(){
             
             "void main(){\n"
             "float dist = box_no_pointy(gl_FragCoord.xy - (out_pos + out_dim/2), out_dim/2, out_radius);\n"
-            "float alpha = mix(1, 0,  dist);\n"
+            "float alpha = clamp(mix(1, 0,  dist), 0, 1);\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), alpha);\n"
             "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
             "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
-            "colour = vec4(frag_colour.rgb, alpha);\n"
+            "colour = vec4(frag_colour.rgb, alpha*frag_colour.a);\n"
             "}else {\n"
             "discard;\n"
             "}\n"
@@ -1033,7 +1033,7 @@ init_shaders(){
             "vec4 get_colour(vec2 uv){\n"
             "float distance = 1.0 - texture(atlas, uv).a;\n"
             "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
-            "vec4 result = vec4(frag_colour.rgb, min(alpha, frag_colour.a));\n"
+            "vec4 result = vec4(frag_colour.rgb, alpha);\n"
             "return result;\n"
             "}\n"
             

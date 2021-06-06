@@ -276,36 +276,8 @@ UPDATE {
         }
         //~ Check
         if(presenter->mode == P_EDIT){
-            
             if(has_pressed_key(KEY_ENTER)){
-                if(presenter->cursor.at->ast_type == AST_INVALID){
-                    presenter->mode = P_CREATE;
-                }else if(presenter->cursor.at->ast_type == AST_TOKEN ||
-                         presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
-                    if(presenter->cursor.at->string.length){
-                        
-                        auto token = make_selectable_arc_node(&editor->arc_pool);
-                        if(presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
-                            set_as_ast(token, AST_TYPE_TOKEN);
-                        }else {
-                            set_as_ast(token, AST_TOKEN);
-                        }
-                        arc_set_property(token, AP_DELETABLE);
-                        if(presenter->cursor.at->ast_type == AST_TOKEN && 
-                           declaration_type_is_composite(presenter->cursor.at->reference)){
-                            insert_arc_node_as_child(presenter->cursor.at, token);
-                        }else {
-                            auto parent = presenter->cursor.at;
-                            while(parent->parent && parent->parent->ast_type == AST_TOKEN) { parent = parent->parent; }
-                            insert_arc_node_as_sibling(parent, token);
-                        }
-                        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                    }else {
-                        presenter->mode = P_CREATE;
-                    }
-                }else {
-                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                }
+                presenter->mode = P_CREATE;
             }
         }
         
@@ -313,13 +285,17 @@ UPDATE {
             
             //~ Node creation keybinds
             if(has_pressed_key(KEY_D)){
-                
+                if(!presenter->cursor.at->next_sibling){
+                    append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                }
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
                 make_declaration_from_node(presenter->cursor.at, &editor->arc_pool);
                 auto type = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(type, AP_DELETABLE);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, type);
                 set_as_ast(type, AST_TYPE_TOKEN);
                 auto expr = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(expr, AP_DELETABLE);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, expr);
                 set_as_ast(expr, AST_TOKEN);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
@@ -344,15 +320,19 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             } else if(string_eq(presenter->cursor.at->string, "if")){
-                
+                if(!presenter->cursor.at->next_sibling){
+                    append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                }
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
                 make_if_from_node(presenter->cursor.at, &editor->arc_pool);
                 
                 auto expr = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(expr, AP_DELETABLE);
                 set_as_ast(expr, AST_TOKEN);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, expr);
                 
                 auto empty = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(expr, AP_DELETABLE);
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
@@ -415,100 +395,21 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             }else if(presenter->cursor.at->string.length == 0){
-                
-                auto next_in_scope = make_selectable_arc_node(&editor->arc_pool);
-                arc_set_property(next_in_scope, AP_DELETABLE);
-                Arc_Node* member;
-                find_parent_list(presenter->cursor.at, &member);
-                if(member){
-                    if(presenter->cursor.at->prev_sibling && (presenter->cursor.at->ast_type == AST_TOKEN ||
-                                                              presenter->cursor.at->ast_type == AST_TYPE_TOKEN)){
-                        // TODO(Oliver): should this happen when doing call arguments?
-                        // NOTE(Oliver): if it's not the first chlid in the list then you
-                        // can delete it provided it's a scope member
-                        mark_node_for_deletion(presenter->cursor.at);
-                    }else if(!presenter->cursor.at->next_sibling && presenter->cursor.at->prev_sibling && 
-                             !arc_has_property(presenter->cursor.at, AP_AST)){
-                        mark_node_for_deletion(presenter->cursor.at);
-                    }
-                    Arc_Node* result;
-                    
-                    if(arc_has_property(member, AP_CONTAINS_SCOPE)){
-                        // NOTE(Oliver): if the current node has an inner scope (if, while etc)
-                        // then we don't want to insert into the parent scope, 
-                        // we want to add to it
-                        auto scope = get_scope_of_node(member);
-                        if(is_node_sub_node_of_list(presenter->cursor.at, scope)){
-                            //insert_arc_node_as_sibling(member, next_in_scope);
-                            if(!presenter->cursor.at->next_sibling){
-                                insert_arc_node_as_sibling(member, next_in_scope);
-                            }
-                        }
-                    }else if(arc_has_property(member->parent->last_child, AP_AST) &&
-                             !is_after_cursor_of_ast_type(AST_TOKEN)){
-                        // NOTE(Oliver): if the last node in parent scope is not empty, 
-                        // then we can add an empty node on the end
-                        if(member->ast_type == AST_EXPR && presenter->cursor.at->prev_sibling){
-                            auto expr = make_arc_node(&editor->arc_pool);
-                            set_as_ast(expr, AST_EXPR);
-                            expr->ast_tag = AST_TAG_ARGS;
-                            insert_arc_node_as_sibling(member, expr);
-                            set_as_ast(next_in_scope, AST_TOKEN);
-                            insert_arc_node_as_child(expr, next_in_scope);
-                        }else if(member->ast_type == AST_EXPR && !presenter->cursor.at->prev_sibling){
-                            Arc_Node* call;
-                            find_sub_node_of_scope(presenter->cursor.at, &call);
-                            insert_arc_node_as_sibling(call, next_in_scope);
-                        }else {
-                            insert_arc_node_as_sibling(member, next_in_scope);
-                        }
-                    }
-                }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }else if(can_resolve_reference(presenter->cursor.at)){
-                if(!presenter->cursor.at->reference){
-                    set_as_ast(presenter->cursor.at, AST_TOKEN);
-                    set_token_type(presenter->cursor.at);
-                }
-                
-                if(presenter->cursor.at->reference->ast_type == AST_FUNCTION){
-                    arc_set_property(presenter->cursor.at, AP_DELETABLE);
-                    make_call_from_node(presenter->cursor.at, &editor->arc_pool);
-                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                    set_as_ast(next, AST_TOKEN);
-                    insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
-                    
-                }else { 
-                    arc_set_property(presenter->cursor.at, AP_DELETABLE);
-                    make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
-                    auto name = presenter->cursor.at->string;
-                    presenter->cursor.at->string = {};
-                    
-                    auto token = make_selectable_arc_node(&editor->arc_pool);
-                    arc_set_property(token, AP_DELETABLE);
-                    token->string = name;
-                    set_as_ast(token, AST_TOKEN);
-                    
-                    auto rhs = make_selectable_arc_node(&editor->arc_pool);
-                    set_as_ast(rhs, AST_TOKEN);
-                    
-                    insert_arc_node_as_child(presenter->cursor.at->first_child, token);
-                    insert_arc_node_as_child(presenter->cursor.at->last_child, rhs);
-                    
-                    set_token_type(token);
-                    
-                    if(declaration_type_is_composite(presenter->cursor.at->reference)){
-                        auto next = make_selectable_arc_node(&editor->arc_pool);
-                        set_as_ast(next, AST_TOKEN);
-                        insert_arc_node_as_child(token, next);
-                    }else if(declaration_type_is_array(presenter->cursor.at->reference)){
-                        auto next = make_selectable_arc_node(&editor->arc_pool);
-                        set_as_ast(next, AST_TOKEN);
-                        next->token_type = TOKEN_ARRAY;
-                        insert_arc_node_as_child(token, next);
-                    }
-                }
+            }else if(has_pressed_key(KEY_ENTER)){
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                insert_arc_node_as_sibling(presenter->cursor.at, next);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                presenter->mode = P_EDIT;
+            }else if(presenter->cursor.at->ast_type == AST_TOKEN ||
+                     presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, presenter->cursor.at->ast_type);
+                insert_arc_node_as_sibling(presenter->cursor.at, next);
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                presenter->mode = P_EDIT;
+            }else if(presenter->cursor.at->ast_type != AST_INVALID){
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }

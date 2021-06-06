@@ -39,6 +39,7 @@ make_selectable_arc_node(Pool* pool){
     auto result = (Arc_Node*)pool_allocate(pool);
     result->string.text = (char*)pool_allocate(&editor->string_pool);
     arc_set_property(result, AP_SELECTABLE);
+    arc_set_property(result, AP_DELETABLE);
     return result;
 }
 
@@ -352,6 +353,13 @@ get_scope_of_node(Arc_Node* node){
     }
     assert(0);
     return nullptr;
+}
+
+internal void
+append_empty_arc_node(Arc_Node* at, Pool* pool){
+    auto node = make_selectable_arc_node(pool);
+    arc_remove_property(node, AP_DELETABLE);
+    insert_arc_node_as_sibling(at, node);
 }
 
 internal Arc_Node*

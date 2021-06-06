@@ -1,7 +1,9 @@
 
 internal void
 mark_node_for_deletion(Arc_Node* at){
-    arc_set_property(at, AP_MARK_DELETE);
+    if(arc_has_property(at, AP_DELETABLE)){
+        arc_set_property(at, AP_MARK_DELETE);
+    }
 }
 
 internal void
@@ -1766,7 +1768,10 @@ present_ast(Arc_Node* node){
             auto member = node->first_child;
             UI_COLUMN{
                 while(member){
-                    present_arc(member);
+                    if(member->string.length || 
+                       member == presenter->cursor.at){
+                        present_arc(member);
+                    }
                     member = member->next_sibling;
                 }
             }
@@ -1807,7 +1812,8 @@ present_ast(Arc_Node* node){
                         present_string(ui->theme.text_misc, preview);
                     }
                 }
-                if(node->next_sibling){
+                if(node->next_sibling && (node->next_sibling->string.length || 
+                                          node->next_sibling == presenter->cursor.at)){
                     present_space();
                     present_arc(node->next_sibling);
                 }
@@ -1848,7 +1854,9 @@ present_ast(Arc_Node* node){
                     present_string(ui->theme.text_misc, preview);
                 }
             }
-            if(node->next_sibling && node->token_type != TOKEN_ARRAY){
+            if(node->next_sibling && node->token_type != TOKEN_ARRAY &&
+               (node->next_sibling->string.length || 
+                node->next_sibling == presenter->cursor.at)){
                 present_space();
             }
             present_arc(node->next_sibling);

@@ -55,7 +55,6 @@ delete_sub_tree_marked_for_deletion(Arc_Node* node){
         
         presenter->number_of_deletions++;
         pool_clear(&editor->arc_pool, node);
-        memset(node, 0, sizeof(Arc_Node));
         node = node->next_sibling;
     }
 }
@@ -163,6 +162,7 @@ set_matching_reference_in_composite(Arc_Node* node, b32* found){
 internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
+    if(node->token_type == TOKEN_ARRAY) return;
     auto scope = node;
     if(node->parent){
         // NOTE(Oliver): must be a dot operator
@@ -175,9 +175,9 @@ set_token_type(Arc_Node* node){
         }
     }
     
-    Arc_Node* function;
-    if(is_sub_node_of_ast_type(node, AST_FOR, &function)){
-        auto init = function->first_child->first_child;
+    Arc_Node* _for;
+    if(is_sub_node_of_ast_type(node, AST_FOR, &_for)){
+        auto init = _for->first_child->first_child;
         if(!is_child_of_node(node, init)){
             if(string_eq(node->string, init->string)){
                 node->token_type = TOKEN_REFERENCE;
@@ -1755,8 +1755,14 @@ present_ast(Arc_Node* node){
                         present_editable_reference(ui->theme.text_function, node);
                     }
                     if(node->first_child){
-                        present_string(ui->theme.text_misc, make_string("."));
-                        present_arc(node->first_child);
+                        if(node->first_child->token_type == TOKEN_ARRAY){
+                            present_string(ui->theme.text_misc, make_string("["));
+                            present_arc(node->first_child);
+                            present_string(ui->theme.text_misc, make_string("]"));
+                        }else {
+                            present_string(ui->theme.text_misc, make_string("."));
+                            present_arc(node->first_child);
+                        }
                     }
                 }else if(node->token_type == TOKEN_LITERAL){
                     present_editable_string(ui->theme.text_literal, node);

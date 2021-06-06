@@ -453,7 +453,18 @@ internal b32
 declaration_type_is_composite(Arc_Node* node){
     if(!node) return false;
     assert(node->ast_type == AST_DECLARATION);
-    return node->first_child->first_child->reference->ast_type == AST_STRUCT;
+    if(node->first_child->first_child->reference){
+        return node->first_child->first_child->reference->ast_type == AST_STRUCT;
+    }else {
+        return false;
+    }
+}
+
+internal b32
+declaration_type_is_array(Arc_Node* node){
+    if(!node) return false;
+    assert(node->ast_type == AST_DECLARATION);
+    return node->first_child->first_child->token_type == TOKEN_ARRAY;
 }
 
 internal void

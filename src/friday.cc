@@ -406,6 +406,7 @@ UPDATE {
             } else if(has_pressed_key(KEY_C)){
                 
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                
                 make_call_from_node(presenter->cursor.at, &editor->arc_pool);
                 find_function(presenter->cursor.at);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
@@ -456,30 +457,44 @@ UPDATE {
                     set_as_ast(presenter->cursor.at, AST_TOKEN);
                     set_token_type(presenter->cursor.at);
                 }
-                arc_set_property(presenter->cursor.at, AP_DELETABLE);
-                make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
-                auto name = presenter->cursor.at->string;
-                presenter->cursor.at->string = {};
                 
-                auto token = make_selectable_arc_node(&editor->arc_pool);
-                arc_set_property(token, AP_DELETABLE);
-                token->string = name;
-                set_as_ast(token, AST_TOKEN);
-                
-                auto rhs = make_selectable_arc_node(&editor->arc_pool);
-                set_as_ast(rhs, AST_TOKEN);
-                
-                insert_arc_node_as_child(presenter->cursor.at->first_child, token);
-                insert_arc_node_as_child(presenter->cursor.at->last_child, rhs);
-                
-                set_token_type(token);
-                
-                if(declaration_type_is_composite(presenter->cursor.at->reference)){
+                if(presenter->cursor.at->reference->ast_type == AST_FUNCTION){
+                    arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                    make_call_from_node(presenter->cursor.at, &editor->arc_pool);
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     set_as_ast(next, AST_TOKEN);
-                    insert_arc_node_as_child(token, next);
+                    insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
+                    
+                }else { 
+                    arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                    make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
+                    auto name = presenter->cursor.at->string;
+                    presenter->cursor.at->string = {};
+                    
+                    auto token = make_selectable_arc_node(&editor->arc_pool);
+                    arc_set_property(token, AP_DELETABLE);
+                    token->string = name;
+                    set_as_ast(token, AST_TOKEN);
+                    
+                    auto rhs = make_selectable_arc_node(&editor->arc_pool);
+                    set_as_ast(rhs, AST_TOKEN);
+                    
+                    insert_arc_node_as_child(presenter->cursor.at->first_child, token);
+                    insert_arc_node_as_child(presenter->cursor.at->last_child, rhs);
+                    
+                    set_token_type(token);
+                    
+                    if(declaration_type_is_composite(presenter->cursor.at->reference)){
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(next, AST_TOKEN);
+                        insert_arc_node_as_child(token, next);
+                    }else if(declaration_type_is_array(presenter->cursor.at->reference)){
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(next, AST_TOKEN);
+                        next->token_type = TOKEN_ARRAY;
+                        insert_arc_node_as_child(token, next);
+                    }
                 }
-                
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }

@@ -143,6 +143,11 @@ UPDATE {
         presenter->delete_queue = nullptr;
         presenter->delete_queue_size = 0;
         
+        if(has_pressed_key_modified(KEY_A, KEY_MOD_CTRL) &&
+           presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
+            presenter->cursor.at->token_type = TOKEN_ARRAY;
+        }
+        
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
             if(!presenter->select_start.at && !presenter->select_end.at){
                 presenter->select_start = presenter->cursor;
@@ -280,7 +285,11 @@ UPDATE {
                     if(presenter->cursor.at->string.length){
                         
                         auto token = make_selectable_arc_node(&editor->arc_pool);
-                        set_as_ast(token, AST_TOKEN);
+                        if(presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
+                            set_as_ast(token, AST_TYPE_TOKEN);
+                        }else {
+                            set_as_ast(token, AST_TOKEN);
+                        }
                         arc_set_property(token, AP_DELETABLE);
                         if(presenter->cursor.at->ast_type == AST_TOKEN && 
                            declaration_type_is_composite(presenter->cursor.at->reference)){

@@ -307,6 +307,7 @@ can_resolve_reference(Arc_Node* node){
 internal void
 set_type_token_type(Arc_Node* node){
     Arc_Node* result;
+    if(node->token_type == TOKEN_ARRAY) return;
     
     auto builtin = editor->builtins;
     while(builtin){
@@ -337,6 +338,9 @@ set_type_token_type(Arc_Node* node){
                 }
                 if(string_eq(node->string, "*")){
                     node->token_type = TOKEN_MISC;
+                }else if(node->string.text[0] == '[' &&
+                         node->string.text[node->string.length-1] == ']'){
+                    node->token_type = TOKEN_ARRAY;
                 }else{
                     node->token_type = TOKEN_LITERAL;
                 }
@@ -1790,6 +1794,12 @@ present_ast(Arc_Node* node){
                     present_editable_reference(ui->theme.text_type, node);
                 }
                 
+            }else if(node->token_type == TOKEN_ARRAY){
+                
+                present_string(ui->theme.text_misc, make_string("["));
+                present_editable_string(ui->theme.text_literal, node);
+                present_string(ui->theme.text_misc, make_string("]"));
+                
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
             }else {
@@ -1801,7 +1811,7 @@ present_ast(Arc_Node* node){
                     present_string(ui->theme.text_misc, preview);
                 }
             }
-            if(node->next_sibling){
+            if(node->next_sibling && node->token_type != TOKEN_ARRAY){
                 present_space();
             }
             present_arc(node->next_sibling);
@@ -1997,7 +2007,7 @@ present_pascal_ast(Arc_Node* node){
                 
             }else if(node->token_type == TOKEN_LITERAL){
                 present_editable_string(ui->theme.text_literal, node);
-            }else {
+            }else{
                 present_editable_string(ui->theme.text, node);
             }
             ID("tab_completer%d", (int)node){

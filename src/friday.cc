@@ -423,6 +423,7 @@ UPDATE {
                 if(member){
                     if(presenter->cursor.at->prev_sibling && (presenter->cursor.at->ast_type == AST_TOKEN ||
                                                               presenter->cursor.at->ast_type == AST_TYPE_TOKEN)){
+                        // TODO(Oliver): should this happen when doing call arguments?
                         // NOTE(Oliver): if it's not the first chlid in the list then you
                         // can delete it provided it's a scope member
                         mark_node_for_deletion(presenter->cursor.at);
@@ -447,7 +448,20 @@ UPDATE {
                              !is_after_cursor_of_ast_type(AST_TOKEN)){
                         // NOTE(Oliver): if the last node in parent scope is not empty, 
                         // then we can add an empty node on the end
-                        insert_arc_node_as_sibling(member, next_in_scope);
+                        if(member->ast_type == AST_EXPR && presenter->cursor.at->prev_sibling){
+                            auto expr = make_arc_node(&editor->arc_pool);
+                            set_as_ast(expr, AST_EXPR);
+                            expr->ast_tag = AST_TAG_ARGS;
+                            insert_arc_node_as_sibling(member, expr);
+                            set_as_ast(next_in_scope, AST_TOKEN);
+                            insert_arc_node_as_child(expr, next_in_scope);
+                        }else if(member->ast_type == AST_EXPR && !presenter->cursor.at->prev_sibling){
+                            Arc_Node* call;
+                            find_sub_node_of_scope(presenter->cursor.at, &call);
+                            insert_arc_node_as_sibling(call, next_in_scope);
+                        }else {
+                            insert_arc_node_as_sibling(member, next_in_scope);
+                        }
                     }
                 }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);

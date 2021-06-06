@@ -319,7 +319,19 @@ set_type_token_type(Arc_Node* node){
         }
         builtin = builtin->next_sibling;
     }
+    
+    Arc_Node* _struct;
+    if(is_sub_node_of_ast_type(node, AST_STRUCT, &_struct)){
+        if(string_eq(node->string, _struct->string)){
+            node->token_type = TOKEN_REFERENCE;
+            node->reference = _struct;
+            replace_string(&node->string, node->reference->string);
+            return;
+        }
+    }
+    
     auto scope = node;
+    
     while(scope){
         Arc_Node* function;
         
@@ -338,9 +350,6 @@ set_type_token_type(Arc_Node* node){
                 }
                 if(string_eq(node->string, "*")){
                     node->token_type = TOKEN_MISC;
-                }else if(node->string.text[0] == '[' &&
-                         node->string.text[node->string.length-1] == ']'){
-                    node->token_type = TOKEN_ARRAY;
                 }else{
                     node->token_type = TOKEN_LITERAL;
                 }
@@ -499,6 +508,7 @@ tab_completer_type(Arc_Node* node){
     
     auto builtin = editor->builtins;
     while(builtin){
+        
         if(is_strict_substring(node->string, builtin->string)){
             if(has_pressed_key(KEY_TAB)){
                 node->token_type = TOKEN_REFERENCE;
@@ -511,8 +521,27 @@ tab_completer_type(Arc_Node* node){
                                     builtin->string.text+node->string.length);
             }
         }
+        
         builtin = builtin->next_sibling;
     }
+    
+    Arc_Node* _struct;
+    if(is_sub_node_of_ast_type(node, AST_STRUCT, &_struct)){
+        if(is_strict_substring(node->string, _struct->string)){
+            if(has_pressed_key(KEY_TAB)){
+                node->token_type = TOKEN_REFERENCE;
+                node->reference = _struct;
+                replace_string(&node->string, node->reference->string);
+                ui->cursor_pos = presenter->cursor.at->string.length;
+                return {};
+            }else{
+                return make_stringf(&platform->frame_arena, "%.*s", _struct->string.length-node->string.length,
+                                    _struct->string.text+node->string.length);
+            }
+        }
+        
+    }
+    
     auto scope = node;
     while(scope){
         if(scope->parent && arc_has_property(scope->parent, AP_AST)){
@@ -1292,7 +1321,7 @@ present_call(Arc_Node* node){
             }
             present_string(ui->theme.text_misc, make_string("("));
             
-            auto arg = node->first_child;
+            auto arg = node->first_child->first_child;
             assert(node->reference);
             auto param = node->reference->first_child->first_child;
             
@@ -1303,7 +1332,9 @@ present_call(Arc_Node* node){
                         present_string(ui->theme.text_misc, make_string(": "));
                     }
                     present_arc(expr->first_child);
-                    if(expr->next_sibling && expr->next_sibling->first_child){
+                    if(expr->next_sibling && expr->next_sibling->first_child &&
+                       (expr->next_sibling->first_child->string.length ||
+                        presenter->cursor.at == expr->next_sibling->first_child)){
                         present_string(ui->theme.text_misc, make_string(","));
                         present_space();
                     }
@@ -1759,7 +1790,7 @@ present_ast(Arc_Node* node){
                             present_string(ui->theme.text_misc, make_string("["));
                             present_arc(node->first_child);
                             present_string(ui->theme.text_misc, make_string("]"));
-                        }else {
+                        }else if(node->first_child) {
                             present_string(ui->theme.text_misc, make_string("."));
                             present_arc(node->first_child);
                         }
@@ -2151,9 +2182,9 @@ build_buffer_from_arc(Arc_Node* node){
         }break;
         case AST_CALL:{
             push_arc(node);
-            auto arg = node->first_child;
+            auto arg = node->first_child->first_child;
             for(auto expr = arg; expr; expr = expr->next_sibling){
-                build_buffer_from_arc(expr->first_child);
+                build_buffer_from_arc(expr);
             }
         }break;
         case AST_RETURN:{

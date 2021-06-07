@@ -131,3 +131,6 @@ declaration_type_is_composite(Arc_Node* node);
 internal b32
 is_child_of_node(Arc_Node* node, Arc_Node* parent);
 
+internal b32
+find_previous_reference(Arc_Node* at, Arc_Node** result);
+

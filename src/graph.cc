@@ -377,6 +377,22 @@ make_declaration_from_node(Arc_Node* decl, Pool* pool){
     return decl;
 }
 
+internal b32
+find_previous_reference(Arc_Node* at, Arc_Node** result){
+    auto node = at;
+    while(node){
+        if(node->token_type == TOKEN_REFERENCE){
+            *result = node;
+            return true;
+        }else if(node->token_type != TOKEN_ARRAY){
+            return false;
+        }
+        node = node->prev_sibling;
+    }
+    *result = nullptr;
+    return false;
+}
+
 internal Arc_Node*
 make_for_from_node(Arc_Node* _for, Pool* pool){
     arc_set_property(_for, AP_AST);

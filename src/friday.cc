@@ -322,13 +322,13 @@ UPDATE {
                  presenter->cursor.at->token_type == TOKEN_REFERENCE) &&
                 presenter->cursor.at->prev_sibling &&
                 presenter->cursor.at->prev_sibling->token_type == TOKEN_REFERENCE)){
-                if(!presenter->cursor.at->next_sibling){
-                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                    set_as_ast(next, AST_TOKEN);
-                    insert_arc_node_as_sibling(presenter->cursor.at, next);
-                }
+                
                 if(has_pressed_key(KEY_LBRACKET)){
-                    
+                    if(!presenter->cursor.at->next_sibling){
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(next, AST_TOKEN);
+                        insert_arc_node_as_sibling(presenter->cursor.at, next);
+                    }
                     Arc_Node* after = presenter->cursor.at;
                     if(presenter->cursor.at->string.length){
                         after = make_selectable_arc_node(&editor->arc_pool);
@@ -351,16 +351,20 @@ UPDATE {
                     insert_arc_node_as_child(expr, next);
                     presenter->mode = P_EDIT;
                 }else if(has_pressed_key(KEY_FULLSTOP)){
-                    if(presenter->cursor.at->reference){
-                        auto ref = presenter->cursor.at->reference;
-                        if(ref->ast_type == AST_DECLARATION){
-                            if(declaration_type_is_composite(ref)){
-                                auto next = make_selectable_arc_node(&editor->arc_pool);
-                            }
-                        }
+                    if(!presenter->cursor.at->next_sibling){
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(next, AST_TOKEN);
+                        insert_arc_node_as_sibling(presenter->cursor.at, next);
+                    }
+                    Arc_Node* prev_ref = nullptr;
+                    if(find_previous_reference(presenter->cursor.at, &prev_ref)){
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(next, AST_TOKEN);
+                        insert_arc_node_as_sibling(presenter->cursor.at, next);
+                        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                        presenter->mode = P_EDIT;
                     }
                 }else if(has_pressed_key(KEY_ENTER)){
-                    
                     presenter->mode = P_EDIT;
                     advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 }

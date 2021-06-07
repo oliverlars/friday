@@ -177,6 +177,15 @@ set_token_type(Arc_Node* node){
         }
     }
     
+    if(node->prev_sibling){
+        Arc_Node* member = nullptr;
+        if(node->prev_sibling->reference){
+            b32 found = false;
+            set_matching_reference_in_composite(node->prev_sibling->reference, &found);
+            if(found) return;
+        }
+    }
+    
     Arc_Node* _for;
     if(is_sub_node_of_ast_type(node, AST_FOR, &_for)){
         auto init = _for->first_child->first_child;
@@ -439,6 +448,12 @@ tab_completer(Arc_Node* node){
     b32 found = false;
     if(node->parent->ast_type == AST_TOKEN){
         auto string = find_matching_reference_in_composite(node->parent->reference, &found);
+        if(found) return string;
+    }
+    
+    Arc_Node* prev_ref = nullptr;
+    if(find_previous_reference(node->prev_sibling, &prev_ref)){
+        auto string = find_matching_reference_in_composite(prev_ref->reference, &found);
         if(found) return string;
     }
     

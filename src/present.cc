@@ -1818,10 +1818,14 @@ present_ast(Arc_Node* node){
                         present_string(ui->theme.text_misc, preview);
                     }
                 }
-                
-                if(node->next_sibling && (node->next_sibling->string.length || 
-                                          node->next_sibling == presenter->cursor.at ||
-                                          node->next_sibling->token_type == TOKEN_ARRAY)){
+                if(node->token_type == TOKEN_REFERENCE &&
+                   node->next_sibling && node->next_sibling->token_type == TOKEN_REFERENCE){
+                    present_string(ui->theme.text_misc, make_string("."));
+                    present_arc(node->next_sibling);
+                }
+                else if(node->next_sibling && (node->next_sibling->string.length || 
+                                               node->next_sibling == presenter->cursor.at ||
+                                               node->next_sibling->token_type == TOKEN_ARRAY)){
                     if(node->next_sibling->token_type != TOKEN_ARRAY){
                         present_space();
                     }

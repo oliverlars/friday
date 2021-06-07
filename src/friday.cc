@@ -160,7 +160,20 @@ UPDATE {
             }else {
                 presenter->cursor.at->token_type = TOKEN_ARRAY;
             }
+        }else if(has_pressed_key_modified(KEY_FULLSTOP, KEY_MOD_CTRL)){
+            if(presenter->cursor.at->ast_type == AST_TOKEN){
+                auto after = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(after, AST_TOKEN);
+                insert_arc_node_as_sibling(presenter->cursor.at, after);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, AST_TOKEN);
+                insert_arc_node_as_child(presenter->cursor.at, next);
+                advance_cursor(&presenter->cursor, CURSOR_LEFT);
+            }else {
+                presenter->cursor.at->token_type = TOKEN_ARRAY;
+            }
         }
+        
         
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
             if(!presenter->select_start.at && !presenter->select_end.at){
@@ -301,7 +314,40 @@ UPDATE {
         if(presenter->mode == P_CREATE){
             
             //~ Node creation keybinds
-            if(has_pressed_key(KEY_D)){
+            if((presenter->cursor.at->ast_type == AST_TOKEN && 
+                presenter->cursor.at->reference) ||
+               (presenter->cursor.at->prev_sibling &&
+                presenter->cursor.at->prev_sibling->token_type == TOKEN_ARRAY)){
+                if(has_pressed_key(KEY_LBRACKET)){
+                    if(!presenter->cursor.at->next_sibling){
+                        append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                    }
+                    Arc_Node* after = presenter->cursor.at;
+                    if(presenter->cursor.at->string.length){
+                        after = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(after, AST_TOKEN);
+                        insert_arc_node_as_sibling(presenter->cursor.at, after);
+                        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                    }else {
+                        set_as_ast(after, AST_TOKEN);
+                        presenter->cursor.at->token_type = TOKEN_ARRAY;
+                    }
+                    auto expr = make_arc_node(&editor->arc_pool);
+                    arc_remove_property(expr, AP_DELETABLE);
+                    set_as_ast(expr, AST_EXPR);
+                    
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    after->token_type = TOKEN_ARRAY;
+                    
+                    set_as_ast(next, AST_TOKEN);
+                    insert_arc_node_as_child(after, expr);
+                    insert_arc_node_as_child(expr, next);
+                    presenter->mode = P_EDIT;
+                }else if(has_pressed_key(KEY_ENTER)){
+                    presenter->mode = P_EDIT;
+                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                }
+            }else if(has_pressed_key(KEY_D)){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
                 }
@@ -469,7 +515,6 @@ UPDATE {
                     insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                     
                 }
-                
             }
         }
         

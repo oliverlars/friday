@@ -181,6 +181,15 @@ string_from_cstr(char* string){
     return result;
 }
 
+internal char*
+string_to_cstr(Arena* arena, String8 string){
+    char* result = (char*)push_size_zero(arena, string.length+1);
+    for(int i = 0; i < string.length; i++){
+        result[i] = string.text[i];
+    }
+    return result;
+}
+
 
 internal void
 advance_lexer(Lexer* l){

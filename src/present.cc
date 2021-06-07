@@ -232,7 +232,14 @@ set_token_type(Arc_Node* node){
                    string_eq(node->string, ">>")){
                     node->token_type = TOKEN_MISC;
                 }else{
-                    node->token_type = TOKEN_LITERAL;
+                    char* str = string_to_cstr(&platform->frame_arena, node->string);
+                    int f = atof(str);
+                    int i = atoi(str);
+                    if(i || f){
+                        node->token_type = TOKEN_LITERAL;
+                    }else {
+                        node->token_type = TOKEN_UNASSIGNED;
+                    }
                 }
             }
         }
@@ -1791,6 +1798,9 @@ present_ast(Arc_Node* node){
                     }else{
                         replace_string(&node->string, node->reference->string);
                         present_editable_reference(ui->theme.text_function, node);
+                    }
+                    if(node->first_child){
+                        present_arc(node->first_child);
                     }
                 }else if(node->token_type == TOKEN_LITERAL){
                     present_editable_string(ui->theme.text_literal, node);

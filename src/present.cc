@@ -1784,7 +1784,9 @@ present_ast(Arc_Node* node){
                 if(node->token_type == TOKEN_MISC){
                     present_editable_string(ui->theme.text_misc, node);
                 }else if(node->token_type == TOKEN_REFERENCE){
-                    if(presenter->cursor.at == node){
+                    if(presenter->cursor.at->reference &&
+                       presenter->cursor.at->reference->ast_type == AST_FUNCTION){
+                    }else if(presenter->cursor.at == node){
                         present_editable_string(ui->theme.text_function, node);
                     }else{
                         replace_string(&node->string, node->reference->string);
@@ -1792,6 +1794,10 @@ present_ast(Arc_Node* node){
                     }
                 }else if(node->token_type == TOKEN_LITERAL){
                     present_editable_string(ui->theme.text_literal, node);
+                }else if(node->token_type == TOKEN_ARRAY){
+                    present_string(ui->theme.text_misc, make_string("["));
+                    present_arc(node->first_child);
+                    present_string(ui->theme.text_misc, make_string("]"));
                 }else {
                     present_editable_string(ui->theme.text, node);
                 }
@@ -1802,9 +1808,13 @@ present_ast(Arc_Node* node){
                         present_string(ui->theme.text_misc, preview);
                     }
                 }
+                
                 if(node->next_sibling && (node->next_sibling->string.length || 
-                                          node->next_sibling == presenter->cursor.at)){
-                    present_space();
+                                          node->next_sibling == presenter->cursor.at ||
+                                          node->next_sibling->token_type == TOKEN_ARRAY)){
+                    if(node->next_sibling->token_type != TOKEN_ARRAY){
+                        present_space();
+                    }
                     present_arc(node->next_sibling);
                 }
             }
@@ -1849,6 +1859,7 @@ present_ast(Arc_Node* node){
                 node->next_sibling == presenter->cursor.at)){
                 present_space();
             }
+            
             present_arc(node->next_sibling);
         }break;
         case AST_CALL:{
@@ -2174,7 +2185,12 @@ build_buffer_from_arc(Arc_Node* node){
             build_buffer_from_arc(node->first_child);
         }break;
         case AST_TOKEN: {
-            push_arc(node);
+            if(node->token_type != TOKEN_ARRAY){
+                push_arc(node);
+            }
+            if(node->first_child){
+                build_buffer_from_arc(node->first_child);
+            }
             build_buffer_from_arc(node->next_sibling);
         }break;
         case AST_CALL:{

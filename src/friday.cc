@@ -143,9 +143,23 @@ UPDATE {
         presenter->delete_queue = nullptr;
         presenter->delete_queue_size = 0;
         
-        if(has_pressed_key_modified(KEY_A, KEY_MOD_CTRL) &&
-           presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
-            presenter->cursor.at->token_type = TOKEN_ARRAY;
+        if(has_pressed_key_modified(KEY_LBRACKET, KEY_MOD_CTRL)){
+            if(presenter->cursor.at->ast_type == AST_TOKEN){
+                
+                presenter->cursor.at->token_type = TOKEN_ARRAY;
+                auto after = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(after, AST_TOKEN);
+                insert_arc_node_as_sibling(presenter->cursor.at, after);
+                auto expr = make_arc_node(&editor->arc_pool);
+                set_as_ast(expr, AST_EXPR);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, AST_TOKEN);
+                insert_arc_node_as_child(presenter->cursor.at, expr);
+                insert_arc_node_as_child(expr, next);
+                //advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+            }else {
+                presenter->cursor.at->token_type = TOKEN_ARRAY;
+            }
         }
         
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
@@ -254,6 +268,7 @@ UPDATE {
         }
         if(presenter->cursor.at->ast_type == AST_TOKEN){
             set_token_type(presenter->cursor.at);
+            
         }
         
         if(presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
@@ -413,6 +428,7 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             }else if(presenter->cursor.at->string.length == 0){
+                
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(has_pressed_key(KEY_ENTER)){
@@ -431,21 +447,20 @@ UPDATE {
                 }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+                
             }else if(presenter->cursor.at->ast_type != AST_INVALID && !presenter->cursor.at->next_sibling){
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(can_resolve_reference(presenter->cursor.at)){
-                if(!presenter->cursor.at->reference){
-                    set_as_ast(presenter->cursor.at, AST_TOKEN);
-                    set_token_type(presenter->cursor.at);
-                }
                 
                 if(!arc_has_property(presenter->cursor.at, AP_AST)){
+                    if(!presenter->cursor.at->next_sibling){
+                        append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                    }
                     make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
                     auto next = make_selectable_arc_node(&editor->arc_pool);
                     next->string = presenter->cursor.at->string;
                     next->reference = presenter->cursor.at->reference;
-                    presenter->cursor.at->string = {};
                     set_as_ast(next, AST_TOKEN);
                     insert_arc_node_as_child(presenter->cursor.at->first_child, next);
                     
@@ -453,37 +468,8 @@ UPDATE {
                     set_as_ast(empty, AST_TOKEN);
                     insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                     
-                }else {
-                    
-                    switch(presenter->cursor.at->reference->ast_type){
-                        case AST_FUNCTION:{
-                            
-                            if(!presenter->cursor.at->next_sibling){
-                                append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
-                            }
-                            arc_set_property(presenter->cursor.at, AP_DELETABLE);
-                            make_call_from_node(presenter->cursor.at, &editor->arc_pool);
-                            set_as_ast(presenter->cursor.at, AST_TOKEN);
-                            auto next = make_selectable_arc_node(&editor->arc_pool);
-                            insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
-                            set_as_ast(next, AST_TOKEN);
-                            advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                            presenter->mode = P_EDIT;
-                        }break;
-                        case AST_DECLARATION:{
-                            if(has_pressed_key(KEY_FULLSTOP)){
-                                if(declaration_type_is_composite(presenter->cursor.at->reference)){
-                                    auto next = make_selectable_arc_node(&editor->arc_pool);
-                                    set_as_ast(presenter->cursor.at, AST_TOKEN);
-                                    set_as_ast(next, AST_TOKEN);
-                                    insert_arc_node_as_sibling(presenter->cursor.at, next);
-                                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                                    presenter->mode = P_EDIT;
-                                }
-                            }
-                        }break;
-                    }
                 }
+                
             }
         }
         

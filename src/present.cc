@@ -1790,16 +1790,6 @@ present_ast(Arc_Node* node){
                         replace_string(&node->string, node->reference->string);
                         present_editable_reference(ui->theme.text_function, node);
                     }
-                    if(node->first_child){
-                        if(node->first_child->token_type == TOKEN_ARRAY){
-                            present_string(ui->theme.text_misc, make_string("["));
-                            present_arc(node->first_child);
-                            present_string(ui->theme.text_misc, make_string("]"));
-                        }else if(node->first_child) {
-                            present_string(ui->theme.text_misc, make_string("."));
-                            present_arc(node->first_child);
-                        }
-                    }
                 }else if(node->token_type == TOKEN_LITERAL){
                     present_editable_string(ui->theme.text_literal, node);
                 }else {
@@ -2035,8 +2025,8 @@ present_pascal_ast(Arc_Node* node){
                 }
                 if(node->next_sibling){
                     present_space();
-                    present_arc(node->next_sibling);
                 }
+                present_arc(node->next_sibling);
             }
         }break;
         case AST_TYPE_TOKEN: {
@@ -2185,7 +2175,6 @@ build_buffer_from_arc(Arc_Node* node){
         }break;
         case AST_TOKEN: {
             push_arc(node);
-            build_buffer_from_arc(node->first_child);
             build_buffer_from_arc(node->next_sibling);
         }break;
         case AST_CALL:{

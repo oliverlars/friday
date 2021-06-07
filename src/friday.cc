@@ -91,11 +91,11 @@ PERMANENT_LOAD {
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     
-    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64"};
+    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
     
     auto start = make_arc_node(&editor->arc_pool);
     auto builtin = start;
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < 11; i++){
         builtin->string = make_string(builtins[i]);
         builtin->next_sibling = make_arc_node(&editor->arc_pool);
         builtin = builtin->next_sibling;
@@ -399,6 +399,7 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             }else if(has_pressed_key(KEY_C)){
+                
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
                 }
@@ -433,6 +434,56 @@ UPDATE {
             }else if(presenter->cursor.at->ast_type != AST_INVALID && !presenter->cursor.at->next_sibling){
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+            }else if(can_resolve_reference(presenter->cursor.at)){
+                if(!presenter->cursor.at->reference){
+                    set_as_ast(presenter->cursor.at, AST_TOKEN);
+                    set_token_type(presenter->cursor.at);
+                }
+                
+                if(!arc_has_property(presenter->cursor.at, AP_AST)){
+                    make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    next->string = presenter->cursor.at->string;
+                    next->reference = presenter->cursor.at->reference;
+                    presenter->cursor.at->string = {};
+                    set_as_ast(next, AST_TOKEN);
+                    insert_arc_node_as_child(presenter->cursor.at->first_child, next);
+                    
+                    auto empty = make_selectable_arc_node(&editor->arc_pool);
+                    set_as_ast(empty, AST_TOKEN);
+                    insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
+                    
+                }else {
+                    
+                    switch(presenter->cursor.at->reference->ast_type){
+                        case AST_FUNCTION:{
+                            
+                            if(!presenter->cursor.at->next_sibling){
+                                append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                            }
+                            arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                            make_call_from_node(presenter->cursor.at, &editor->arc_pool);
+                            set_as_ast(presenter->cursor.at, AST_TOKEN);
+                            auto next = make_selectable_arc_node(&editor->arc_pool);
+                            insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
+                            set_as_ast(next, AST_TOKEN);
+                            advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                            presenter->mode = P_EDIT;
+                        }break;
+                        case AST_DECLARATION:{
+                            if(has_pressed_key(KEY_FULLSTOP)){
+                                if(declaration_type_is_composite(presenter->cursor.at->reference)){
+                                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                                    set_as_ast(presenter->cursor.at, AST_TOKEN);
+                                    set_as_ast(next, AST_TOKEN);
+                                    insert_arc_node_as_sibling(presenter->cursor.at, next);
+                                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                                    presenter->mode = P_EDIT;
+                                }
+                            }
+                        }break;
+                    }
+                }
             }
         }
         

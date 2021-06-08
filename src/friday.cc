@@ -95,7 +95,7 @@ PERMANENT_LOAD {
     
     auto start = make_arc_node(&editor->arc_pool);
     auto builtin = start;
-    for(int i = 0; i < 11; i++){
+    for(int i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++){
         builtin->string = make_string(builtins[i]);
         builtin->next_sibling = make_arc_node(&editor->arc_pool);
         builtin = builtin->next_sibling;
@@ -174,6 +174,10 @@ UPDATE {
             }else {
                 presenter->cursor.at->token_type = TOKEN_ARRAY;
             }
+        }else if(has_pressed_key_modified(KEY_2, KEY_MOD_CTRL)){
+            
+            presenter->cursor.at->token_type = TOKEN_STRING;
+            presenter->mode = P_EDIT;
         }
         
         
@@ -573,6 +577,7 @@ UPDATE {
         if(platform->frame_count == 0){
             ui->active = presenter->cursor.text_id;
         }
+        
         if(editor->should_reload){
             pool_free(&editor->arc_pool);
             editor->arc_pool = make_pool(sizeof(Arc_Node));
@@ -596,7 +601,7 @@ UPDATE {
             
             auto start = make_arc_node(&editor->arc_pool);
             auto builtin = start;
-            for(int i = 0; i < 11; i++){
+            for(int i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++){
                 builtin->string = make_string(builtins[i]);
                 builtin->next_sibling = make_arc_node(&editor->arc_pool);
                 builtin = builtin->next_sibling;
@@ -604,6 +609,7 @@ UPDATE {
             
             editor->builtins = start;
             fix_references(editor->root);
+            
         }
         
     }

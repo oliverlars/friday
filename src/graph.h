@@ -53,6 +53,7 @@ enum Token_Type {
     TOKEN_REFERENCE,
     TOKEN_LITERAL,
     TOKEN_ARRAY,
+    TOKEN_STRING,
 };
 
 

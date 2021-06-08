@@ -164,7 +164,8 @@ set_matching_reference_in_composite(Arc_Node* node, b32* found){
 internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
-    if(node->token_type == TOKEN_ARRAY) return;
+    if(node->token_type == TOKEN_ARRAY ||
+       node->token_type == TOKEN_STRING) return;
     auto scope = node;
     if(node->parent){
         // NOTE(Oliver): must be a dot operator
@@ -1832,6 +1833,14 @@ present_ast(Arc_Node* node){
                     present_string(ui->theme.text_misc, make_string("["));
                     present_arc(node->first_child);
                     present_string(ui->theme.text_misc, make_string("]"));
+                }else if(node->token_type == TOKEN_STRING){
+                    ID("left"){
+                        present_string(ui->theme.text_misc, make_string("\""));
+                    }
+                    present_editable_string(ui->theme.text_literal, node);
+                    ID("right"){
+                        present_string(ui->theme.text_misc, make_string("\""));
+                    }
                 }else {
                     present_editable_string(ui->theme.text, node);
                 }

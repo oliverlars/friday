@@ -22,6 +22,10 @@ enum Ast_Type {
     AST_EXPR,
     AST_RETURN,
     AST_USING,
+    AST_WHILE,
+    AST_VARIADIC,
+    AST_NEW,
+    AST_FOREIGN,
 };
 
 enum Operator_Type {
@@ -134,3 +138,8 @@ is_child_of_node(Arc_Node* node, Arc_Node* parent);
 internal b32
 find_previous_reference(Arc_Node* at, Arc_Node** result);
 
+internal void
+serialise(Arc_Node* root);
+
+internal void
+deserialise();

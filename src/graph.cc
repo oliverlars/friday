@@ -52,6 +52,44 @@ make_scope(Pool* pool){
 }
 
 internal Arc_Node*
+make_new_from_node(Arc_Node* _new, Pool* pool){
+    set_as_ast(_new, AST_NEW);
+    auto expr = make_selectable_arc_node(pool);
+    insert_arc_node_as_child(_new, expr);
+    return _new;
+}
+
+internal Arc_Node*
+make_variadic_from_node(Arc_Node* variadic, Pool* pool){
+    set_as_ast(variadic, AST_VARIADIC);
+    return variadic;
+}
+
+internal Arc_Node*
+make_foreign_from_node(Arc_Node* foreign, Pool* pool){
+    set_as_ast(foreign, AST_FOREIGN);
+    return foreign;
+}
+
+internal Arc_Node*
+make_while_from_node(Arc_Node* _while, Pool* pool){
+    set_as_ast(_while, AST_WHILE);
+    
+    auto expr = make_arc_node(pool);
+    set_as_ast(expr, AST_EXPR);
+    
+    auto scope = make_arc_node(pool);
+    set_as_ast(scope, AST_SCOPE);
+    arc_set_property(scope, AP_LIST);
+    scope->ast_tag = AST_TAG_BODY;
+    
+    insert_arc_node_as_child(_while, expr);
+    insert_arc_node_as_sibling(expr, scope);
+    
+    return _while;
+}
+
+internal Arc_Node*
 make_if_from_node(Arc_Node* _if, Pool* pool){
     arc_set_property(_if, AP_AST);
     arc_set_property(_if, AP_CONTAINS_SCOPE);
@@ -567,3 +605,56 @@ insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
     }
     
 }
+
+internal void
+serialise(Arc_Node* root){
+    
+    while(root){
+        Arc_Node node = *root;
+        node.string = {};
+        node.prev_sibling = 0;
+        node.next_sibling = 0;
+        node.first_child = 0;
+        node.last_child = 0;
+        node.parent = 0;
+        node.reference = 0;
+        editor->serialise[editor->serial_index] = {0, node};
+        snprintf(editor->serialise[editor->serial_index].string, 256, "%.*s", 
+                 root->string.length, root->string.text);
+        editor->serial_index++;
+        if(root->first_child){
+            serialise(root->first_child);
+        }else {
+            editor->serialise[editor->serial_index++] = { 1, {}};
+        }
+        root = root->next_sibling;
+    }
+}
+
+internal void
+deserialise(){
+    if(!editor->deserial_index){
+        Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
+        *node = editor->serialise[0].node;
+        node->string.text = (char*)pool_allocate(&editor->string_pool);
+        int length = snprintf(node->string.text, 256, "%s", editor->serialise[0].string);
+        node->string.length = clampi(length, 0, 256);
+        editor->deserialise[editor->deserial_index++] = node;
+    }
+    
+    for(int i = 0; i < editor->serial_index; i++){
+        if(editor->serialise[i].marker){
+            editor->deserial_index--;
+        }else {
+            Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
+            *node = editor->serialise[i].node;
+            node->string.text = (char*)pool_allocate(&editor->string_pool);
+            int length = snprintf(node->string.text, 256, "%s", editor->serialise[i].string);
+            node->string.length = clampi(length, 0, 256);
+            Arc_Node* current = editor->deserialise[editor->deserial_index-1];
+            insert_arc_node_as_child(current, node);
+            editor->deserialise[editor->deserial_index++] = node;
+        }
+    }
+}
+

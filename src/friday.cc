@@ -110,6 +110,7 @@ PERMANENT_LOAD {
     insert_arc_node_as_child(scope, first);
     
     editor->root = scope;
+    
     presenter->cursor.at = first;
     presenter->cursor.string = &first->string;
     
@@ -405,7 +406,13 @@ UPDATE {
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
                 
-            } else if(string_eq(presenter->cursor.at->string, "if")){
+            }else if(string_eq(presenter->cursor.at->string, "foreign")){
+                if(!presenter->cursor.at->next_sibling){
+                    append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                }
+                arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                make_foreign_from_node(presenter->cursor.at, &editor->arc_pool);
+            }else if(string_eq(presenter->cursor.at->string, "if")){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
                 }

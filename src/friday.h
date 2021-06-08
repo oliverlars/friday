@@ -3,9 +3,15 @@
 // needed because all globals are wiped on hot load
 
 struct Serial_Node {
-    int marker;
+    b32 marker;
     Arc_Node node;
     char string[256];
+};
+
+struct Arc_Format {
+    s32 version_number;
+    s64 number_of_nodes;
+    Serial_Node* nodes;
 };
 
 struct Editor_State {

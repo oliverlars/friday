@@ -85,7 +85,7 @@ label(char* fmt, ...){
     va_end(args);
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_TEXT);
-    widget_set_property(widget, WP_LERP_POSITION);
+    //widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
 }
 
@@ -121,7 +121,7 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
-    widget_set_property(widget, WP_LERP_POSITION);
+    //widget_set_property(widget, WP_LERP_POSITION);
     auto result = update_widget(widget);
     return result.clicked;
 }
@@ -194,7 +194,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_LERP_POSITION);
+    //widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
     
     auto render_hook = [](Widget* widget) {

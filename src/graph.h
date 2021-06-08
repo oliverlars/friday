@@ -142,5 +142,5 @@ find_previous_reference(Arc_Node* at, Arc_Node** result);
 internal void
 serialise(String8 filename, Arc_Node* root);
 
-internal void
+internal Arc_Node*
 deserialise();

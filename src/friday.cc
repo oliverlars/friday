@@ -577,7 +577,7 @@ UPDATE {
             pool_free(&editor->arc_pool);
             editor->arc_pool = make_pool(sizeof(Arc_Node));
             deserialise(make_string("test.arc"));
-            editor->root = editor->deserialise[0]->first_child;
+            editor->root = deserialise(make_string("test.arc"));
             globals->presenter = push_type_zero(&platform->permanent_arena, Presenter_State);
             presenter = globals->presenter;
             ui->editing_string.length = 0;

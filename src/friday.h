@@ -25,15 +25,8 @@ struct Editor_State {
     String8 views[256];
     int view_count;
     
-    int serial_index;
-    Serial_Node serialise[1024];
-    
-    int deserial_index;
-    Arc_Node* deserialise[1024];
-    
     b32 should_reload;
     
-    Arc_Format file;
 };
 
 Editor_State* editor;

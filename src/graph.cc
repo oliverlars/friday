@@ -618,20 +618,18 @@ serialise(String8 filename, Arc_Node* root){
         node.last_child = 0;
         node.parent = 0;
         node.reference = 0;
-        editor->serialise[editor->serial_index] = {0, node};
-        snprintf(editor->serialise[editor->serial_index].string, 256, "%.*s", 
+        Serial_Node serial_node = {0, node};
+        snprintf(serial_node.string, 256, "%.*s", 
                  root->string.length, root->string.text);
-        platform->append_to_file(filename, &editor->serialise[editor->serial_index], sizeof(Serial_Node));
-        editor->serial_index++;
+        platform->append_to_file(filename, &serial_node, sizeof(Serial_Node));
         serialise(filename, root->first_child);
-        editor->serialise[editor->serial_index] = { 1, {}};
-        platform->append_to_file(filename, &editor->serialise[editor->serial_index], sizeof(Serial_Node));
-        editor->serial_index++;
+        serial_node = { 1, {}};
+        platform->append_to_file(filename, &serial_node, sizeof(Serial_Node));
         root = root->next_sibling;
     }
 }
 
-internal void
+internal Arc_Node*
 deserialise(String8 filename){
     void* file = nullptr;
     u64 length_in_bytes = 0;
@@ -640,29 +638,37 @@ deserialise(String8 filename){
     Serial_Node* nodes = (Serial_Node*)file;
     assert(nodes);
     
-    if(!editor->deserial_index){
+    s64 index = 0;
+    // NOTE(Oliver): another upper limit... maybe sort that out but it's probably not an issue
+    // even for large files
+    // also this does NOT need to be on the frame arena, switch to using a temp allocator
+    
+    Arc_Node** stack = (Arc_Node**)push_size(&platform->frame_arena, length_in_bytes);
+    
+    if(!index){
         Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
         *node = nodes[0].node;
         node->string.text = (char*)pool_allocate(&editor->string_pool);
         int length = snprintf(node->string.text, 256, "%s", nodes[0].string);
         node->string.length = clampi(length, 0, 256);
-        editor->deserialise[editor->deserial_index++] = node;
+        stack[index++] = node;
     }
     
     for(int i = 1; i < length_in_bytes/sizeof(Serial_Node); i++){
         if(nodes[i].marker){
-            editor->deserial_index--;
+            index--;
         }else {
             Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
             *node = nodes[i].node;
             node->string.text = (char*)pool_allocate(&editor->string_pool);
             int length = snprintf(node->string.text, 256, "%s", nodes[i].string);
             node->string.length = clampi(length, 0, 256);
-            Arc_Node* current = editor->deserialise[editor->deserial_index-1];
+            Arc_Node* current = stack[index-1];
             insert_arc_node_as_child(current, node);
-            editor->deserialise[editor->deserial_index++] = node;
+            stack[index++] = node;
         }
     }
+    return stack[0];
 }
 
 internal void

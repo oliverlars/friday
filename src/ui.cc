@@ -1434,6 +1434,7 @@ render_panels(Panel* root, v4f rect){
                         UI_ROW UI_WIDTHFILL {
                             if(button("serialise")){
                                 auto str = make_stringf(&platform->frame_arena, "%s", "test.arc");
+                                platform->delete_file(str);
                                 serialise(str, editor->root);
                             }
                             if(button("deserialise")){

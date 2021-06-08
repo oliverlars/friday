@@ -2,7 +2,7 @@ internal char *
 win32_cstr_from_string(String8 string)
 {
     char *buffer = 0;
-    buffer = (char*)push_size(&platform->frame_arena, string.length+1);
+    buffer = (char*)push_size_zero(&platform->frame_arena, string.length+1);
     memcpy(buffer, string.text, string.length);
     return buffer;
 }
@@ -124,7 +124,7 @@ win32_load_entire_file(Arena* arena, String8 path, void** data, u64* data_len) {
     }
 }
 
-internal char *
+internal char*
 win32_load_file_and_null_terminate(Arena* arena, String8 path)
 {
     char *result = 0;

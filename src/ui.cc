@@ -1341,6 +1341,7 @@ render_panels(Panel* root, v4f rect){
         v2f delta = {};
         has_mouse_moved(&delta);
         if(has_left_released()){
+            platform->reset_cursor();
             root->is_dragging = false;
         }
         // NOTE(Oliver): credit to Max Jordan for giving me the algorithm
@@ -1360,6 +1361,7 @@ render_panels(Panel* root, v4f rect){
     if(root->first && root->second){
         switch(root->first->split_type){
             case PANEL_SPLIT_VERTICAL:{
+                
                 v4f first = rect;
                 first.width *= root->first->split_ratio;
                 render_panels(root->first, first);
@@ -1368,6 +1370,7 @@ render_panels(Panel* root, v4f rect){
                 second.x += rect.width*root->first->split_ratio;
                 second.width *= root->second->split_ratio;
                 render_panels(root->second, second);
+                
             }break;
             case PANEL_SPLIT_HORIZONTAL:{
                 v4f first = rect;
@@ -1393,13 +1396,15 @@ render_panels(Panel* root, v4f rect){
         
         
         v2f delta = {};
-        if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-            root->parent->is_dragging = true;
-            
-        } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
-            root->parent->is_dragging = true;
+        if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
+            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+                root->parent->is_dragging = true;
+            }
+        } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
+            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+                root->parent->is_dragging = true;
+            }
         }
-        
         
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
@@ -1428,7 +1433,8 @@ render_panels(Panel* root, v4f rect){
                         }
                         UI_ROW UI_WIDTHFILL {
                             if(button("serialise")){
-                                serialise(editor->root);
+                                auto str = make_stringf(&platform->frame_arena, "%s", "test.arc");
+                                serialise(str, editor->root);
                             }
                             if(button("deserialise")){
                                 editor->should_reload = true;

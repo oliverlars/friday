@@ -140,7 +140,7 @@ internal b32
 find_previous_reference(Arc_Node* at, Arc_Node** result);
 
 internal void
-serialise(Arc_Node* root);
+serialise(String8 filename, Arc_Node* root);
 
 internal void
 deserialise();

@@ -10,7 +10,6 @@ struct Serial_Node {
 
 struct Arc_Format {
     s32 version_number;
-    s64 number_of_nodes;
     Serial_Node* nodes;
 };
 
@@ -33,6 +32,8 @@ struct Editor_State {
     Arc_Node* deserialise[1024];
     
     b32 should_reload;
+    
+    Arc_Format file;
 };
 
 Editor_State* editor;

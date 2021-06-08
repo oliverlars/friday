@@ -136,6 +136,7 @@ UPDATE {
     FRAME
     {
         
+        platform->reset_cursor();
         f32 start = platform->get_time();
         presenter->number_of_deletions = 0;
         presenter->number_of_deletions_before_cursor = 0;
@@ -575,7 +576,7 @@ UPDATE {
         if(editor->should_reload){
             pool_free(&editor->arc_pool);
             editor->arc_pool = make_pool(sizeof(Arc_Node));
-            deserialise();
+            deserialise(make_string("test.arc"));
             editor->root = editor->deserialise[0]->first_child;
             globals->presenter = push_type_zero(&platform->permanent_arena, Presenter_State);
             presenter = globals->presenter;

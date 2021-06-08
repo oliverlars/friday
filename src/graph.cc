@@ -607,7 +607,7 @@ insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
 }
 
 internal void
-serialise(Arc_Node* root){
+serialise(String8 filename, Arc_Node* root){
     if(!root) return;
     while(root){
         Arc_Node node = *root;
@@ -621,33 +621,42 @@ serialise(Arc_Node* root){
         editor->serialise[editor->serial_index] = {0, node};
         snprintf(editor->serialise[editor->serial_index].string, 256, "%.*s", 
                  root->string.length, root->string.text);
+        platform->append_to_file(filename, &editor->serialise[editor->serial_index], sizeof(Serial_Node));
         editor->serial_index++;
-        serialise(root->first_child);
-        editor->serialise[editor->serial_index++] = { 1, {}};
+        serialise(filename, root->first_child);
+        editor->serialise[editor->serial_index] = { 1, {}};
+        platform->append_to_file(filename, &editor->serialise[editor->serial_index], sizeof(Serial_Node));
+        editor->serial_index++;
         root = root->next_sibling;
     }
 }
 
 internal void
-deserialise(){
+deserialise(String8 filename){
+    void* file = nullptr;
+    u64 length_in_bytes = 0;
+    platform->load_file(&platform->frame_arena, filename, &file, &length_in_bytes);
+    assert(length_in_bytes);
+    Serial_Node* nodes = (Serial_Node*)file;
+    assert(nodes);
     
     if(!editor->deserial_index){
         Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
-        *node = editor->serialise[0].node;
+        *node = nodes[0].node;
         node->string.text = (char*)pool_allocate(&editor->string_pool);
-        int length = snprintf(node->string.text, 256, "%s", editor->serialise[0].string);
+        int length = snprintf(node->string.text, 256, "%s", nodes[0].string);
         node->string.length = clampi(length, 0, 256);
         editor->deserialise[editor->deserial_index++] = node;
     }
     
-    for(int i = 1; i < editor->serial_index; i++){
-        if(editor->serialise[i].marker){
+    for(int i = 1; i < length_in_bytes/sizeof(Serial_Node); i++){
+        if(nodes[i].marker){
             editor->deserial_index--;
         }else {
             Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
-            *node = editor->serialise[i].node;
+            *node = nodes[i].node;
             node->string.text = (char*)pool_allocate(&editor->string_pool);
-            int length = snprintf(node->string.text, 256, "%s", editor->serialise[i].string);
+            int length = snprintf(node->string.text, 256, "%s", nodes[i].string);
             node->string.length = clampi(length, 0, 256);
             Arc_Node* current = editor->deserialise[editor->deserial_index-1];
             insert_arc_node_as_child(current, node);
@@ -675,4 +684,3 @@ fix_references(Arc_Node* node){
         node = node->next_sibling;
     }
 }
-

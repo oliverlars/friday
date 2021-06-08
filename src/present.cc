@@ -1227,19 +1227,26 @@ present_if(Arc_Node* node){
         
         UI_COLUMN{
             UI_ROW{
-                present_editable_string(ui->theme.text_type, node);
-                present_space();
-                present_arc(node->first_child->first_child);
-                present_space();
-                present_string(ui->theme.text_misc, make_string("{"));
+                ID("expr%d", (int)node->first_child){
+                    present_editable_string(ui->theme.text_type, node);
+                    present_space();
+                    present_arc(node->first_child->first_child);
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("{"));
+                }
             }
             UI_ROW {
-                present_space();
-                present_space();
-                present_arc(node->last_child);
+                ID("scope%d", (int)node->last_child){
+                    present_space();
+                    present_space();
+                    present_arc(node->last_child);
+                }
             }
             UI_ROW {
-                present_string(ui->theme.text_misc, make_string("}"));
+                ID("%d", (int)node){
+                    
+                    present_string(ui->theme.text_misc, make_string("}"));
+                }
             }
         }
     }

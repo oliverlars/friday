@@ -26,6 +26,7 @@ struct Editor_State {
     int deserial_index;
     Arc_Node* deserialise[1024];
     
+    b32 should_reload;
 };
 
 Editor_State* editor;

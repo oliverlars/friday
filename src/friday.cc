@@ -572,6 +572,26 @@ UPDATE {
         if(platform->frame_count == 0){
             ui->active = presenter->cursor.text_id;
         }
+        if(editor->should_reload){
+            pool_free(&editor->arc_pool);
+            editor->arc_pool = make_pool(sizeof(Arc_Node));
+            deserialise();
+            editor->root = editor->deserialise[0]->first_child;
+            globals->presenter = push_type_zero(&platform->permanent_arena, Presenter_State);
+            presenter = globals->presenter;
+            ui->editing_string.length = 0;
+            ui->active = -1;
+            ui->hot = -1;
+            ui->cursor_pos = 0;
+            presenter->cursor.at = editor->root->first_child;
+            presenter->cursor.string = &editor->root->first_child->string;
+            presenter->buffer_index = 0;
+            presenter->line_index = 0;
+            editor->should_reload = false;
+            highlight_reference = nullptr;
+            presenter->last_cursor = {};
+        }
+        
     }
     platform->refresh_screen();
 }

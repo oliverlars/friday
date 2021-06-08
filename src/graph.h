@@ -57,6 +57,7 @@ enum Token_Type {
 
 
 enum Arc_Property {
+    AP_INVALID,
     AP_AST,
     AP_AST_TAG,
     AP_SELECTABLE,

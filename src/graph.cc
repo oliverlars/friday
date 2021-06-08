@@ -608,7 +608,7 @@ insert_arc_node_as_child(Arc_Node* at, Arc_Node* node){
 
 internal void
 serialise(Arc_Node* root){
-    
+    if(!root) return;
     while(root){
         Arc_Node node = *root;
         node.string = {};
@@ -622,17 +622,15 @@ serialise(Arc_Node* root){
         snprintf(editor->serialise[editor->serial_index].string, 256, "%.*s", 
                  root->string.length, root->string.text);
         editor->serial_index++;
-        if(root->first_child){
-            serialise(root->first_child);
-        }else {
-            editor->serialise[editor->serial_index++] = { 1, {}};
-        }
+        serialise(root->first_child);
+        editor->serialise[editor->serial_index++] = { 1, {}};
         root = root->next_sibling;
     }
 }
 
 internal void
 deserialise(){
+    
     if(!editor->deserial_index){
         Arc_Node* node = (Arc_Node*)pool_allocate(&editor->arc_pool);
         *node = editor->serialise[0].node;
@@ -642,7 +640,7 @@ deserialise(){
         editor->deserialise[editor->deserial_index++] = node;
     }
     
-    for(int i = 0; i < editor->serial_index; i++){
+    for(int i = 1; i < editor->serial_index; i++){
         if(editor->serialise[i].marker){
             editor->deserial_index--;
         }else {

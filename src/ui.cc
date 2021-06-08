@@ -1431,15 +1431,7 @@ render_panels(Panel* root, v4f rect){
                                 serialise(editor->root);
                             }
                             if(button("deserialise")){
-                                pool_free(&editor->arc_pool);
-                                editor->arc_pool = make_pool(sizeof(Arc_Node));
-                                deserialise();
-                                editor->root = editor->deserialise[0]->first_child;
-                                presenter->cursor.at = editor->root->first_child;
-                                presenter->cursor.string = &editor->root->first_child->first_child->string;
-                                presenter->buffer_index = 0;
-                                presenter->line_index = 0;
-                                
+                                editor->should_reload = true;
                             }
                         }
                     }

@@ -590,6 +590,19 @@ UPDATE {
             editor->should_reload = false;
             highlight_reference = nullptr;
             presenter->last_cursor = {};
+            
+            char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
+            
+            auto start = make_arc_node(&editor->arc_pool);
+            auto builtin = start;
+            for(int i = 0; i < 11; i++){
+                builtin->string = make_string(builtins[i]);
+                builtin->next_sibling = make_arc_node(&editor->arc_pool);
+                builtin = builtin->next_sibling;
+            }
+            
+            editor->builtins = start;
+            fix_references(editor->root);
         }
         
     }

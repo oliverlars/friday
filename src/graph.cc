@@ -656,3 +656,23 @@ deserialise(){
     }
 }
 
+internal void
+fix_references(Arc_Node* node){
+    
+    while(node){
+        if(arc_has_property(node, AP_AST) && (node->ast_type == AST_TOKEN || node->ast_type == AST_TYPE_TOKEN)){
+            if(node->token_type == TOKEN_REFERENCE){
+                if(node->ast_type == AST_TOKEN){
+                    set_token_type(node);
+                }else {
+                    set_type_token_type(node);
+                }
+            }
+        }
+        if(node->first_child){
+            fix_references(node->first_child);
+        }
+        node = node->next_sibling;
+    }
+}
+

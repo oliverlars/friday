@@ -1818,8 +1818,10 @@ present_ast(Arc_Node* node){
                     }else if(presenter->cursor.at == node){
                         present_editable_string(ui->theme.text_function, node);
                     }else{
-                        replace_string(&node->string, node->reference->string);
-                        present_editable_reference(ui->theme.text_function, node);
+                        if(node->reference){
+                            replace_string(&node->string, node->reference->string);
+                            present_editable_reference(ui->theme.text_function, node);
+                        }
                     }
                     if(node->first_child){
                         present_arc(node->first_child);

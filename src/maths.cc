@@ -368,8 +368,12 @@ operator+(v2f a, v2f b){
 
 inline v2f
 operator+=(v2f& a, v2f b){
-    a = a + b;
+    v2f result = {};
+    result = a + b;
+    a = result;
+    return result;
 }
+
 
 inline v2f
 operator-(v2f a, v2f b){

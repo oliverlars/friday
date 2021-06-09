@@ -896,9 +896,7 @@ push_widget_container(String8 string){
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
     if(result.dragged){
-        widget->pos.x += result.delta.x;
-        widget->pos.y += result.delta.y;
-        widget->dont_lerp_children = true;
+        widget->pos += result.delta;
     }
 }
 
@@ -1097,14 +1095,11 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     if(widget_has_property(widget, WP_CONTAINER)){
         if(widget->pos.x == 0 && widget->pos.y == 0){
             widget->pos = pos;
-        }else if(pos.y <= widget->pos.y){
-            // HACK(Oliver): this is to make sure it doesn't overlap with parent widgets,
-            // but we may want this to happen when scrolling, for example
-            widget->pos.y = pos.y;
         }
         pos = widget->pos;
         pos.y += widget->scroll_amount;
         v2f size = layout_widgets(widget->first_child, pos, widget->dont_lerp_children);
+        widget->min = size;
         widget->dont_lerp_children = false;
         //log("container size is now: %f %f", size.
     }

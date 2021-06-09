@@ -162,10 +162,58 @@ set_matching_reference_in_composite(Arc_Node* node, b32* found){
 }
 
 internal void
+set_matching_reference_in_composite(Arc_Node* at, Arc_Node* node, b32* found){
+    if(!found) return;
+    if(*found) return;
+    if(!node) return;
+    auto parent = node->parent;
+    Arc_Node* member = nullptr;
+    if(declaration_type_is_composite(node)){
+        auto decl = node;
+        auto type = decl->first_child->first_child;
+        auto _struct = type->reference;
+        member = _struct->first_child->first_child;
+    }
+    while(member && !*found){
+        if(arc_has_property(member, AP_AST) && member->ast_type == AST_USING){
+            set_matching_reference_in_composite(member->first_child, found);
+            if(*found) return;
+        }else if(string_eq(at->string, member->string)){
+            at->token_type = TOKEN_REFERENCE;
+            at->reference = member;
+            replace_string(&at->string, member->string);
+            *found = true;
+            return;
+        }
+        member = member->next_sibling;
+    }
+    return;
+}
+
+internal void
 set_token_type(Arc_Node* node){
     Arc_Node* result;
     if(node->token_type == TOKEN_ARRAY ||
        node->token_type == TOKEN_STRING) return;
+    
+    Arc_Node* prev_ref = nullptr;
+    b32 found = false;
+    if(find_previous_reference(node->prev_sibling, &prev_ref)){
+        set_matching_reference_in_composite(node, prev_ref, &found);
+        if(found) return;
+    }
+    
+    auto function = editor->stdlib;
+    while(function){
+        if(string_eq(node->string, function->string)){
+            node->token_type = TOKEN_REFERENCE;
+            node->reference = function;
+            replace_string(&node->string, node->reference->string);
+            return;
+        }
+        function = function->next_sibling;
+    }
+    
     auto scope = node;
     if(node->parent){
         // NOTE(Oliver): must be a dot operator
@@ -219,7 +267,7 @@ set_token_type(Arc_Node* node){
                 result = scope;
                 auto member = result->prev_sibling;
                 while(member){
-                    if(string_eq(member->string, node->string)){
+                    if(member->ast_type != AST_ASSIGNMENT && string_eq(member->string, node->string)){
                         node->token_type = TOKEN_REFERENCE;
                         node->reference = member;
                         replace_string(&node->string, node->reference->string);
@@ -260,9 +308,19 @@ set_token_type(Arc_Node* node){
 }
 
 internal b32
-can_resolve_reference(Arc_Node* node){
+can_resolve_reference(Arc_Node* node, Arc_Node**  would_be_reference = nullptr){
     Arc_Node* result;
     auto scope = node;
+    
+    auto func = editor->stdlib;
+    while(func){
+        if(string_eq(node->string, func->string)){
+            if(would_be_reference) *would_be_reference = func;
+            return true;
+        }
+        func = func->next_sibling;
+    }
+    
     if(node->parent){
         // NOTE(Oliver): must be a dot operator
         auto parent = node->parent;
@@ -276,6 +334,7 @@ can_resolve_reference(Arc_Node* node){
             }
             while(member){
                 if(string_eq(node->string, member->string)){
+                    if(would_be_reference) *would_be_reference = member;
                     return true;
                 }
                 member = member->next_sibling;
@@ -288,6 +347,7 @@ can_resolve_reference(Arc_Node* node){
         auto init = function->first_child->first_child;
         if(!is_child_of_node(node, init)){
             if(string_eq(node->string, init->string)){
+                if(would_be_reference) *would_be_reference = init;
                 return true;
             }
         }
@@ -300,6 +360,7 @@ can_resolve_reference(Arc_Node* node){
             if(!is_child_of_node(node, function->first_child)){
                 while(param){
                     if(string_eq(param->string, node->string)){
+                        if(would_be_reference) *would_be_reference = param;
                         return true;
                     }
                     param = param->next_sibling;
@@ -312,6 +373,7 @@ can_resolve_reference(Arc_Node* node){
                 auto member = result->prev_sibling;
                 while(member){
                     if(string_eq(member->string, node->string)){
+                        if(would_be_reference) *would_be_reference = member;
                         return true;
                     }
                     member = member->prev_sibling;
@@ -330,7 +392,7 @@ set_type_token_type(Arc_Node* node){
     
     auto builtin = editor->builtins;
     while(builtin){
-        if(string_eq(node->string, builtin->string)){
+        if(builtin->ast_type == AST_TYPE_TOKEN && string_eq(node->string, builtin->string)){
             node->token_type = TOKEN_REFERENCE;
             node->reference = builtin;
             replace_string(&node->string, node->reference->string);
@@ -396,7 +458,6 @@ find_function(Arc_Node* node){
                     }
                     member = member->prev_sibling;
                 }
-                
             }
         }
         scope = scope->parent;
@@ -450,6 +511,23 @@ tab_completer(Arc_Node* node){
     if(node->parent->ast_type == AST_TOKEN){
         auto string = find_matching_reference_in_composite(node->parent->reference, &found);
         if(found) return string;
+    }
+    
+    auto func = editor->stdlib;
+    while(func){
+        if(is_strict_substring(node->string, func->string)){
+            if(has_pressed_key(KEY_TAB)){
+                node->token_type = TOKEN_REFERENCE;
+                node->reference = func;
+                replace_string(&node->string, node->reference->string);
+                ui->cursor_pos = presenter->cursor.at->string.length;
+                return {};
+            }else{
+                return make_stringf(&platform->frame_arena, "%.*s", func->string.length,
+                                    func->string.text+node->string.length);
+            }
+        }
+        func = func->next_sibling;
     }
     
     Arc_Node* prev_ref = nullptr;
@@ -1223,6 +1301,15 @@ present_type_usage(Arc_Node* node){
 }
 
 internal void
+present_new(Arc_Node* node){
+    UI_ROW {
+        present_editable_string(ui->theme.text_type, node);
+        present_space();
+        present_arc(node->first_child);
+    }
+}
+
+internal void
 present_if(Arc_Node* node){
     ID("if%d", (int)node){
         
@@ -1246,6 +1333,36 @@ present_if(Arc_Node* node){
             UI_ROW {
                 ID("%d", (int)node){
                     
+                    present_string(ui->theme.text_misc, make_string("}"));
+                }
+            }
+        }
+    }
+}
+
+internal void
+present_while(Arc_Node* node){
+    ID("while%d", (int)node){
+        
+        UI_COLUMN{
+            UI_ROW{
+                ID("expr%d", (int)node->first_child){
+                    present_editable_string(ui->theme.text_type, node);
+                    present_space();
+                    present_arc(node->first_child->first_child);
+                    present_space();
+                    present_string(ui->theme.text_misc, make_string("{"));
+                }
+            }
+            UI_ROW {
+                ID("scope%d", (int)node->last_child){
+                    present_space();
+                    present_space();
+                    present_arc(node->last_child);
+                }
+            }
+            UI_ROW {
+                ID("%d", (int)node){
                     present_string(ui->theme.text_misc, make_string("}"));
                 }
             }
@@ -1343,8 +1460,9 @@ present_struct(Arc_Node* node){
 
 internal void
 present_call(Arc_Node* node){
-    ID("call%d", (int)node){
-        UI_ROW{
+    UI_ROW{
+        ID("call%d", (int)node){
+            
             if(presenter->cursor.at == node){
                 present_editable_string(ui->theme.text_function, node);
             }else{
@@ -1355,7 +1473,12 @@ present_call(Arc_Node* node){
             
             auto arg = node->first_child->first_child;
             assert(node->reference);
-            auto param = node->reference->first_child->first_child;
+            auto param = node->reference->first_child;
+            if(param){
+                param = param->first_child;
+            }else {
+                param = nullptr;
+            }
             
             for(auto expr = arg; expr; expr = expr->next_sibling){
                 ID("args%d", (int)expr){
@@ -1794,6 +1917,12 @@ present_ast(Arc_Node* node){
         case AST_IF: {
             present_if(node);
         }break;
+        case AST_NEW: {
+            present_new(node);
+        }break;
+        case AST_WHILE: {
+            present_while(node);
+        }break;
         case AST_SCOPE: {
             auto member = node->first_child;
             UI_COLUMN{
@@ -1867,6 +1996,7 @@ present_ast(Arc_Node* node){
             }
         }break;
         case AST_TYPE_TOKEN: {
+            
             if(node->token_type == TOKEN_MISC){
                 present_editable_string(ui->theme.text_misc, node);
             }else if(node->token_type == TOKEN_REFERENCE){
@@ -2210,6 +2340,16 @@ build_buffer_from_arc(Arc_Node* node){
             build_buffer_from_arc(node->first_child->first_child);
             push_newline();
             build_buffer_from_arc(node->last_child);
+        }break;
+        case AST_WHILE: {
+            push_arc(node);
+            build_buffer_from_arc(node->first_child->first_child);
+            push_newline();
+            build_buffer_from_arc(node->last_child);
+        }break;
+        case AST_NEW: {
+            push_arc(node);
+            build_buffer_from_arc(node->first_child);
         }break;
         case AST_FOR: {
             push_arc(node);

@@ -80,3 +80,6 @@ global Arc_Node* highlight_reference;
 
 
 Presenter_State* presenter;
+
+internal String8 
+find_matching_reference_in_composite(Arc_Node* node, b32* found);

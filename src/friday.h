@@ -19,6 +19,7 @@ struct Editor_State {
     Arc_Node* root;
     
     Arc_Node* builtins;
+    Arc_Node* stdlib;
     
     Pool string_pool;
     

@@ -9,6 +9,7 @@
 #include "widgets.h"
 #include "graph.h"
 #include "present.h"
+#include "c_backend.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -16,7 +17,6 @@
 #include "memory.cc"
 #include "strings.cc"
 #include "platform.cc"
-
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb_image.h"
@@ -26,6 +26,8 @@
 #include "widgets.cc"
 #include "present.cc"
 #include "graph.cc"
+#include "c_backend.cc"
+
 
 global Friday_Globals* globals = 0;
 
@@ -36,6 +38,31 @@ initialise_globals(){
     ui = globals->ui;
     editor = globals->editor;
     presenter = globals->presenter;
+}
+
+internal void
+make_builtins(){
+    
+    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
+    
+    auto first_builtin = make_arc_node(&editor->arc_pool);
+    set_as_ast(first_builtin, AST_TYPE_TOKEN);
+    auto builtin = first_builtin;
+    for(int i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++){
+        int length = snprintf(builtin->string.text, 256, "%s", builtins[i]);
+        builtin->string.length = length;
+        builtin->next_sibling = make_arc_node(&editor->arc_pool);
+        set_as_ast(builtin->next_sibling, AST_TYPE_TOKEN);
+        builtin = builtin->next_sibling;
+    }
+    auto print = make_arc_node(&editor->arc_pool);
+    set_as_ast(print, AST_FUNCTION);
+    int length = snprintf(print->string.text, 256, "print");
+    print->string.length = length;
+    
+    editor->builtins = first_builtin;
+    editor->stdlib = print;
+    
 }
 
 internal void
@@ -91,23 +118,13 @@ PERMANENT_LOAD {
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     
-    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
-    
-    auto start = make_arc_node(&editor->arc_pool);
-    auto builtin = start;
-    for(int i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++){
-        builtin->string = make_string(builtins[i]);
-        builtin->next_sibling = make_arc_node(&editor->arc_pool);
-        builtin = builtin->next_sibling;
-    }
-    
-    editor->builtins = start;
-    
     auto scope = make_scope(&editor->arc_pool);
     set_as_ast(scope, AST_SCOPE);
     arc_set_property(scope, AP_LIST);
     auto first = make_selectable_arc_node(&editor->arc_pool);
     insert_arc_node_as_child(scope, first);
+    
+    make_builtins();
     
     editor->root = scope;
     
@@ -316,7 +333,7 @@ UPDATE {
                 presenter->mode = P_CREATE;
             }
         }
-        
+        Arc_Node* would_be_reference = nullptr;
         if(presenter->mode == P_CREATE){
             
             //~ Node creation keybinds
@@ -435,6 +452,24 @@ UPDATE {
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
+            }else if(string_eq(presenter->cursor.at->string, "while")){
+                if(!presenter->cursor.at->next_sibling){
+                    append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                }
+                arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                make_while_from_node(presenter->cursor.at, &editor->arc_pool);
+                
+                auto expr = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(expr, AP_DELETABLE);
+                set_as_ast(expr, AST_TOKEN);
+                insert_arc_node_as_child(presenter->cursor.at->first_child, expr);
+                
+                auto empty = make_selectable_arc_node(&editor->arc_pool);
+                arc_remove_property(expr, AP_DELETABLE);
+                insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
+                
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                presenter->mode = P_EDIT;
             }else if(string_eq(presenter->cursor.at->string, "using")){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
@@ -470,9 +505,11 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             }else if(string_eq(presenter->cursor.at->string, "return")){
+                
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
                 }
+                
                 arc_set_property(presenter->cursor.at, AP_DELETABLE);
                 make_return_from_node(presenter->cursor.at, &editor->arc_pool);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
@@ -481,6 +518,19 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 
+            }else if(string_eq(presenter->cursor.at->string, "new")){
+                
+                if(!presenter->cursor.at->next_sibling){
+                    append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                }
+                
+                arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                make_new_from_node(presenter->cursor.at, &editor->arc_pool);
+                auto next = make_selectable_arc_node(&editor->arc_pool);
+                set_as_ast(next, AST_TYPE_TOKEN);
+                insert_arc_node_as_child(presenter->cursor.at, next);
+                presenter->mode = P_EDIT;
+                advance_cursor(&presenter->cursor, CURSOR_RIGHT);
             }else if(has_pressed_key(KEY_S)){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
@@ -507,7 +557,20 @@ UPDATE {
                 presenter->mode = P_EDIT;
                 
             }else if(presenter->cursor.at->string.length == 0){
-                
+                if(presenter->cursor.at->parent &&
+                   presenter->cursor.at->parent->parent &&
+                   presenter->cursor.at->parent->parent->parent &&
+                   presenter->cursor.at->parent->parent->parent->ast_type == AST_CALL &&
+                   !presenter->cursor.at->next_sibling &&
+                   presenter->cursor.at->prev_sibling){
+                    // NOTE(Oliver): shitty special casing for function calls :(
+                    auto expr = make_arc_node(&editor->arc_pool);
+                    set_as_ast(expr, AST_EXPR);
+                    auto next = make_selectable_arc_node(&editor->arc_pool);
+                    set_as_ast(next, AST_TOKEN);
+                    insert_arc_node_as_sibling(presenter->cursor.at->parent, expr);
+                    insert_arc_node_as_child(expr, next);
+                }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
             }else if(has_pressed_key(KEY_ENTER)){
@@ -530,23 +593,41 @@ UPDATE {
             }else if(presenter->cursor.at->ast_type != AST_INVALID && !presenter->cursor.at->next_sibling){
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 presenter->mode = P_EDIT;
-            }else if(can_resolve_reference(presenter->cursor.at)){
+            }else if(can_resolve_reference(presenter->cursor.at, &would_be_reference)){
                 
-                if(!arc_has_property(presenter->cursor.at, AP_AST)){
+                if(would_be_reference->ast_type == AST_FUNCTION){
                     if(!presenter->cursor.at->next_sibling){
                         append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
                     }
-                    make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
+                    arc_set_property(presenter->cursor.at, AP_DELETABLE);
+                    make_call_from_node(presenter->cursor.at, &editor->arc_pool);
+                    presenter->cursor.at->reference = would_be_reference;
+                    replace_string(&presenter->cursor.at->string, would_be_reference->string);
                     auto next = make_selectable_arc_node(&editor->arc_pool);
-                    next->string = presenter->cursor.at->string;
-                    next->reference = presenter->cursor.at->reference;
                     set_as_ast(next, AST_TOKEN);
-                    insert_arc_node_as_child(presenter->cursor.at->first_child, next);
+                    insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
+                    advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+                    presenter->mode = P_EDIT;
                     
-                    auto empty = make_selectable_arc_node(&editor->arc_pool);
-                    set_as_ast(empty, AST_TOKEN);
-                    insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
-                    
+                }else {
+                    if(!arc_has_property(presenter->cursor.at, AP_AST)){
+                        
+                        if(!presenter->cursor.at->next_sibling){
+                            append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
+                        }
+                        
+                        make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
+                        auto next = make_selectable_arc_node(&editor->arc_pool);
+                        next->string = presenter->cursor.at->string;
+                        next->reference = presenter->cursor.at->reference;
+                        set_as_ast(next, AST_TOKEN);
+                        insert_arc_node_as_child(presenter->cursor.at->first_child, next);
+                        
+                        auto empty = make_selectable_arc_node(&editor->arc_pool);
+                        set_as_ast(empty, AST_TOKEN);
+                        insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
+                        
+                    }
                 }
             }
         }
@@ -596,18 +677,7 @@ UPDATE {
             editor->should_reload = false;
             highlight_reference = nullptr;
             presenter->last_cursor = {};
-            
-            char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
-            
-            auto start = make_arc_node(&editor->arc_pool);
-            auto builtin = start;
-            for(int i = 0; i < sizeof(builtins)/sizeof(builtins[0]); i++){
-                builtin->string = make_string(builtins[i]);
-                builtin->next_sibling = make_arc_node(&editor->arc_pool);
-                builtin = builtin->next_sibling;
-            }
-            
-            editor->builtins = start;
+            make_builtins();
             fix_references(editor->root);
             
         }

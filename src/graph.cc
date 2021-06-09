@@ -54,8 +54,6 @@ make_scope(Pool* pool){
 internal Arc_Node*
 make_new_from_node(Arc_Node* _new, Pool* pool){
     set_as_ast(_new, AST_NEW);
-    auto expr = make_selectable_arc_node(pool);
-    insert_arc_node_as_child(_new, expr);
     return _new;
 }
 
@@ -514,7 +512,7 @@ go_to_or_make_next(){
 internal b32
 declaration_type_is_composite(Arc_Node* node){
     if(!node) return false;
-    assert(node->ast_type == AST_DECLARATION);
+    if(node->ast_type != AST_DECLARATION) return false;
     if(node->first_child->first_child->reference){
         return node->first_child->first_child->reference->ast_type == AST_STRUCT;
     }else {
@@ -675,8 +673,12 @@ internal void
 fix_references(Arc_Node* node){
     
     while(node){
-        if(arc_has_property(node, AP_AST) && (node->ast_type == AST_TOKEN || node->ast_type == AST_TYPE_TOKEN)){
-            if(node->token_type == TOKEN_REFERENCE){
+        if(arc_has_property(node, AP_AST) && (node->ast_type == AST_TOKEN || node->ast_type == AST_TYPE_TOKEN ||
+                                              node->ast_type == AST_CALL)){
+            if(node->ast_type == AST_CALL){
+                set_token_type(node);
+            }
+            else if(node->token_type == TOKEN_REFERENCE){
                 if(node->ast_type == AST_TOKEN){
                     set_token_type(node);
                 }else {

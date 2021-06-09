@@ -37,3 +37,5 @@ struct String_Heap {
 struct Lexer {
     char* pos;
 };
+
+#define expand_string(s) s.length, s.text

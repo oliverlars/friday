@@ -1428,7 +1428,9 @@ render_panels(Panel* root, v4f rect){
                         
                         yspacer(20);
                         UI_ROW UI_WIDTHFILL {
-                            button("Compile");
+                            if(button("Compile")){
+                                compile_c(editor->root);
+                            }
                             button("Run");
                         }
                         UI_ROW UI_WIDTHFILL {

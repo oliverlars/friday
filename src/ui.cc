@@ -1339,7 +1339,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
 
 static int present_style = 0;
 internal void present_arc(Arc_Node* node);
-static f32 font_scale = 1.0f;
+static f32 font_scale = 0.85f;
 
 internal void
 render_panels(Panel* root, v4f rect){
@@ -1438,9 +1438,17 @@ render_panels(Panel* root, v4f rect){
                         local_persist v4f rect  = {};
                         yspacer(20);
                         
-                        UI_WIDTHFILL {
-                            label("font size"); 
-                            fslider(0, 2, &font_scale, "font scale");
+                        UI_WIDTHFILL UI_ROW{
+                            
+                            UI_COLUMN {
+                                label("font size"); 
+                                yspacer(15);
+                                label("indent level"); 
+                            }
+                            UI_COLUMN {
+                                fslider(0, 2, &font_scale, "font scale");
+                                fslider(0, 50, &presenter->indent_level, "indent");
+                            }
                         }
                         
                         yspacer(20);
@@ -1470,6 +1478,7 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor#%d", (int)root);
                     UI_ROW {
+                        xspacer(50);
                         label("view");
                         xspacer(10);
                         for(int i = 0; i < editor->view_count; i++){

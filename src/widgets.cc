@@ -48,10 +48,12 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     
     
     b32 dropdown = false;
+    yspacer(50);
     UI_ROW {
+        xspacer(50);
         label("%.*s", string.length, string.text);
         UI_WIDTHFILL{
-            xspacer(20);
+            xspacer(50);
             dropdown = arrow_dropdown("change type%.*s", string.length, string.text);
         }
         

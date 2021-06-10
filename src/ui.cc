@@ -1490,38 +1490,31 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, "Debug#%d", (int)root){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Debug");
-                    if(dropdown("test dropdown")){
+                    if(dropdown("navigation")){
                         UI_COLUMN {
-                            
-#if 0
-                            for(int i = 0; i < presenter->line_pos; i++){
-                                label("line %d start: %d end: %d", i, presenter->lines[i].start, presenter->lines[i].end);
-                            }
-                            label("current line: %d", presenter->line_index);
-                            label("current pos: %d", presenter->buffer_pos);
-                            label("current pos on line : %d", presenter->buffer_pos - presenter->lines[presenter->line_index].start);
-#endif
-                            
+                            label("current line: %d", presenter->cursor.line_index);
+                            label("current pos: %d", presenter->cursor.buffer_index);
+                            label("max line: %d", presenter->line_pos);
+                            label("max pos: %d", presenter->buffer_pos);
                             for(int j = 0; j < presenter->line_pos; j++){
-                                UI_ROW {
-                                    for(int i = presenter->lines[j].start; i <= presenter->lines[j].end; i++){
+                                UI_ROW{
+                                    for(int i = presenter->lines[j].start; i < presenter->lines[j].end; i++){
                                         ID("buffer%d", (int)presenter->buffer[i].node){
                                             if(presenter->buffer[i].node->string.length){
                                                 label("%.*s", presenter->buffer[i].node->string.length,
                                                       presenter->buffer[i].node->string.text);
                                             }else {
-                                                label("empty %d", presenter->buffer[i].node->ast_type);
+                                                //label("empty %d", presenter->buffer[i].node->ast_type);
                                             }
                                         }
                                     }
+                                    label("| line: %d %d", presenter->lines[j].start, presenter->lines[j].end);
                                 }
                             }
                             
                         }
                     }
-                    if(dropdown("secrets")){
-                        
-                    }
+                    
                 }
             }
         }else if(root->type == PANEL_CONSOLE){

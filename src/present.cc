@@ -695,7 +695,7 @@ set_next_cursor_pos(Cursor* cursor){
             next_pos = clampi(next_pos-count, 0, presenter->buffer_pos-1);
             cursor->at = presenter->buffer[next_pos].node;
             ui->cursor_pos = cursor->at->string.length;
-            if(next_pos < presenter->lines[line_index].start){
+            while(next_pos < presenter->lines[line_index].start){
                 line_index = clampi(line_index-1, 0, presenter->line_pos-1);
             }
         }break;
@@ -704,7 +704,7 @@ set_next_cursor_pos(Cursor* cursor){
             cursor->at = presenter->buffer[next_pos].node;
             ui->cursor_pos = 0;
             
-            if(next_pos > presenter->lines[line_index].end){
+            while(next_pos > presenter->lines[line_index].end){
                 line_index = clampi(line_index+1, 0, presenter->line_pos-1);
             }
         }break;
@@ -798,11 +798,12 @@ push_newline(){
     }else{
         line_info.start = presenter->lines[presenter->line_pos-1].end+1;
         line_info.end = presenter->buffer_pos-1;
-        if(line_info.end < line_info.start){
+        if(line_info.end <= line_info.start){
             line_info.end = line_info.start;
         }
     }
     presenter->lines[presenter->line_pos++] = line_info;
+    
 }
 
 internal b32
@@ -1067,21 +1068,24 @@ present_editable_reference(Colour colour, Arc_Node* node){
     }
     
     if(result.clicked){
+        
         ui->cursor_pos = string.length;
-        int clicked_pos = 0;
-        int cursor_pos = presenter->buffer_index;
-        for(int i = 0; i < presenter->buffer_pos; i++){
-            if(widget->arc == presenter->buffer[i].node){
-                clicked_pos = i;
+        
+        // NOTE(Oliver): use navigation system to find where to click to
+        // as it needs to update presenter->buffer_index and presenter->line_index
+        
+        int index = 0;
+        for(; index < presenter->buffer_pos; index++){
+            if(presenter->buffer[index].node == widget->arc){
                 break;
             }
         }
-        // NOTE(Oliver): use navigation system to find where to click to
-        // as it needs to update presenter->buffer_index and presenter->line_index
-        if(clicked_pos - cursor_pos <= 0){
-            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(clicked_pos - cursor_pos));
-        }else if(clicked_pos - cursor_pos > 0){
-            advance_cursor(&presenter->cursor,CURSOR_RIGHT, clicked_pos - cursor_pos);
+        int pos_diff = index - presenter->cursor.buffer_index;
+        
+        if(pos_diff < 0){
+            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(pos_diff));
+        }else if(pos_diff > 0){
+            advance_cursor(&presenter->cursor,CURSOR_RIGHT, pos_diff);
         }
         presenter->cursor.text_id = widget->id;
         
@@ -1091,7 +1095,6 @@ present_editable_reference(Colour colour, Arc_Node* node){
         highlight_reference = node->reference;
     }
     presenter->pos++;
-    
 }
 
 internal void
@@ -1192,7 +1195,22 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     if(result.clicked){
         ui->cursor_pos = string->length;
-        presenter->cursor.at = widget->arc;
+        
+        int index = 0;
+        for(; index < presenter->buffer_pos; index++){
+            if(presenter->buffer[index].node == widget->arc){
+                break;
+            }
+        }
+        // NOTE(Oliver): use navigation system to find where to click to
+        // as it needs to update presenter->buffer_index and presenter->line_index
+        int pos_diff = index - presenter->cursor.buffer_index;
+        if(pos_diff < 0){
+            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(pos_diff));
+        }else if(pos_diff > 0){
+            advance_cursor(&presenter->cursor,CURSOR_RIGHT, pos_diff);
+        }
+        
         presenter->cursor.text_id = widget->id;
     }
     
@@ -2341,7 +2359,6 @@ build_buffer_from_arc(Arc_Node* node){
                 build_buffer_from_arc(decl);
             }
             build_buffer_from_arc(node->first_child->next_sibling->first_child);
-            push_newline();
             build_buffer_from_arc(node->last_child);
         }break;
         case AST_TYPE_USAGE: {

@@ -1106,6 +1106,8 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
         pos = widget->pos;
         pos.y += widget->scroll_amount;
         v2f size = layout_widgets(widget->first_child, pos, widget->dont_lerp_children);
+        size.width = max(size.width, 200);
+        size.height = max(size.height, 100);
         widget->min = size;
         widget->dont_lerp_children = false;
         //log("container size is now: %f %f", size.

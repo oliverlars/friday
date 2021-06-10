@@ -302,9 +302,11 @@ internal v4f
 union_rects(v4f a, v4f b){
     v4f result = {};
     result.x = min(a.x, b.x);
-    result.y = min(a.x, b.x);
-    result.width = max(a.width, b.width);
-    result.height = max(a.height, b.height);
+    result.y = min(a.y, b.y);
+    result.width = max(a.x + a.width, b.x + b.width);
+    result.height = max(a.y + a.height, b.y + b.height);
+    result.width = result.width - result.x;
+    result.height = result.height - result.y;
     return result;
 }
 
@@ -366,12 +368,10 @@ operator+(v2f a, v2f b){
     return result;
 }
 
-inline v2f
+inline v2f&
 operator+=(v2f& a, v2f b){
-    v2f result = {};
-    result = a + b;
-    a = result;
-    return result;
+    a = a + b;
+    return a;
 }
 
 
@@ -386,6 +386,7 @@ operator-(v2f a, v2f b){
 inline v2f
 operator-=(v2f& a, v2f b){
     a = a - b;
+    return a;
 }
 
 inline v2f

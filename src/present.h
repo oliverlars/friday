@@ -75,6 +75,9 @@ struct Presenter_State {
     
     Arc_Node** delete_queue;
     int delete_queue_size;
+    
+    v4f select_first_rect;
+    v4f select_second_rect;
 };
 global Arc_Node* highlight_reference;
 

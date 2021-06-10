@@ -59,12 +59,10 @@ enum Widget_Property {
 struct Widget_Style {
     v4f text_colour;
     v4f border_colour;
+    v4f background_colour;
     f32 font_scale;
 };
 
-struct Widget_State {
-    
-};
 
 struct Arc_Node;
 
@@ -105,7 +103,8 @@ struct Widget {
 
 struct Widget_Update {
     b32 clicked;
-    b32 dragged;
+    b32 left_dragged;
+    b32 middle_dragged;
     b32 hovered;
     v2f delta;
     v2f clicked_position;

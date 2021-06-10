@@ -115,10 +115,22 @@ button(char* fmt, ...){
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
+    
+#if 0    
+    Widget_Style style = {};
+    style.background_colour = v4f_from_colour({0x2F9160ff});
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour({0x103321ff});
+    style.font_scale = 0.8f;
+    push_style(style);
+#endif
+    
     Widget* widget = push_widget(string);
+    
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
+    //widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
     //widget_set_property(widget, WP_LERP_POSITION);
@@ -221,7 +233,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
                     lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
                 }
             }
-            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(border_colour));
+            push_rectangle_outline(bbox, 0.2f, 3, colour_from_v4f(border_colour));
             
             pos.x += 1;
             pos.y -= 1;
@@ -241,7 +253,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
         *value = min + x*(max-min);
         widget->value = (*value - min)/(max - min);
     }
-    if(result.dragged){
+    if(result.left_dragged){
         f32 x = result.delta.x/result.size.width;
         *value += x*(max-min);
         clampf(value, min, max);

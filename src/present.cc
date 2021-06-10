@@ -762,11 +762,11 @@ present_string(Colour colour, String8 string){
     auto result = update_widget(widget);
     
     
-    Widget_Style style = {
-        v4f_from_colour(colour),
-        v4f_from_colour(ui->theme.text),
-        font_scale,
-    };
+    Widget_Style style = {};
+    
+    style.text_colour = v4f_from_colour(colour),
+    style.border_colour  = v4f_from_colour(ui->theme.text),
+    style.font_scale = font_scale;
     widget->style = style;
     
     v2f size = get_text_size(widget->string, widget->style.font_scale);
@@ -1002,11 +1002,16 @@ present_editable_reference(Colour colour, Arc_Node* node){
         if(!widget->alt_string.length && presenter->cursor.text_id != widget->id){
             push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
+        
         if(presenter->start_pos != presenter->end_pos &&
-           widget->present_pos >= presenter->start_pos &&
-           widget->present_pos <= presenter->end_pos){
-            push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));
+           presenter->start_pos == widget->present_pos){
+            presenter->select_first_rect = bbox;
         }
+        if(presenter->start_pos != presenter->end_pos &&
+           presenter->end_pos == widget->present_pos){
+            presenter->select_second_rect = bbox;
+        }
+        
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
@@ -1044,11 +1049,13 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     auto result = update_widget(widget);
     
-    Widget_Style style = {
-        v4f_from_colour(colour),
-        v4f_from_colour(ui->theme.text),
-        font_scale,
-    };
+    Widget_Style style = {};
+    
+    style.text_colour = v4f_from_colour(colour),
+    style.border_colour  = v4f_from_colour(ui->theme.text),
+    style.font_scale = font_scale;
+    widget->style = style;
+    
     widget->style = style;
     
     if(presenter->cursor.text_id == widget->id){
@@ -1100,7 +1107,6 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget->alt_string = node->string;
     widget->style.text_colour = v4f_from_colour(colour);
-    
     widget->arc = node;
     
     if(presenter->select_start.at == node){
@@ -1126,11 +1132,16 @@ present_editable_string(Colour colour, Arc_Node* node){
         if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
+        
         if(presenter->start_pos != presenter->end_pos &&
-           widget->present_pos >= presenter->start_pos &&
-           widget->present_pos <= presenter->end_pos){
-            push_rectangle(bbox, 1, colour_from_v4f(v4f(1,1,1,0.2)));
+           presenter->start_pos == widget->present_pos){
+            presenter->select_first_rect = bbox;
         }
+        if(presenter->start_pos != presenter->end_pos &&
+           presenter->end_pos == widget->present_pos){
+            presenter->select_second_rect = bbox;
+        }
+        
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
         if(presenter->cursor.text_id == widget->id){
@@ -1163,11 +1174,12 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     auto result = update_widget(widget);
     
-    Widget_Style style = {
-        v4f_from_colour(colour),
-        v4f_from_colour(ui->theme.text),
-        font_scale,
-    };
+    Widget_Style style = {};
+    
+    style.text_colour = v4f_from_colour(colour),
+    style.border_colour  = v4f_from_colour(ui->theme.text),
+    style.font_scale = font_scale;
+    
     widget->style = style;
     
     if(presenter->cursor.text_id == widget->id){

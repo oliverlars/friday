@@ -43,7 +43,7 @@ initialise_globals(){
 internal void
 make_builtins(){
     
-    char* builtins[] = {"s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
+    char* builtins[] = {"void", "s8", "s16", "s32", "s64", "u8", "u16", "u32", "u64", "f32", "f64", "string"};
     
     auto first_builtin = make_arc_node(&editor->arc_pool);
     set_as_ast(first_builtin, AST_TYPE_TOKEN);
@@ -290,11 +290,23 @@ UPDATE {
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
+        // NOTE(Oliver): background
+        Colour backdrop = ui->theme.background;
+        backdrop.r /= 1.2f;
+        backdrop.g /= 1.2f;
+        backdrop.b /= 1.2f;
+        push_rectangle(v4f(0,0, platform->window_size.width,platform->window_size.height), 1, backdrop);
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);
         }
+        Colour select_colour;
+        select_colour.packed = 0xB73E4Aff;
+        select_colour.a *= 0.4f;
+        push_rectangle(union_rects(presenter->select_first_rect,
+                                   presenter->select_second_rect),
+                       3, select_colour);
         
         if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
            (presenter->last_cursor.at->ast_type == AST_TOKEN ||
@@ -681,6 +693,8 @@ UPDATE {
             fix_references(editor->root);
             
         }
+        presenter->select_first_rect = v4f(0,0,0,0);
+        presenter->select_second_rect = v4f(0,0,0,0);
         
     }
     platform->refresh_screen();

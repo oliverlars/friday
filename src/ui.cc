@@ -422,7 +422,8 @@ push_default_style(){
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
-    style.font_scale = .8f;
+    //style.background_colour = v4f_from_colour(ui->theme.background);
+    style.font_scale = 0.8f;
     push_style(style);
 }
 
@@ -743,7 +744,13 @@ update_widget(Widget* widget){
             }
             else if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
                 ui->active = widget->id;
-                result.dragged = true;
+                result.left_dragged = true;
+                result.delta = delta;
+                result.pos = bbox.pos;
+                result.size = bbox.size;
+            }else if(has_mouse_dragged(MOUSE_BUTTON_MIDDLE, &delta)){
+                ui->active = widget->id;
+                result.middle_dragged = true;
                 result.delta = delta;
                 result.pos = bbox.pos;
                 result.size = bbox.size;
@@ -895,7 +902,7 @@ push_widget_container(String8 string){
     auto result = update_widget(widget);
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
-    if(result.dragged){
+    if(result.middle_dragged){
         widget->pos += result.delta;
     }
 }
@@ -1137,13 +1144,15 @@ internal void
 widget_render_text(Widget* widget, Colour colour){
     v2f pos = widget->pos;
     pos.y -= widget->min.height;
-    v4f bbox = get_text_bbox(pos, widget->string, widget->style.font_scale);
-    bbox = v4f2(pos, widget->min);
+    v4f text_bbox = get_text_bbox(pos, widget->string, widget->style.font_scale);
+    v4f bbox = v4f2(pos, widget->min);
     if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
+        bbox = inflate_rect(bbox, widget->hot_transition*2.0);
+        //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
         push_rectangle(bbox, 1, ui->theme.background);
     }
     if(widget_has_property(widget, WP_RENDER_BORDER)){
-        bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
+        bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
         v4f border_colour;
         if(widget->id == ui->hot){
             border_colour = v4f_from_colour(ui->theme.cursor);
@@ -1157,7 +1166,7 @@ widget_render_text(Widget* widget, Colour colour){
             }
         }
         
-        push_rectangle_outline(bbox, 1, 3, colour_from_v4f(border_colour));
+        push_rectangle_outline(bbox, 0.2, 3, colour_from_v4f(border_colour));
         widget->pos.x += 1;
         widget->pos.y -= 1;
     }
@@ -1171,8 +1180,10 @@ widget_render_text(Widget* widget, Colour colour){
     shadow_colour.g /= 8;
     shadow_colour.b /= 8;
     shadow_colour.a = 1;
-    push_string(v2f(text_x+1.5, bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour), widget->style.font_scale);
+    v2f text_size = get_text_size(widget->string, widget->style.font_scale);
+    push_string(v2f(text_x+1.5, text_bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour), widget->style.font_scale);
     push_string(v2f(text_x, bbox.y), widget->string, colour, widget->style.font_scale);
+    //push_rectangle_outline(v4f(text_x, bbox.y, text_size.width, text_size.height), 0.2, 3, ui->theme.text);
 }
 
 internal void
@@ -1184,10 +1195,10 @@ render_widgets(Widget* widget){
         
         v4f bbox = v4f2(widget->pos, widget->min);
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
-            push_rectangle(bbox, 3, ui->theme.background);
+            //push_rectangle(bbox, 3, colour_from_v4f(widget->style.background_colour));
         }
         bbox = inflate_rect(bbox, 1.5);
-        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
+        push_rectangle_outline(bbox, 0.2, 3, ui->theme.text);
         
     }
     
@@ -1246,16 +1257,16 @@ render_widgets(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
-        widget_render_text(widget, ui->theme.text);
+        widget_render_text(widget,(ui->theme.text));
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(pos, widget->min);
-        bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
+        bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             if(widget->id == ui->hot){
-                push_rectangle_outline(bbox, 1, 3, ui->theme.cursor);
+                push_rectangle_outline(bbox, 0.2, 3, ui->theme.cursor);
             }else{ 
-                push_rectangle_outline(bbox, 1, 3, ui->theme.border);
+                push_rectangle_outline(bbox, 0.2, 3, ui->theme.border);
             }
             bbox.pos.x += 1;
             bbox.pos.y -= 1;
@@ -1295,7 +1306,7 @@ ui_panel_resize_widgets(Panel* panel, v4f rect, char* fmt, ...){
     
     auto result = update_widget(widget);
     
-    if(result.dragged){
+    if(result.left_dragged){
         f32 delta = result.delta.x;
         f32 divisor = rect.width/panel->split_ratio;
         update_panel_split(panel->parent, platform->mouse_position.x/platform->window_size.x);

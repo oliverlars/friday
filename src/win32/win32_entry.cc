@@ -120,11 +120,14 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        for(int i = 0; i < 3; i++){
-            if(mouse_buttons_pressed[i]){
-                platform_push_event(platform_mouse_drag((Mouse_Button)i,
-                                                        v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                            global_platform.mouse_position.y - last_mouse.y)));
+        if((global_platform.mouse_position.x + 3 > last_mouse.x) &&
+           global_platform.mouse_position.y + 3 > last_mouse.y){
+            for(int i = 0; i < 3; i++){
+                if(mouse_buttons_pressed[i]){
+                    platform_push_event(platform_mouse_drag((Mouse_Button)i,
+                                                            v2f(global_platform.mouse_position.x - last_mouse.x,
+                                                                global_platform.mouse_position.y - last_mouse.y)));
+                }
             }
         }
         

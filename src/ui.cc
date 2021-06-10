@@ -742,7 +742,7 @@ update_widget(Widget* widget){
                 result.pos = bbox.pos;
                 result.size = bbox.size;
             }
-            else if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            else if(!widget_has_property(widget, WP_CONTAINER) && has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
                 ui->active = widget->id;
                 result.left_dragged = true;
                 result.delta = delta;

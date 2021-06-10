@@ -7,8 +7,30 @@ mark_node_for_deletion(Arc_Node* at){
 }
 
 internal void
-set_cursor_as_node(Arc_Node* node){
-    presenter->cursor.at = node;
+advance_cursor(Cursor* cursor, Cursor_Direction dir, int count = 1){
+    if(!cursor->at) return;
+    cursor->direction = dir;
+    cursor->direction_count = count;
+}
+
+internal void
+set_cursor_as_node(Cursor* cursor, Arc_Node* node){
+    ui->cursor_pos = 0;
+    int index = 0;
+    for(; index < presenter->buffer_pos; index++){
+        if(presenter->buffer[index].node == node){
+            break;
+        }
+    }
+    // NOTE(Oliver): use navigation system to find where to click to
+    // as it needs to update presenter->buffer_index and presenter->line_index
+    int pos_diff = index - cursor->buffer_index;
+    if(pos_diff < 0){
+        advance_cursor(cursor, CURSOR_LEFT, abs(pos_diff));
+    }else if(pos_diff > 0){
+        advance_cursor(cursor, CURSOR_RIGHT, pos_diff);
+    }
+    
 }
 
 internal b32
@@ -92,13 +114,6 @@ delete_nodes_marked_for_deletion(Arc_Node* node){
         }
         node = node->next_sibling;
     }
-}
-
-internal void
-advance_cursor(Cursor* cursor, Cursor_Direction dir, int count = 1){
-    if(!cursor->at) return;
-    cursor->direction = dir;
-    cursor->direction_count = count;
 }
 
 internal b32
@@ -1068,27 +1083,13 @@ present_editable_reference(Colour colour, Arc_Node* node){
     }
     
     if(result.clicked){
+        set_cursor_as_node(&presenter->cursor, widget->arc);
         
-        ui->cursor_pos = string.length;
-        
-        // NOTE(Oliver): use navigation system to find where to click to
-        // as it needs to update presenter->buffer_index and presenter->line_index
-        
-        int index = 0;
-        for(; index < presenter->buffer_pos; index++){
-            if(presenter->buffer[index].node == widget->arc){
-                break;
-            }
-        }
-        int pos_diff = index - presenter->cursor.buffer_index;
-        
-        if(pos_diff < 0){
-            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(pos_diff));
-        }else if(pos_diff > 0){
-            advance_cursor(&presenter->cursor,CURSOR_RIGHT, pos_diff);
-        }
         presenter->cursor.text_id = widget->id;
         
+    }
+    
+    if(result.left_dragged){
     }
     
     if(result.hovered && node->reference){
@@ -1194,25 +1195,14 @@ present_editable_string(Colour colour, Arc_Node* node){
     }
     
     if(result.clicked){
-        ui->cursor_pos = string->length;
-        
-        int index = 0;
-        for(; index < presenter->buffer_pos; index++){
-            if(presenter->buffer[index].node == widget->arc){
-                break;
-            }
-        }
-        // NOTE(Oliver): use navigation system to find where to click to
-        // as it needs to update presenter->buffer_index and presenter->line_index
-        int pos_diff = index - presenter->cursor.buffer_index;
-        if(pos_diff < 0){
-            advance_cursor(&presenter->cursor,CURSOR_LEFT, abs(pos_diff));
-        }else if(pos_diff > 0){
-            advance_cursor(&presenter->cursor,CURSOR_RIGHT, pos_diff);
-        }
-        
+        set_cursor_as_node(&presenter->cursor, widget->arc);
         presenter->cursor.text_id = widget->id;
+    } 
+    
+    if(result.left_dragged){
+        
     }
+    
     
     if(result.hovered && node->reference){
         highlight_reference = node->reference;

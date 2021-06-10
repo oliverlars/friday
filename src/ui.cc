@@ -1347,21 +1347,19 @@ render_panels(Panel* root, v4f rect){
     
     if(root->is_dragging){
         v2f delta = {};
-        has_mouse_moved(&delta);
         if(has_left_released()){
-            platform->reset_cursor();
             root->is_dragging = false;
         }
         // NOTE(Oliver): credit to Max Jordan for giving me the algorithm
         // to resize panels
         switch(root->first->split_type){
             case PANEL_SPLIT_HORIZONTAL:{
-                root->first->split_ratio -= delta.y/platform->window_size.height;
-                root->second->split_ratio += delta.y/platform->window_size.height;
+                root->first->split_ratio = 1.0 -platform->mouse_position.y/platform->window_size.height;
+                root->second->split_ratio =platform->mouse_position.y/platform->window_size.height;
             }break;
             case PANEL_SPLIT_VERTICAL:{
-                root->first->split_ratio += delta.x/platform->window_size.width;
-                root->second->split_ratio -= delta.x/platform->window_size.width;
+                root->first->split_ratio = platform->mouse_position.x/platform->window_size.width;
+                root->second->split_ratio = 1.0 - platform->mouse_position.x/platform->window_size.width;
             }break;
         }
     }
@@ -1408,11 +1406,22 @@ render_panels(Panel* root, v4f rect){
             if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
                 root->parent->is_dragging = true;
             }
+            platform->set_cursor_to_horizontal_resize();
         } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
             if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
                 root->parent->is_dragging = true;
             }
         }
+        
+        if((root->parent->is_dragging && root->split_type == PANEL_SPLIT_VERTICAL) 
+           || is_in_rect(platform->mouse_position, harea)){
+            platform->set_cursor_to_horizontal_resize();
+        }
+        if((root->parent->is_dragging && root->split_type == PANEL_SPLIT_HORIZONTAL) 
+           || is_in_rect(platform->mouse_position, varea)){
+            platform->set_cursor_to_vertical_resize();
+        }
+        
         
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {

@@ -374,7 +374,6 @@ operator+=(v2f& a, v2f b){
     return a;
 }
 
-
 inline v2f
 operator-(v2f a, v2f b){
     v2f result = {};

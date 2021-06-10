@@ -120,8 +120,9 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        if((global_platform.mouse_position.x + 3 > last_mouse.x) &&
-           global_platform.mouse_position.y + 3 > last_mouse.y){
+        
+        if(1 || fabs(global_platform.mouse_position.x - last_mouse.x) >= 3 &&
+           fabs(global_platform.mouse_position.y - last_mouse.y) >= 3){
             for(int i = 0; i < 3; i++){
                 if(mouse_buttons_pressed[i]){
                     platform_push_event(platform_mouse_drag((Mouse_Button)i,
@@ -149,7 +150,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         
     }
     else if(message == WM_MOUSELEAVE){
-        
+        mouse_hover_active = 0;
     }
     else if(message == WM_MOUSEWHEEL){
         s16 wheel_delta = HIWORD(wparam);
@@ -175,6 +176,9 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
                 }break;
                 
                 case CURSOR_IBAR:{
+                    SetCursor(LoadCursorA(0, IDC_IBEAM));
+                }break;
+                case CURSOR_DEFAULT:{
                     SetCursor(LoadCursorA(0, IDC_ARROW));
                 }break;
                 default: break;

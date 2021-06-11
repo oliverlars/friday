@@ -80,6 +80,7 @@ struct Presenter_State {
     v4f select_second_rect;
     
     f32 indent_level;
+    
 };
 global Arc_Node* highlight_reference;
 

@@ -48,9 +48,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     
     
     b32 dropdown = false;
-    yspacer(50);
     UI_ROW {
-        xspacer(50);
         label("%.*s", string.length, string.text);
         UI_WIDTHFILL{
             xspacer(50);
@@ -132,7 +130,7 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
-    //widget_set_property(widget, WP_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
     //widget_set_property(widget, WP_LERP_POSITION);

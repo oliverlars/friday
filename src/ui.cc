@@ -520,6 +520,7 @@ get_widget(String8 string){
             widget->value = last_widget->value;
             widget->string = string;
             widget->id = id;
+            widget->dragging = last_widget->dragging;
         }
         
     }
@@ -903,7 +904,9 @@ push_widget_container(String8 string){
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
     if(result.middle_dragged){
-        widget->pos += result.delta;
+        //widget->pos = platform->mouse_position;
+        widget->dragging = true;
+        ui->drag_pos = platform->mouse_position;
     }
 }
 
@@ -1061,7 +1064,13 @@ layout_container(Widget* widget,  v2f pos, b32 dont_lerp_children){
     if(widget->pos.x == 0 && widget->pos.y == 0){
         widget->pos = pos;
     }
+    
     pos = widget->pos;
+    
+    if(widget->dragging){
+        assert(0);
+        pos += platform->mouse_position - ui->drag_pos;
+    }
     v2f size = layout_widgets(widget->first_child, pos);
     
 }
@@ -1196,6 +1205,7 @@ render_widgets(Widget* widget){
         widget->pos.y -= widget->min.height;
         
         v4f bbox = v4f2(widget->pos, widget->min);
+        
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
             //push_rectangle(bbox, 3, colour_from_v4f(widget->style.background_colour));
         }
@@ -1206,7 +1216,10 @@ render_widgets(Widget* widget){
     
     if(widget_has_property(widget, WP_CONTAINER) &&
        widget_has_property(widget, WP_RENDER_CORNERS)){
-        v4f bbox = v4f2(widget->pos, widget->min);
+        
+        v2f pos = widget->pos; 
+        
+        v4f bbox = v4f2(pos, widget->min);
         //push_string(widget->pos, widget->string, ui->theme.text, 1.0f + widget->style.font_scale);
         bbox.y -= widget->min.height;
         push_rectangle_outline(bbox, 1, 3, ui->theme.text);
@@ -1263,6 +1276,7 @@ render_widgets(Widget* widget){
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(pos, widget->min);
+        
         bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
         if(widget_has_property(widget, WP_RENDER_BORDER)){
             if(widget->id == ui->hot){
@@ -1478,9 +1492,8 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor#%d", (int)root);
                     UI_ROW {
-                        xspacer(50);
                         label("view");
-                        xspacer(10);
+                        xspacer(20);
                         for(int i = 0; i < editor->view_count; i++){
                             button("%.*s", editor->views[i].length, editor->views[i].text);
                             xspacer(10);

@@ -287,8 +287,20 @@ push_rectangle_textured( v4f rect, f32 radius, Bitmap bitmap){
 }
 
 
+internal inline void
+push_bezier(v2f v0, v2f v1, v2f v2, f32 thickness, Colour colour = {0xFF00FFFF}){
+    
+    auto bezier = make_command(COMMAND_BEZIER);
+    bezier->bezier.thickness = thickness;
+    bezier->bezier.v0 = v0;
+    bezier->bezier.v1 = v1;
+    bezier->bezier.v2 = v2;
+    bezier->colour = colour;
+    insert_command(bezier);
+}
+
 internal void
-push_string( v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
+push_string(v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
     
     pos.y = -pos.y;
     pos.y -= get_font_line_height(font_scale);
@@ -643,6 +655,44 @@ init_opengl_renderer(){
         
     }
     
+    {
+        glGenVertexArrays(1, &renderer->vaos[COMMAND_BEZIER]);
+        glBindVertexArray(renderer->vaos[COMMAND_BEZIER]);
+        
+        glGenBuffers(1, &renderer->buffers[COMMAND_BEZIER]);
+        glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_BEZIER]);
+        
+        // NOTE(Oliver): yeah maybe sort these constants out, looks wacko
+        glBufferData(GL_ARRAY_BUFFER, MAX_DRAW*BYTES_PER_BEZIER, 0, GL_DYNAMIC_DRAW);
+        
+        GLuint thickness = 0;
+        GLuint v0 = 1;
+        GLuint v1 = 3;
+        GLuint v2 = 5;
+        GLuint colour = 7;
+        
+        glEnableVertexAttribArray(thickness);
+        glVertexAttribPointer(thickness, 1, GL_FLOAT, false, 
+                              BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*0));
+        
+        glEnableVertexAttribArray(v0);
+        glVertexAttribPointer(v0, 2, GL_FLOAT, false, 
+                              BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*1));
+        
+        glEnableVertexAttribArray(v1);
+        glVertexAttribPointer(v1, 2, GL_FLOAT, false, 
+                              BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*3));
+        
+        glEnableVertexAttribArray(v2);
+        glVertexAttribPointer(v2, 2, GL_FLOAT, false, 
+                              BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*5));
+        
+        glEnableVertexAttribArray(colour);
+        glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
+                              BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*7));
+        
+    }
+    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
@@ -661,6 +711,7 @@ make_program(char* vs, char* fs){
     
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &compiled);
     if(compiled == GL_FALSE){
+        OutputDebugStringA(vs);
         GLint length = 0;
         glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &length);
         
@@ -677,6 +728,7 @@ make_program(char* vs, char* fs){
     
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compiled);
     if(compiled == GL_FALSE){
+        OutputDebugStringA(fs);
         GLint length = 0;
         glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &length);
         
@@ -1033,6 +1085,7 @@ init_shaders(){
             "const float edge = 0.15;\n"
             
             "vec4 get_colour(vec2 uv){\n"
+            
             "float distance = 1.0 - texture(atlas, uv).a;\n"
             "float alpha = 1.0 - smoothstep(width, width + edge, distance);\n"
             "vec4 result = vec4(frag_colour.rgb, alpha);\n"
@@ -1128,6 +1181,174 @@ init_shaders(){
         
     }
     
+    // NOTE(Oliver): init bezier shader
+    {
+        GLchar* bezier_vs =  
+            "#version 330 core\n"
+            "layout(location = 0) in float thickness; \n"
+            "layout(location = 1) in vec2 v0; \n"
+            "layout(location = 3) in vec2 v1;\n"
+            "layout(location = 5) in vec2 v2; \n"
+            "layout(location = 7) in vec4 colour; \n"
+            "uniform mat4x4 ortho;\n"
+            "uniform mat4x4 view;\n"
+            "uniform vec2 resolution;\n"
+            
+            "out vec2 frag_size;\n"
+            "out float frag_thickness;\n"
+            "out vec2 frag_v0;\n"
+            "out vec2 frag_v1;\n"
+            "out vec2 frag_v2;\n"
+            "out vec4 frag_colour;\n"
+            "out vec2 frag_pos;\n"
+            
+            "void main(){\n"
+            "vec2 minv = v0;\n"
+            "vec2 maxv = v0;\n"
+            "if(v0.x < minv.x ) minv.x = v0.x;\n"
+            "if(v0.y < minv.y ) minv.y = v0.y;\n"
+            "if(v0.x > maxv.x ) maxv.x = v0.x;\n"
+            "if(v0.y > maxv.y ) maxv.y = v0.y;\n"
+            "if(v1.x < minv.x ) minv.x = v1.x;\n"
+            "if(v1.y < minv.y ) minv.y = v1.y;\n"
+            "if(v1.x > maxv.x ) maxv.x = v1.x;\n"
+            "if(v1.y > maxv.y ) maxv.y = v1.y;\n"
+            "if(v2.x < minv.x ) minv.x = v2.x;\n"
+            "if(v2.y < minv.y ) minv.y = v2.y;\n"
+            "if(v2.x > maxv.x ) maxv.x = v2.x;\n"
+            "if(v2.y > maxv.y ) maxv.y = v2.y;\n"
+            "vec2 size = abs(maxv - minv);\n"
+            "size *= 1.5;\n"
+            "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
+            "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));\n"
+            "vec2 uvs[] = vec2[](vec2(0,1), vec2(1,1), vec2(1,0),\n"
+            "vec2(0, 1), vec2(0,0), vec2(1,0));\n"
+            "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
+            "screen_position.xy *= (vec4(size/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((minv*0.9 + size/2.0)/resolution,0,1)).xy -1;\n"
+            //"screen_position.xy += 2*(vec4((vec2(1280,720)/2.0)/resolution,0,1)).xy -1;\n"
+            "gl_Position = screen_position;\n"
+            "frag_thickness = thickness;\n"
+            "frag_v0 = v0;\n"
+            "frag_v1 = v1;\n"
+            "frag_v2 = v2;\n"
+            "frag_size = size;\n"
+            "frag_colour = colour;\n"
+            "frag_pos = minv;\n"
+            "}\n";
+        
+        GLchar* bezier_fs =  
+            "#version 330 core\n"
+            "in float frag_thickness; \n"
+            "in vec4 frag_colour; \n"
+            "in vec2 frag_v0; \n"
+            "in vec2 frag_v1; \n"
+            "in vec2 frag_v2; \n"
+            "in vec2 frag_size;\n"
+            "in vec2 frag_pos;\n"
+            "out vec4 colour;\n"
+            "uniform vec4 clip_range;\n"
+            
+            "float dot2( in vec2 v ) { return dot(v,v); }\n"
+            "float cross2( in vec2 a, in vec2 b ) { return a.x*b.y - a.y*b.x; }\n"
+            
+            "// signed distance to a quadratic bezier\n"
+            "float bezier(in vec2 pos, in vec2 A, in vec2 B, in vec2 C ) { \n"
+            "vec2 a = B - A;\n"
+            "vec2 b = A - 2.0*B + C;\n"
+            "vec2 c = a * 2.0;\n"
+            "vec2 d = A - pos;\n"
+            "float kk = 1.0/dot(b,b);\n"
+            "float kx = kk * dot(a,b);\n"
+            "float ky = kk * (2.0*dot(a,a)+dot(d,b))/3.0;\n"
+            "float kz = kk * dot(d,a);  \n"    
+            "float res = 0.0;\n"
+            "float sgn = 0.0;\n"
+            "float p = ky - kx*kx;\n"
+            "float p3 = p*p*p;\n"
+            "float q = kx*(2.0*kx*kx - 3.0*ky) + kz;\n"
+            "float h = q*q + 4.0*p3;\n"
+            "if( h>=0.0 ) \n"
+            "{   // 1 root\n"
+            "h = sqrt(h);\n"
+            "vec2 x = (vec2(h,-h)-q)/2.0;\n"
+            "vec2 uv = sign(x)*pow(abs(x), vec2(1.0/3.0));\n"
+            "float t = clamp( uv.x+uv.y-kx, 0.0, 1.0 );\n"
+            "vec2  q = d+(c+b*t)*t;\n"
+            "res = dot2(q);\n"
+            "sgn = cross2(c+2.0*b*t,q);\n"
+            "}\n"
+            "else \n"
+            "{   // 3 roots\n"
+            "float z = sqrt(-p);\n"
+            "float v = acos(q/(p*z*2.0))/3.0;\n"
+            "float m = cos(v);\n"
+            "float n = sin(v)*1.732050808;\n"
+            "vec3  t = clamp( vec3(m+m,-n-m,n-m)*z-kx, 0.0, 1.0 );\n"
+            "vec2  qx=d+(c+b*t.x)*t.x; float dx=dot2(qx), sx = cross2(c+2.0*b*t.x,qx);\n"
+            "vec2  qy=d+(c+b*t.y)*t.y; float dy=dot2(qy), sy = cross2(c+2.0*b*t.y,qy);\n"
+            "if( dx<dy ) { res=dx; sgn=sx; } else {res=dy; sgn=sy; }\n"
+            "}\n"
+            "return sqrt( res )*sign(sgn);\n"
+            "}\n"
+            "float udBezier( in vec2 pos, in vec2 A, in vec2 B, in vec2 C )\n"
+            "{    \n"
+            "vec2 a = B - A;\n"
+            "vec2 b = A - 2.0*B + C;\n"
+            "vec2 c = a * 2.0;\n"
+            "vec2 d = A - pos;\n"
+            
+            "float kk = 1.0/dot(b,b);\n"
+            "float kx = kk * dot(a,b);\n"
+            "float ky = kk * (2.0*dot(a,a)+dot(d,b))/3.0;\n"
+            "float kz = kk * dot(d,a);   \n"   
+            
+            "float res = 0.0;\n"
+            
+            "float p = ky - kx*kx;\n"
+            "float p3 = p*p*p;\n"
+            "float q = kx*(2.0*kx*kx - 3.0*ky) + kz;\n"
+            "float h = q*q + 4.0*p3;\n"
+            
+            "if( h>=0.0 ) \n"
+            "{   // 1 root\n"
+            "h = sqrt(h);\n"
+            "vec2 x = (vec2(h,-h)-q)/2.0;\n"
+            "vec2 uv = sign(x)*pow(abs(x), vec2(1.0/3.0));\n"
+            "float t = clamp( uv.x+uv.y-kx, 0.0, 1.0 );\n"
+            "res = dot2(d+(c+b*t)*t);\n"
+            "}\n"
+            "else \n"
+            "{   // 3 roots\n"
+            "float z = sqrt(-p);\n"
+            "float v = acos(q/(p*z*2.0))/3.0;\n"
+            "float m = cos(v);\n"
+            "float n = sin(v)*1.732050808;\n"
+            "vec3  t = clamp( vec3(m+m,-n-m,n-m)*z-kx, 0.0, 1.0 );\n"
+            "res = min( dot2(d+(c+b*t.x)*t.x),\n"
+            "dot2(d+(c+b*t.y)*t.y) );\n"
+            "}\n"
+            "return sqrt( res );\n"
+            "}\n"
+            "void main(){\n"
+            "float d = udBezier(gl_FragCoord.xy, frag_v0, frag_v1, frag_v2);\n"
+            "float alpha = d;\n"
+            //"colour = vec4(frag_colour.rgb, alpha);\n"
+            //"colour = vec4(mix( vec3(0.0), vec3(1.0), 1.0-step(0.05,abs(d)) ), 1.0);\n"
+            //"vec3 colour = mix( vec3(0.0), vec3(1.0), 1.0-step(1.0,abs(d)) );\n"
+            //"colour = vec4(vec3(1.0), alpha);\n"
+            "colour = vec4(frag_colour.rgb, 1.0-smoothstep(frag_thickness-1, frag_thickness,abs(d)));\n"
+            "}\n";
+        
+        GLuint program = make_program(bezier_vs, bezier_fs);
+        
+        renderer->resolution_uniforms[COMMAND_BEZIER] = glGetUniformLocation(program, "resolution");
+        renderer->clip_range_uniforms[COMMAND_BEZIER] = glGetUniformLocation(program, "clip_range");
+        
+        renderer->programs[COMMAND_BEZIER] = program;
+        
+    }
+    
 }
 
 internal void
@@ -1140,6 +1361,7 @@ process_and_draw_commands(){
     f32* circles = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_CIRCLE);
     f32* glyphs = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_GLYPH);
     f32* rectangles_textured = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED);
+    f32* beziers = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_BEZIER);
     
     v4f clip_range = v4f(0, 0, platform->window_size.width, platform->window_size.height);
     for(Command* command = renderer->head; command; command = command->next){
@@ -1438,6 +1660,53 @@ process_and_draw_commands(){
                     glUseProgram(0);
                 }
             }break;
+            
+            case COMMAND_BEZIER:{
+                
+                int num_verts = 0;
+                f32* attribs = beziers;
+                for(Command* _command = command; _command && _command->type == previous_command->type; 
+                    _command = _command->next){
+                    
+                    auto bezier = _command;
+                    for(int i = 0; i < 6; i++){
+                        
+                        *attribs++ = bezier->bezier.thickness;
+                        *attribs++ = bezier->bezier.v0.x;
+                        *attribs++ = bezier->bezier.v0.y;
+                        *attribs++ = bezier->bezier.v1.x;
+                        *attribs++ = bezier->bezier.v1.y;
+                        *attribs++ = bezier->bezier.v2.x;
+                        *attribs++ = bezier->bezier.v2.y;
+                        *attribs++ = (bezier->colour.r/255.0f);
+                        *attribs++ = (bezier->colour.g/255.0f);
+                        *attribs++ = (bezier->colour.b/255.0f);
+                        *attribs++ = (bezier->colour.a/255.0f);
+                        num_verts++;
+                        
+                    }
+                }
+                
+                {
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_BEZIER]);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                                    MAX_DRAW*BYTES_PER_BEZIER,
+                                    beziers);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    
+                    glUseProgram(renderer->programs[COMMAND_BEZIER]);
+                    
+                    f32 resolution[2] = {(f32)platform->window_size.width, (f32)platform->window_size.height};
+                    glUniform2fv(renderer->resolution_uniforms[COMMAND_BEZIER], 1, resolution);
+                    glUniform4fv(renderer->clip_range_uniforms[COMMAND_BEZIER], 1, (f32*)&clip_range);
+                    
+                    glBindVertexArray(renderer->vaos[COMMAND_BEZIER]);
+                    glDrawArrays(GL_TRIANGLES, 0, num_verts);
+                    glUseProgram(0);
+                }
+                
+            }break;
+            
         }
         command = previous_command;
         

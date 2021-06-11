@@ -571,7 +571,7 @@ UPDATE {
         presenter->delete_queue_size = 0;
         
         
-        adult_swim_trend();
+        //adult_swim_trend();
         
         if(has_pressed_key_modified(KEY_LBRACKET, KEY_MOD_CTRL)){
             if(presenter->cursor.at->ast_type == AST_TOKEN){
@@ -712,13 +712,16 @@ UPDATE {
             layout_widgets(it);
             render_widgets(it);
         }
+        
+        
         Colour select_colour;
         select_colour.packed = 0xB73E4Aff;
         select_colour.a *= 0.4f;
         push_rectangle(union_rects(presenter->select_first_rect,
                                    presenter->select_second_rect),
                        3, select_colour);
-        
+        push_bezier(platform->mouse_position, v2f(50, 50), v2f(200, 200),
+                    5, ui->theme.text);
         if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
            (presenter->last_cursor.at->ast_type == AST_TOKEN ||
             presenter->last_cursor.at->ast_type == AST_TYPE_TOKEN) &&

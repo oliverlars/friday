@@ -27,11 +27,6 @@ struct SDFFont {
     v4i padding;
 };
 
-enum Menu_Type {
-    MENU_TYPE_USAGE,
-    MENU_CREATE_NODE
-};
-
 enum Command_Type {
     COMMAND_RECTANGLE,
     COMMAND_TRIANGLE,
@@ -39,6 +34,7 @@ enum Command_Type {
     COMMAND_RECTANGLE_OUTLINE,
     COMMAND_GLYPH,
     COMMAND_RECTANGLE_TEXTURED,
+    COMMAND_BEZIER,
     
     COMMAND_CLIP_RANGE_BEGIN,
     COMMAND_CLIP_RANGE_END,
@@ -100,6 +96,14 @@ struct Command {
             
             Bitmap bitmap;
         }rectangle_textured;
+        
+        struct {
+#define BYTES_PER_BEZIER (11*sizeof(f32))
+            f32 thickness;
+            v2f v0;
+            v2f v1;
+            v2f v2;
+        }bezier;
         
         struct {
             f32 x, y;

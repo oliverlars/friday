@@ -31,7 +31,9 @@ struct Cursor {
     int buffer_index;
     
     v2f pos;
-    
+    v2f v0;
+    v2f v1;
+    v2f v2;
     Cursor_Direction direction;
     int direction_count;
 };

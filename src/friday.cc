@@ -720,8 +720,9 @@ UPDATE {
         push_rectangle(union_rects(presenter->select_first_rect,
                                    presenter->select_second_rect),
                        3, select_colour);
-        push_bezier(platform->mouse_position, v2f(50, 50), v2f(200, 200),
-                    5, ui->theme.text);
+        
+        //push_bezier(platform->mouse_position, v2f(50, 50), v2f(200, 200), 1, ui->theme.text);
+        
         if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
            (presenter->last_cursor.at->ast_type == AST_TOKEN ||
             presenter->last_cursor.at->ast_type == AST_TYPE_TOKEN) &&

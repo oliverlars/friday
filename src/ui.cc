@@ -1032,7 +1032,12 @@ layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
         
     }
     f32 available_space =  widget->parent->min.width;
-    f32 width = (available_space - total_width + PADDING)/(f32)number_of_children - PADDING;
+    f32 width = 0;
+    if(number_of_children == 1){
+        width = (available_space - total_width + PADDING)/(f32)number_of_children - PADDING;
+    }else {
+        width = (available_space - total_width + PADDING)/(f32)number_of_children;
+    }
     
     
     width = width >= 0 ? width : 0;
@@ -1489,6 +1494,8 @@ render_panels(Panel* root, v4f rect){
                             }
                             
                         }
+                        yspacer(20);
+                        label("frame graph"); 
                         UI_ROW UI_WIDTHFILL{
                             frame_graph();
                         }

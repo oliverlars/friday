@@ -578,7 +578,6 @@ frame_graph(){
     String8 string = make_string("flame graph");
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_HOOK);
-    widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget_set_property(widget, WP_RENDER_BORDER);

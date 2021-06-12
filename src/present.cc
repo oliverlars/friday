@@ -753,15 +753,7 @@ set_next_cursor_pos(Cursor* cursor){
 internal void
 render_cursor(Cursor* cursor, v2f size, Colour colour){
     
-#if 0
-    v2f v0 = cursor->pos;
-    v2f v1 = cursor->pos;
-    v1.y += size.height/2.0;
-    v2f v2 = cursor->pos;
-    v2.y += size.height;
-#endif
-    
-    push_bezier(cursor->v0, cursor->v1, cursor->v2, 3, colour);
+    push_bezier(cursor->v0, cursor->v1, cursor->v2, size.width, colour);
     //push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
     //push_bezier(cursor->v0, cursor->v1, cursor->v1 + v2f(10,10) , 3, ui->theme.text);
 }
@@ -1173,17 +1165,17 @@ present_editable_string(Colour colour, Arc_Node* node){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
-            v2f cursor_size = v2f(4, widget->min.height);
+            v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
             lerp(&presenter->cursor.pos.x, next.x, 0.4f);
-            lerp(&presenter->cursor.pos.y, next.y, 0.4f);
+            lerp(&presenter->cursor.pos.y, next.y, 0.6f);
             
             lerp(&presenter->cursor.v0.x, next.x, 0.4f);
-            lerp(&presenter->cursor.v0.y, next.y, 0.4f);
+            lerp(&presenter->cursor.v0.y, next.y, 0.2f);
             
-            lerp(&presenter->cursor.v1.x, next.x, 0.2f);
-            lerp(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.2f);
+            lerp(&presenter->cursor.v1.x, next.x, 0.3f);
+            lerp(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.7f);
             
-            lerp(&presenter->cursor.v2.x, next.x, 0.8f);
+            lerp(&presenter->cursor.v2.x, next.x, 0.2f);
             lerp(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.8f);
             
             if(presenter->mode == P_CREATE){

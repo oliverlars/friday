@@ -26,7 +26,6 @@ struct Theme {
 enum Widget_Property {
     WP_RENDER_TEXT,
     WP_RENDER_TEXT_SHADOW,
-    WP_RENDER_TRIANGLE,
     WP_RENDER_BORDER,
     WP_RENDER_CORNERS,
     WP_RENDER_DOUBLE_BORDER,

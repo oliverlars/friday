@@ -561,19 +561,6 @@ f32 graph_width = 400.0f;
 f32 delta_times[64] = {};
 
 internal void
-draw_frame_graph(v2f pos){
-    f32 max_delta = 5.0f;
-    f32 x = pos.x;
-    v2f prev = {};
-    for(int i = 0; i < 64; i++){
-        f32 height = (delta_times[i]/max_delta)*20.0f;
-        f32 width = graph_width/64.0f;
-        push_rectangle(v4f2(v2f(x, pos.y), v2f(width, height)), 0, ui->theme.text);
-        x += width;
-    }
-}
-
-internal void
 frame_graph(){
     String8 string = make_string("flame graph");
     auto widget = push_widget(string);
@@ -597,7 +584,7 @@ frame_graph(){
         
     };
     auto result = update_widget(widget);
-    widget->min.height = 50;
+    widget->min.height = 100;
     widget->render_hook = render_hook;
 }
 

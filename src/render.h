@@ -59,9 +59,10 @@ struct Command {
         }rectangle;
         
         struct {
-#define BYTES_PER_TRIANGLE (8*sizeof(f32)) // NOTE(Oliver): we secretly add two size fields
+#define BYTES_PER_TRIANGLE (9*sizeof(f32)) // NOTE(Oliver): we secretly add two size fields
             f32 x, y;
             f32 size;
+            f32 rotation;
         }triangle;
         
         struct {

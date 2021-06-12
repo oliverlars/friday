@@ -208,12 +208,13 @@ push_rectangle( v4f rect, f32 radius, Colour colour){
 }
 
 internal inline void
-push_triangle( v2f pos, f32 size, Colour colour){
+push_triangle( v2f pos, f32 size, f32 rotation, Colour colour){
     
     auto triangle = make_command(COMMAND_TRIANGLE);
     triangle->triangle.x = pos.x;
     triangle->triangle.y = pos.y;
-    triangle->triangle.size = size;
+    triangle->triangle.size = sqrt(size*2.0)/2.0;
+    triangle->triangle.rotation = rotation;
     triangle->colour = colour;
     insert_command(triangle);
 }
@@ -509,7 +510,8 @@ init_opengl_renderer(){
         
         GLuint pos = 0;
         GLuint dim = 2;
-        GLuint colour = 4;
+        GLuint rot = 4;
+        GLuint colour = 5;
         
         glEnableVertexAttribArray(pos);
         glVertexAttribPointer(pos, 2, GL_FLOAT, false, 
@@ -519,9 +521,13 @@ init_opengl_renderer(){
         glVertexAttribPointer(dim, 2, GL_FLOAT, false, 
                               BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*2));
         
+        glEnableVertexAttribArray(rot);
+        glVertexAttribPointer(rot, 1, GL_FLOAT, false, 
+                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
+        
         glEnableVertexAttribArray(colour);
         glVertexAttribPointer(colour, 4, GL_FLOAT, false, 
-                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*4));
+                              BYTES_PER_TRIANGLE, reinterpret_cast<void*>(sizeof(f32)*5));
         
     }
     
@@ -837,25 +843,27 @@ init_shaders(){
             "#version 330 core\n"
             "layout(location = 0) in vec2 pos; \n"
             "layout(location = 2) in vec2 dim; \n"
-            "layout(location = 4) in vec4 colour; \n"
+            "layout(location = 4) in float rot; \n"
+            "layout(location = 5) in vec4 colour; \n"
             "uniform mat4x4 ortho;\n"
             "uniform mat4x4 view;\n"
             "uniform vec2 resolution;\n"
             "out vec2 out_pos;\n"
             "out vec2 out_dim;\n"
             "out vec4 frag_colour;\n"
+            "out float frag_rot;\n"
             
             "void main(){\n"
-            "vec2 scaled_dim = dim*2.0;\n"
             "vec2 vertices[] = vec2[](vec2(-1, -1), vec2(1,-1), vec2(1,1),\n"
             "vec2(-1,-1), vec2(-1, 1), vec2(1, 1));"
             "vec4 screen_position = vec4(vertices[(gl_VertexID % 6)], 0, 1);\n"
-            "screen_position.xy *= (vec4(1.5*scaled_dim/resolution, 0, 1)).xy;\n"
-            "screen_position.xy += 2*(vec4((pos+scaled_dim/2)/resolution,0,1)).xy -1;\n"
+            "screen_position.xy *= (vec4(5.0*dim/resolution, 0, 1)).xy;\n"
+            "screen_position.xy += 2*(vec4((pos + dim)/resolution,0,1)).xy -1;\n"
             "gl_Position = screen_position;\n"
             "out_pos = pos;\n"
             "out_dim = dim;\n"
             "frag_colour = colour;\n"
+            "frag_rot = rot;\n"
             "}\n";
         
         GLchar* triangle_fs =  
@@ -863,6 +871,7 @@ init_shaders(){
             "in vec2 out_pos; \n"
             "in vec2 out_dim; \n"
             "in vec4 frag_colour;\n"
+            "in float frag_rot;\n"
             "out vec4 colour;\n"
             "uniform vec2 in_position;\n"
             "uniform vec4 clip_range;\n"
@@ -889,7 +898,7 @@ init_shaders(){
             
             "void main(){\n"
             "vec2 coord = gl_FragCoord.xy;\n"
-            "vec2 pos = rotate(coord.xy - (out_pos + out_dim), 1.5);\n"
+            "vec2 pos = rotate(coord.xy - (out_pos + out_dim/2), frag_rot);\n"
             "float dist = triangle(pos, out_dim.x);\n"
             "float alpha = mix(1, 0,  dist);\n"
             "vec3 debug_colour = mix(vec3(1,0,0), vec3(0,1,0), alpha);\n"
@@ -1469,6 +1478,7 @@ process_and_draw_commands(){
                         *attribs++ = triangle->triangle.y;
                         *attribs++ = triangle->triangle.size;
                         *attribs++ = triangle->triangle.size;
+                        *attribs++ = triangle->triangle.rotation;
                         *attribs++ = (triangle->colour.r/255.0f);
                         *attribs++ = (triangle->colour.g/255.0f);
                         *attribs++ = (triangle->colour.b/255.0f);

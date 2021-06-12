@@ -773,12 +773,6 @@ update_widget(Widget* widget){
         widget->min = get_text_bbox({}, widget->string, widget->style.font_scale).size;
     }
     
-    if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
-        v2f size = get_text_bbox({}, "V").size;
-        size.width = size.height;
-        widget->min = size;
-    }
-    
     if(widget_has_property(widget, WP_ROW)){
         widget->min = widget->parent->min;
     }
@@ -1157,8 +1151,7 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
 }
 
 internal void
-widget_render_text(Widget* widget, Colour colour){
-    v2f pos = widget->pos;
+widget_render_text(v2f pos, Widget* widget, Colour colour){
     pos.y -= widget->min.height;
     v4f text_bbox = get_text_bbox(pos, widget->string, widget->style.font_scale);
     v4f bbox = v4f2(pos, widget->min);
@@ -1167,27 +1160,9 @@ widget_render_text(Widget* widget, Colour colour){
         //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
         push_rectangle(bbox, 1, ui->theme.background);
     }
-    if(widget_has_property(widget, WP_RENDER_BORDER)){
-        bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
-        v4f border_colour;
-        if(widget->id == ui->hot){
-            border_colour = v4f_from_colour(ui->theme.cursor);
-            if(widget_has_property(widget, WP_LERP_COLOURS)){
-                lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-            }
-        }else {
-            border_colour = v4f_from_colour(ui->theme.border);
-            if(widget_has_property(widget, WP_LERP_COLOURS)){
-                lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
-            }
-        }
-        
-        push_rectangle_outline(bbox, 0.2, 3, colour_from_v4f(border_colour));
-        widget->pos.x += 1;
-        widget->pos.y -= 1;
-    }
     
-    f32 centre = widget->pos.x + widget->min.x/2.0f;
+    
+    f32 centre = pos.x + widget->min.x/2.0f;
     f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
     f32 text_x = centre - text_centre;
     
@@ -1196,10 +1171,16 @@ widget_render_text(Widget* widget, Colour colour){
     shadow_colour.g /= 8;
     shadow_colour.b /= 8;
     shadow_colour.a = 1;
+    
     v2f text_size = get_text_size(widget->string, widget->style.font_scale);
     push_string(v2f(text_x+1.5, text_bbox.y-1.5), widget->string, colour_from_v4f(shadow_colour), widget->style.font_scale);
     push_string(v2f(text_x, bbox.y), widget->string, colour, widget->style.font_scale);
     //push_rectangle_outline(v4f(text_x, bbox.y, text_size.width, text_size.height), 0.2, 3, ui->theme.text);
+}
+
+internal void
+widget_render_text(Widget* widget, Colour colour){
+    widget_render_text(widget->pos, widget, colour);
 }
 
 internal void
@@ -1277,31 +1258,37 @@ render_widgets(Widget* widget){
         lerp(&widget->hot_transition, 0, 0.1f);
     }
     
+    if(ui->active == widget->id && widget->checked){
+        lerp(&widget->active_transition, 1.0f, 0.1f);
+    }else if(!widget->checked) {
+        lerp(&widget->active_transition, 0, 0.1f);
+    }
+    
+    
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget_render_text(widget,(ui->theme.text));
-    }else {
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            v4f bbox = v4f2(pos, widget->min);
-            push_rectangle_outline(bbox, 0.2, 3, ui->theme.text);
-        }
     }
-    if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
-        v4f bbox = v4f2(pos, widget->min);
-        
+    
+    
+    if(widget_has_property(widget, WP_RENDER_BORDER)){
+        v4f bbox = v4f2(widget->pos, widget->min);
+        bbox.y -= widget->min.height;
         bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            if(widget->id == ui->hot){
-                push_rectangle_outline(bbox, 0.2, 3, ui->theme.cursor);
-            }else{ 
-                push_rectangle_outline(bbox, 0.2, 3, ui->theme.border);
+        v4f border_colour = {};
+        if(widget->id == ui->hot){
+            border_colour = v4f_from_colour(ui->theme.cursor);
+            if(widget_has_property(widget, WP_LERP_COLOURS)){
+                lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
             }
-            bbox.pos.x += 1;
-            bbox.pos.y -= 1;
+        }else {
+            border_colour = v4f_from_colour(ui->theme.border);
+            if(widget_has_property(widget, WP_LERP_COLOURS)){
+                lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
+            }
         }
-        bbox.pos.x += bbox.size.width/6.0f;
-        bbox.pos.y += bbox.size.width/3.0f;
-        push_triangle(bbox.pos, bbox.size.width/3.0f, ui->theme.text);
+        push_rectangle_outline(bbox, 0.2, 3, colour_from_v4f(border_colour));
     }
+    
     
     if(widget_has_property(widget, WP_RENDER_HOOK)){
         widget->render_hook(widget);
@@ -1451,7 +1438,7 @@ render_panels(Panel* root, v4f rect){
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ID("%d", (int)root){
-                    ui_panel_header(root, "Properties#%d", (int)root);
+                    ui_panel_header(root, "Properties");
                     ui_panel_resize_widgets(root, rect, "splitter");
                     
                     UI_COLUMN ID("%d", (int)root) {
@@ -1499,18 +1486,22 @@ render_panels(Panel* root, v4f rect){
                         UI_ROW UI_WIDTHFILL{
                             frame_graph();
                         }
+                        
+                        UI_WIDTHFILL {
+                            local_persist String8 string = make_string("test");
+                            text_box(&string);
+                        }
                     }
                 }
             }
             
         }else if(root->type == PANEL_EDITOR) {
-            UI_WINDOW(rect, "Code Editor#%d", (int)root) {
+            UI_WINDOW(rect, "Code Editor") {
                 
                 ID("%d", (int)root) {
-                    ui_panel_header(root, "Code Editor#%d", (int)root);
+                    ui_panel_header(root, "Code Editor");
                     UI_ROW {
                         label("view");
-                        xspacer(20);
                         for(int i = 0; i < editor->view_count; i++){
                             button("%.*s", editor->views[i].length, editor->views[i].text);
                             xspacer(10);

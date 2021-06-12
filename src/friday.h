@@ -38,3 +38,5 @@ struct Friday_Globals {
     Editor_State* editor;
     Presenter_State* presenter;
 };
+internal void
+frame_graph();

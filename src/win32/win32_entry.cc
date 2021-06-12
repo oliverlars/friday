@@ -416,6 +416,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             refresh_rate = (float)device_mode.dmDisplayFrequency;
         }
     }
+    
     {
         platform = &global_platform;
         
@@ -481,7 +482,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.frame_arena = frame_arenas[frame];
         arena_clear(&frame_arenas[frame]);
         
-        win32_timer_begin_frame(&global_win32_timer);
+        //win32_timer_begin_frame(&global_win32_timer);
         
         {
             platform->event_count = 0;
@@ -504,7 +505,10 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             global_platform.window_size.y = client_rect.bottom - client_rect.top;
         }
         
-        
+        LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
+        LARGE_INTEGER Frequency;
+        QueryPerformanceFrequency(&Frequency); 
+        QueryPerformanceCounter(&StartingTime);
         platform_begin_frame();
         {
             POINT mouse;
@@ -527,12 +531,17 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
             
         }
         platform_end_frame();
+        QueryPerformanceCounter(&EndingTime);
+        ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+        ElapsedMicroseconds.QuadPart *= 1000000;
+        ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+        platform->dt = ((f32)ElapsedMicroseconds.QuadPart/1000.0);
         frame = !frame;
         global_platform.frame_count++;
         
         win32_code_update(&win32_app_code);
         
-        win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
+        //win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
         
         
     }

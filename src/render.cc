@@ -299,6 +299,18 @@ push_bezier(v2f v0, v2f v1, v2f v2, f32 thickness, Colour colour = {0xFF00FFFF})
     insert_command(bezier);
 }
 
+internal inline void
+push_line(v2f v0, v2f v1, f32 thickness=1.0, Colour colour = {0xFF00FFFF}){
+    
+    auto bezier = make_command(COMMAND_BEZIER);
+    bezier->bezier.thickness = thickness;
+    bezier->bezier.v0 = v0;
+    bezier->bezier.v1 = v0 + v1/2.0;
+    bezier->bezier.v2 = v1;
+    bezier->colour = colour;
+    insert_command(bezier);
+}
+
 internal void
 push_string(v2f pos, String8 string, Colour colour, f32 font_scale = 1.0f){
     

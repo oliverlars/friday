@@ -556,6 +556,52 @@ adult_swim_trend(){
     }
 }
 
+f32 graph_height = 100.0f;
+f32 graph_width = 400.0f;
+f32 delta_times[64] = {};
+
+internal void
+draw_frame_graph(v2f pos){
+    f32 max_delta = 5.0f;
+    f32 x = pos.x;
+    v2f prev = {};
+    for(int i = 0; i < 64; i++){
+        f32 height = (delta_times[i]/max_delta)*20.0f;
+        f32 width = graph_width/64.0f;
+        push_rectangle(v4f2(v2f(x, pos.y), v2f(width, height)), 0, ui->theme.text);
+        x += width;
+    }
+}
+
+internal void
+frame_graph(){
+    String8 string = make_string("flame graph");
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_LERP_POSITION);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_FIRST_TRANSITION);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_RENDER_BACKGROUND);
+    auto render_hook = [](Widget* widget ){
+        RENDER_CLIP(v4f2(widget->pos - v2f(0, widget->min.height), widget->min)){
+            f32 max_delta = 15.0f;
+            f32 x = widget->pos.x;
+            for(int i = 0; i < 64; i++){
+                f32 height = (delta_times[i]/max_delta)*widget->min.height;
+                f32 width = (widget->min.width)/64.0f;
+                push_rectangle(v4f2(v2f(x, widget->pos.y - widget->min.height), 
+                                    v2f(width, height)), 0, ui->theme.text);
+                x += width;
+            }
+        }
+        
+    };
+    auto result = update_widget(widget);
+    widget->min.height = 50;
+    widget->render_hook = render_hook;
+}
+
 
 UPDATE {
     FRAME
@@ -592,15 +638,11 @@ UPDATE {
             }
         }else if(has_pressed_key_modified(KEY_FULLSTOP, KEY_MOD_CTRL)){
             if(presenter->cursor.at->ast_type == AST_TOKEN){
-                auto after = make_selectable_arc_node(&editor->arc_pool);
-                set_as_ast(after, AST_TOKEN);
-                insert_arc_node_as_sibling(presenter->cursor.at, after);
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TOKEN);
+                next->token_type = TOKEN_REFERENCE;
                 insert_arc_node_as_child(presenter->cursor.at, next);
                 advance_cursor(&presenter->cursor, CURSOR_LEFT);
-            }else {
-                presenter->cursor.at->token_type = TOKEN_ARRAY;
             }
         }else if(has_pressed_key_modified(KEY_2, KEY_MOD_CTRL)){
             
@@ -722,6 +764,7 @@ UPDATE {
                        3, select_colour);
         
         //push_bezier(platform->mouse_position, v2f(50, 50), v2f(200, 200), 1, ui->theme.text);
+        delta_times[platform->frame_count%64] = platform->dt;
         
         if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
            (presenter->last_cursor.at->ast_type == AST_TOKEN ||

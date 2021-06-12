@@ -1207,8 +1207,9 @@ render_widgets(Widget* widget){
         v4f bbox = v4f2(widget->pos, widget->min);
         
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
-            //push_rectangle(bbox, 3, colour_from_v4f(widget->style.background_colour));
+            push_rectangle(bbox, 3, colour_from_v4f(widget->style.background_colour));
         }
+        
         bbox = inflate_rect(bbox, 1.5);
         push_rectangle_outline(bbox, 0.2, 3, ui->theme.text);
         
@@ -1273,6 +1274,11 @@ render_widgets(Widget* widget){
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
         widget_render_text(widget,(ui->theme.text));
+    }else {
+        if(widget_has_property(widget, WP_RENDER_BORDER)){
+            v4f bbox = v4f2(pos, widget->min);
+            push_rectangle_outline(bbox, 0.2, 3, ui->theme.text);
+        }
     }
     if(widget_has_property(widget, WP_RENDER_TRIANGLE)){
         v4f bbox = v4f2(pos, widget->min);
@@ -1481,6 +1487,10 @@ render_panels(Panel* root, v4f rect){
                             if(button("deserialise")){
                                 editor->should_reload = true;
                             }
+                            
+                        }
+                        UI_ROW UI_WIDTHFILL{
+                            frame_graph();
                         }
                     }
                 }
@@ -1513,8 +1523,8 @@ render_panels(Panel* root, v4f rect){
         }else if(root->type == PANEL_STATUS){
             UI_WINDOW(rect, "Status#%d", (int)root) {
                 UI_ROW {
-                    label("mouse position:"); 
-                    label("%.0f %.0f", platform->mouse_position.x, platform->mouse_position.y);
+                    label("delta time:"); 
+                    label("%.1f", platform->dt);
                 }
             }
         }else if(root->type == PANEL_DEBUG){

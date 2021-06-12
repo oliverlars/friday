@@ -763,6 +763,7 @@ present_string(Colour colour, String8 string){
     if(string.length == 0){
         string = make_string(" ");
     }
+    
     auto widget = push_widget(string);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
@@ -2331,11 +2332,13 @@ present_arc(Arc_Node* node){
         }
     }else {
         UI_ROW{
-            present_editable_string(ui->theme.text, node);
-            ID("tab_completer%d", (int)node){
-                auto preview = tab_completer(node);
-                if(preview.length){
-                    present_string(ui->theme.text_misc, preview);
+            ID("emptynode%d", (int)node){
+                present_editable_string(ui->theme.text, node);
+                ID("tab_completer%d", (int)node){
+                    auto preview = tab_completer(node);
+                    if(preview.length){
+                        present_string(ui->theme.text_misc, preview);
+                    }
                 }
             }
         }

@@ -103,6 +103,8 @@ struct Platform {
     u32 sample_count;
     u32 samples_per_second;
     
+    f32 dt;
+    
     void* (*heap_alloc)(u32 size);
     void* (*heap_free)(void* data);
     void* (*reserve)(u64 size);

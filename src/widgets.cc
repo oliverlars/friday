@@ -18,7 +18,6 @@ yspacer(f32 space){
 
 internal void
 ui_window(v4f rect, char* fmt, ...) {
-    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -31,7 +30,7 @@ ui_window(v4f rect, char* fmt, ...) {
 
 internal void
 ui_container(char* fmt, ...) {
-    ;
+    
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -81,40 +80,45 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     b32 dropdown = false;
     UI_ROW {
         UI_WIDTHFILL{
-            xspacer(50);
+            xspacer();
             
             ID("change type"){
-                dropdown = arrow_dropdown("%.*s", string.length, string.text);
                 
-            }
-        }
-    }
-    UI_COLUMN{
-        ID("%d", (int)panel) {
-            if(dropdown){
-                UI_ROW UI_WIDTHFILL{
-                    xspacer(50);
-                    if(button("properties")){
-                        panel->type = PANEL_PROPERTIES;
-                    }
+                auto widget = push_widget(string);
+                widget_set_property(widget, WP_CLICKABLE);
+                widget_set_property(widget, WP_FIXED_SIZE);
+                widget_set_property(widget, WP_SPACING);
+                widget_set_property(widget, WP_FIRST_TRANSITION);
+                widget_set_property(widget, WP_RENDER_HOOK);
+                widget_set_property(widget, WP_RENDER_BORDER);
+                
+                auto render_hook = [](Widget* widget) {
+                    auto bbox = v4f2(widget->pos, widget->min);
+                    f32 padded_size = widget->min.height;
+                    v2f tpos = bbox.pos;
+                    tpos.y -= padded_size/2.0;
+                    tpos.x += padded_size/2.0;
+                    push_triangle(tpos, padded_size, 0.25 + lerp(0.0, 0.25, widget->active_transition), ui->theme.text);
+                    bbox.pos.x += padded_size/2.0;
+                    widget_render_text(bbox.pos , widget, ui->theme.text);
+                };
+                
+                widget->render_hook = render_hook;
+                auto result = update_widget(widget);
+                widget->min = get_text_size(widget->string, widget->style.font_scale);
+                widget->min.width += 2.0*widget->min.height;
+                
+                if(result.clicked){
+                    widget->checked = !widget->checked;
+                    ui->popup = widget->checked;
                 }
-                UI_ROW UI_WIDTHFILL{
-                    xspacer(50);
-                    if(button("code editor")){
-                        panel->type = PANEL_EDITOR;
-                    }
-                }
-                UI_ROW UI_WIDTHFILL{
-                    xspacer(50);
-                    if(button("debug info")){
-                        panel->type = PANEL_DEBUG;
-                    }
-                }
-                UI_ROW UI_WIDTHFILL{
-                    xspacer(50);
-                    if(button("console")){
-                        panel->type = PANEL_CONSOLE;
-                    }
+                
+                if(widget->checked){
+                    ui->popup_rect = v4f2(widget->pos, v2f(200,200));
+                    ui->popup_rect.pos.x -= (ui->popup_rect.width - widget->min.width);
+                    ui->popup_rect.pos.y -= widget->min.height;
+                    ui->popup_rect.pos.y -= PADDING;
+                    ui->popup_panel = panel;
                 }
             }
         }
@@ -123,7 +127,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
 
 internal void
 label(char* fmt, ...){
-    ;
+    
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -136,6 +140,7 @@ label(char* fmt, ...){
 
 internal b32
 arrow_dropdown(char* fmt, ...){
+    
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -159,6 +164,7 @@ arrow_dropdown(char* fmt, ...){
         bbox.pos.x += padded_size/2.0;
         widget_render_text(bbox.pos , widget, ui->theme.text);
     };
+    
     widget->render_hook = render_hook;
     auto result = update_widget(widget);
     widget->min = get_text_size(widget->string, widget->style.font_scale);
@@ -167,11 +173,12 @@ arrow_dropdown(char* fmt, ...){
         widget->checked = !widget->checked;
     }
     return widget->checked;
+    
 }
 
 internal b32
 button(char* fmt, ...){
-    ;
+    
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);

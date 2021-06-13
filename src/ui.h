@@ -54,7 +54,7 @@ enum Widget_Property {
     WP_ALT_STRING,
     WP_FIRST_TRANSITION,
     WP_GHOST_LAYOUT,
-    WP
+    WP_ON_TOP,
 };
 
 struct Widget_Style {
@@ -182,6 +182,9 @@ struct UI_State {
     
     Panel* panel;
     
+    b32 popup;
+    v4f popup_rect;
+    Panel* popup_panel;
     
     struct {
         int capacity;
@@ -205,6 +208,7 @@ global f32 time_per_gui_update;
 typedef u64 UI_ID;
 
 
+#define UI_GHOST defer_loop(push_widget_ghost(), pop_layout())
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
 #define UI_WINDOW(rect, fmt, ...) defer_loop(ui_window(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 

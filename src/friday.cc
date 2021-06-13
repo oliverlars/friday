@@ -568,7 +568,7 @@ frame_graph(){
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_RENDER_BACKGROUND);
+    
     auto render_hook = [](Widget* widget ){
         RENDER_CLIP(v4f2(widget->pos - v2f(0, widget->min.height), widget->min)){
             f32 max_delta = 15.0f;
@@ -736,6 +736,8 @@ UPDATE {
         backdrop.b /= 1.2f;
         push_rectangle(v4f(0,0, platform->window_size.width,platform->window_size.height), 1, backdrop);
         f32 widget_start = platform->get_time();
+        
+        render_popup();
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);

@@ -845,7 +845,6 @@ push_widget_row(){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_ROW);
     widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
 }
 
@@ -855,7 +854,16 @@ push_widget_column(){
     auto layout = push_layout(widget);
     widget_set_property(widget, WP_COLUMN);
     widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_LERP_POSITION);
+    update_widget(widget);
+}
+
+internal void
+push_widget_ghost(){
+    auto widget = push_widget();
+    auto layout = push_layout(widget);
+    widget->min = widget->parent->min;
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_GHOST_LAYOUT);
     update_widget(widget);
 }
 
@@ -943,8 +951,6 @@ internal v2f layout_widgets(Widget* widget, v2f pos =  v2f(0,0), b32 dont_lerp_c
 
 internal v2f
 layout_row(Widget* widget, v2f pos, b32 dont_lerp_children){
-    ;
-    
     v2f size = {};
     v2f start_pos = pos;
     v2f next_size = {};
@@ -1011,8 +1017,6 @@ layout_wrap(Widget* widget, v2f pos, b32 dont_lerp_children){
 
 internal v2f
 layout_column(Widget* widget, v2f pos, b32 dont_lerp_children){
-    ;
-    
     v2f size = {};
     
     ForEachWidgetSibling(widget){
@@ -1032,8 +1036,9 @@ layout_column(Widget* widget, v2f pos, b32 dont_lerp_children){
 
 internal v2f
 layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
-    ;
+    
     v2f size = {};
+    f32 min_space_required = 0;
     s32 number_of_children = 0;
     // NOTE(Oliver): layout as if it's a normal row
     {
@@ -1054,15 +1059,23 @@ layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
             
             size.width += next_size.width;
             size.height = max(size.height, next_size.height);
-            number_of_children++;
+            if(widget_has_property(it, WP_FIXED_SIZE)){
+                min_space_required += next_size.width;
+            }else {
+                number_of_children++;
+            }
         }
         
     }
     f32 available_space = widget->parent->min.width;
-    f32 space_per_widget = available_space/number_of_children;
+    f32 space_left = available_space - min_space_required;
+    f32 space_per_widget = space_left/number_of_children;
     
     ForEachWidgetSibling(widget){
-        it->min.width = space_per_widget;
+        if(widget_has_property(it, WP_FIXED_SIZE)){
+        }else {
+            it->min.width = space_per_widget;
+        }
     }
     
     size = {};
@@ -1167,7 +1180,7 @@ layout_window(Widget* widget,  v2f pos){
 
 internal v2f
 layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
-    ;
+    
     if(!widget) return {};
     
     if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
@@ -1217,6 +1230,11 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     }
     if(dont_lerp_children)  widget->pos = pos;
     
+    
+    if(widget_has_property(widget, WP_GHOST_LAYOUT)){
+        layout_widgets(widget->first_child, pos, dont_lerp_children);
+        return {};
+    }
     
     if(widget_has_property(widget, WP_COLUMN)){
         return layout_column(widget->first_child, pos, dont_lerp_children);
@@ -1280,12 +1298,11 @@ render_widgets(Widget* widget){
         v4f bbox = v4f2(widget->pos, widget->min);
         
         if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
-            push_rectangle(bbox, 3, colour_from_v4f(widget->style.background_colour));
+            push_rectangle(bbox, 3, ui->theme.background);
         }
         
         bbox = inflate_rect(bbox, 1.5);
         push_rectangle_outline(bbox, 0.2, 3, ui->theme.text);
-        
     }
     
     if(widget_has_property(widget, WP_CONTAINER) &&
@@ -1442,7 +1459,7 @@ static f32 font_scale = 0.85f;
 
 internal void
 render_panels(Panel* root, v4f rect){
-    ;
+    
     if(!root) return;
     
     if(root->is_dragging){
@@ -1522,12 +1539,10 @@ render_panels(Panel* root, v4f rect){
             platform->set_cursor_to_vertical_resize();
         }
         
-        
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ID("%d", (int)root){
                     ui_panel_header(root, "Properties");
-                    ui_panel_resize_widgets(root, rect, "splitter");
                     
                     UI_COLUMN ID("%d", (int)root) {
                         label("Syntax Style");
@@ -1570,11 +1585,9 @@ render_panels(Panel* root, v4f rect){
                         yspacer(20);
                         label("frame graph"); 
                         
-#if 0
                         UI_ROW UI_WIDTHFILL{
-                            //frame_graph();
+                            frame_graph();
                         }
-#endif
                         
                         UI_WIDTHFILL {
                             local_persist String8 string = make_string("test");
@@ -1654,5 +1667,37 @@ render_panels(Panel* root, v4f rect){
             }
         }
         
+    }
+    
+}
+
+internal void
+render_popup(){
+    
+    if(ui->popup){
+        UI_WINDOW(ui->popup_rect, "popup"){
+            ID("%d", (int)ui->popup_panel) {
+                UI_ROW UI_WIDTHFILL{
+                    if(button("Properties")){
+                        ui->popup_panel->type = PANEL_PROPERTIES;
+                    }
+                }
+                UI_ROW UI_WIDTHFILL{
+                    if(button("Code Editor")){
+                        ui->popup_panel->type = PANEL_EDITOR;
+                    }
+                }
+                UI_ROW UI_WIDTHFILL{
+                    if(button("Debug Info")){
+                        ui->popup_panel->type = PANEL_DEBUG;
+                    }
+                }
+                UI_ROW UI_WIDTHFILL{
+                    if(button("Console")){
+                        ui->popup_panel->type = PANEL_CONSOLE;
+                    }
+                }
+            }
+        }
     }
 }

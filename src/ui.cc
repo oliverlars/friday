@@ -503,7 +503,7 @@ get_last_widget(UI_ID id, String8 string){
 
 internal Widget*
 get_widget(String8 string){
-    ;
+    
     if(string.length == 0) return nullptr;
     
     auto id = generate_id(string);
@@ -561,6 +561,22 @@ get_widget(String8 string){
     
     return widget;
 }
+
+internal b32
+is_there_an_overlapping_window_after(){
+    if(ui->previous_window_count){
+        for(int i = ui->current_window+1; i < ui->previous_window_count; i++){
+            auto window = ui->previous_windows[i];
+            auto bounds = v4f2(window->pos, window->min);
+            bounds.y -= bounds.height;
+            if(is_in_rect(platform->mouse_position, bounds)){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 internal Widget*
 make_widget(){
@@ -757,7 +773,11 @@ update_widget(Widget* widget){
     
     Widget* last_widget = get_widget(widget->string);
     
-    if(last_widget){
+    if(is_there_an_overlapping_window_after()){
+        // NOTE(Oliver): dont handle this widget, there's a window
+        // after that contains the mouse
+    }
+    else if(last_widget){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         
@@ -778,7 +798,6 @@ update_widget(Widget* widget){
         }
         
         if(is_in_rect(platform->mouse_position, bbox)){
-            
             ui->hot = widget->id;
         }
         
@@ -892,10 +911,14 @@ internal void
 push_widget_window(v4f rect, String8 string){
     auto widget = push_widget();
     auto layout = push_layout(widget);
+    
     // NOTE(Oliver): i must be able to just call
     // push_widget(string)???????????
     widget->id = generate_id(string);
     widget->string = string;
+    
+    ui->current_window = ui->window_count;
+    ui->windows[ui->window_count++] = widget;
     
     push_default_style();
     widget->style.background_colour = v4f_from_colour(ui->theme.background);
@@ -1700,21 +1723,26 @@ render_popup(){
                 UI_ROW UI_WIDTHFILL{
                     if(button("Properties")){
                         ui->popup_panel->type = PANEL_PROPERTIES;
+                        ui->popup = false;
                     }
                 }
                 UI_ROW UI_WIDTHFILL{
                     if(button("Code Editor")){
                         ui->popup_panel->type = PANEL_EDITOR;
+                        ui->popup = false;
                     }
                 }
                 UI_ROW UI_WIDTHFILL{
                     if(button("Debug Info")){
                         ui->popup_panel->type = PANEL_DEBUG;
+                        ui->popup = false;
+                        
                     }
                 }
                 UI_ROW UI_WIDTHFILL{
                     if(button("Console")){
                         ui->popup_panel->type = PANEL_CONSOLE;
+                        ui->popup = false;
                     }
                 }
             }

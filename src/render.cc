@@ -1760,5 +1760,4 @@ opengl_end_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     process_and_draw_commands();
     
-    
 }

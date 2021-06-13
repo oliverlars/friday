@@ -179,10 +179,18 @@ struct UI_State {
     
     Widget* root;
     
+    s32 current_window;
+    
     Widget** widget_table;
     Widget** last_widget_table;
     
     Panel* panel;
+    
+    Widget** previous_windows;
+    int previous_window_count;
+    
+    Widget** windows;
+    int window_count;
     
     b32 popup;
     v4f popup_rect;

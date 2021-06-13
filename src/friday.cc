@@ -73,6 +73,11 @@ start_frame(){
     ui->last_widget_table = ui->widget_table;
     ui->widget_table = (Widget**)push_size_zero(&platform->frame_arena, MAX_TABLE_WIDGETS*sizeof(Widget*));
     
+    ui->previous_windows = ui->windows;
+    ui->previous_window_count = ui->window_count;
+    ui->window_count = 0;
+    ui->windows = (Widget**)push_size_zero(&platform->frame_arena, 32*sizeof(Widget));
+    
     opengl_start_frame();
 }
 
@@ -729,6 +734,8 @@ UPDATE {
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
+        render_popup();
+        
         // NOTE(Oliver): background
         Colour backdrop = ui->theme.background;
         backdrop.r /= 1.2f;
@@ -737,12 +744,12 @@ UPDATE {
         push_rectangle(v4f(0,0, platform->window_size.width,platform->window_size.height), 1, backdrop);
         f32 widget_start = platform->get_time();
         
-        render_popup();
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);
         }
+        
         f32 widget_end = platform->get_time();
         if(widget_end - widget_start > 0.001){
         }

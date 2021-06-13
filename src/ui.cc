@@ -952,8 +952,12 @@ push_widget_popup(v4f rect, String8 string){
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
+    
     style.background_colour = v4f_from_colour(ui->theme.darker_background);
-    style.background_colour.a *= 0.5f;
+    style.background_colour.r /= 2.0;
+    style.background_colour.g /= 2.0;
+    style.background_colour.b /= 2.0;
+    
     style.font_scale = 0.8f;
     push_style(style);
     
@@ -963,7 +967,7 @@ push_widget_popup(v4f rect, String8 string){
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
-        push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, ui->theme.darker_background);
+        push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, colour_from_v4f(widget->style.background_colour));
     };
     widget->render_hook = render_hook;
     auto result = update_widget(widget);

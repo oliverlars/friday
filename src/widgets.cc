@@ -229,6 +229,10 @@ arrow_dropdown2(char* fmt, ...){
     if(result.clicked){
         widget->checked = !widget->checked;
     }
+    else if(result.was_active && widget->checked){
+        widget->checked = 0;
+    }
+    
     return widget->checked;
     
 }

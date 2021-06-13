@@ -456,7 +456,7 @@ push_default_style(){
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
     style.background_colour = v4f_from_colour(ui->theme.background);
-    style.font_scale = 0.8f;
+    style.font_scale = 0.75f;
     push_style(style);
     
 }
@@ -958,7 +958,7 @@ push_widget_popup(v4f rect, String8 string){
     style.background_colour.g /= 2.0;
     style.background_colour.b /= 2.0;
     
-    style.font_scale = 0.8f;
+    style.font_scale = 0.7f;
     push_style(style);
     
     widget_set_property(widget, WP_OVERLAP);
@@ -1020,9 +1020,7 @@ layout_row(Widget* widget, v2f pos, b32 dont_lerp_children){
     v2f start_pos = pos;
     v2f next_size = {};
     ForEachWidgetSibling(widget){
-        if(widget_has_property(it, WP_WIDTHFILL)){
-            it->min.x = it->parent->min.x - (pos.x - start_pos.x);
-        }
+        
         v2f next_size = layout_widgets(it, pos, dont_lerp_children);
         
         if(widget_has_property(it, WP_SPACING)){
@@ -1126,6 +1124,7 @@ layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
             size.height = max(size.height, next_size.height);
             if(widget_has_property(it, WP_FIXED_SIZE)){
                 min_space_required += next_size.width;
+                min_space_required += PADDING;
             }else {
                 number_of_children++;
             }
@@ -1606,55 +1605,80 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
                 ID("%d", (int)root){
                     ui_panel_header(root, "Properties");
+                    yspacer(10);
+                    b32 result = false;
                     
                     UI_COLUMN ID("%d", (int)root) {
-                        label("Syntax Style");
-                        UI_WIDTHFILL { if(button("Render as Default")) present_style = 0;}
-                        UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
-                        UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 2;}
-                        UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
-                        local_persist v4f rect  = {};
-                        yspacer(20);
-                        
-                        UI_WIDTHFILL{
-                            label("font size"); 
-                            fslider(0, 2, &font_scale, "font scale");
+                        UI_WIDTHFILL {
+                            result = arrow_dropdown2("Syntax Style");
                         }
                         
-                        UI_WIDTHFILL{
-                            label("indent scale"); 
-                            fslider(0, 50, &presenter->indent_level, "indent");
-                        }
-                        
-                        
-                        yspacer(20);
-                        UI_ROW UI_WIDTHFILL {
-                            if(button("Compile")){
-                                compile_c(editor->root);
-                            }
-                            button("Run");
-                        }
-                        UI_ROW UI_WIDTHFILL {
-                            if(button("serialise")){
-                                auto str = make_stringf(&platform->frame_arena, "%s", "test.arc");
-                                platform->delete_file(str);
-                                serialise(str, editor->root);
-                            }
-                            if(button("deserialise")){
-                                editor->should_reload = true;
-                            }
-                            
-                        }
-                        yspacer(20);
-                        label("frame graph"); 
-                        
-                        UI_ROW UI_WIDTHFILL{
-                            frame_graph();
+                        if(result){
+                            yspacer(10);
+                            UI_WIDTHFILL { if(button("Render as Default")) present_style = 0;}
+                            UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
+                            UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 2;}
+                            UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
+                            local_persist v4f rect  = {};
+                            yspacer(10);
                         }
                         
                         UI_WIDTHFILL {
-                            local_persist String8 string = make_string("test");
-                            text_box(&string);
+                            result = arrow_dropdown2("Size and spacing");
+                        }
+                        if(result){
+                            yspacer(10);
+                            UI_WIDTHFILL{
+                                label("Font"); 
+                                fslider(0, 2, &font_scale, "font scale");
+                            }
+                            
+                            UI_WIDTHFILL{
+                                label("Indent"); 
+                                fslider(0, 50, &presenter->indent_level, "indent");
+                            }
+                            yspacer(10);
+                        }
+                        
+                        UI_WIDTHFILL {
+                            result = arrow_dropdown2("Code generation");
+                        }
+                        if(result){
+                            yspacer(10);
+                            UI_ROW UI_WIDTHFILL {
+                                if(button("Compile")){
+                                    compile_c(editor->root);
+                                }
+                                button("Run");
+                            }
+                            UI_ROW UI_WIDTHFILL {
+                                if(button("Serialise")){
+                                    auto str = make_stringf(&platform->frame_arena, "%s", "test.arc");
+                                    platform->delete_file(str);
+                                    serialise(str, editor->root);
+                                }
+                                if(button("Deserialise")){
+                                    editor->should_reload = true;
+                                }
+                                
+                            }
+                        }
+                        
+                        UI_WIDTHFILL {
+                            result = arrow_dropdown2("Frame Graph");
+                        }
+                        if(result){
+                            yspacer(20);
+                            label("frame graph"); 
+                            
+                            UI_ROW UI_WIDTHFILL{
+                                frame_graph();
+                            }
+                            
+                            UI_WIDTHFILL {
+                                local_persist String8 string = make_string("test");
+                                text_box(&string);
+                            }
                         }
                     }
                 }

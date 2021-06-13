@@ -126,7 +126,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                 }
                 
                 if(widget->checked){
-                    ui->popup_rect = v4f2(widget->pos, v2f(200,150));
+                    ui->popup_rect = v4f2(widget->pos, v2f(200,125));
                     ui->popup_rect.pos.x -= (ui->popup_rect.width - widget->min.width);
                     ui->popup_rect.pos.y -= widget->min.height;
                     ui->popup_rect.pos.y -= 20;
@@ -146,6 +146,7 @@ label(char* fmt, ...){
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
+    push_default_style();
     widget_set_property(widget, WP_RENDER_TEXT);
     //widget_set_property(widget, WP_LERP_POSITION);
     update_widget(widget);
@@ -214,7 +215,7 @@ arrow_dropdown2(char* fmt, ...){
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
     style.background_colour = v4f_from_colour(ui->theme.darker_background);
-    style.font_scale = 0.8f;
+    style.font_scale = 0.7f;
     push_style(style);
     
     auto render_hook = [](Widget* widget) {
@@ -253,7 +254,7 @@ button(char* fmt, ...){
     va_end(args);
     
     Widget* widget = push_widget(string);
-    
+    push_default_style();
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_RENDER_BORDER);
@@ -329,7 +330,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     auto widget = push_widget(string);
-    
+    push_default_style();
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BORDER);
@@ -376,6 +377,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     widget->render_hook = render_hook;
     widget->value = (*value - min)/(max - min);
     auto result = update_widget(widget);
+    widget->min.height = get_font_line_height(widget->style.font_scale);
     if(result.clicked){
         f32 x = (result.clicked_position.x - result.pos.x)/result.size.width;
         *value = min + x*(max-min);
@@ -421,31 +423,11 @@ text_box(String8* string){
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
     widget_set_property(widget, WP_TEXT_EDIT);
-    
+    push_default_style();
     auto render_hook = [](Widget* widget) {
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
-        
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
-            v4f border_colour;
-            if(widget->id == ui->hot){
-                border_colour = v4f_from_colour(ui->theme.cursor);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-                }
-            }else {
-                border_colour = v4f_from_colour(ui->theme.border);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
-                }
-            }
-            push_rectangle_outline(bbox, 1, 3, colour_from_v4f(widget->style.border_colour));
-            
-            pos.x += 1;
-            pos.y -= 1;
-        }
         
         if(ui->active == widget->id){
             String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
@@ -462,13 +444,14 @@ text_box(String8* string){
             f32 centre = pos.x + widget->min.x/2.0f;
             f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
             f32 text_x = centre - text_centre;
-            push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text);
+            push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text, widget->style.font_scale);
         }
     };
     
     widget->render_hook = render_hook;
     
     auto result = update_widget(widget);
+    widget->min = get_text_size(widget->string, widget->style.font_scale);
     if(result.clicked){
         memcpy(ui->editing_string.text, string->text, string->length);
         ui->editing_string.length = string->length;

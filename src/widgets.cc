@@ -182,9 +182,15 @@ arrow_dropdown(char* fmt, ...){
     auto result = update_widget(widget);
     widget->min = get_text_size(widget->string, widget->style.font_scale);
     widget->min.width += 2.0*widget->min.height;
+    
+    
     if(result.clicked){
         widget->checked = !widget->checked;
     }
+    else if(result.was_active && widget->checked){
+        widget->checked = 0;
+    }
+    
     return widget->checked;
     
 }
@@ -226,6 +232,7 @@ arrow_dropdown2(char* fmt, ...){
     auto result = update_widget(widget);
     widget->min = get_text_size(widget->string, widget->style.font_scale);
     widget->min.width += 2.0*widget->min.height;
+    
     if(result.clicked){
         widget->checked = !widget->checked;
     }

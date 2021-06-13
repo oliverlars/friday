@@ -53,6 +53,8 @@ enum Widget_Property {
     WP_MANUAL_LAYOUT,
     WP_ALT_STRING,
     WP_FIRST_TRANSITION,
+    WP_GHOST_LAYOUT,
+    WP
 };
 
 struct Widget_Style {

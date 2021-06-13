@@ -39,6 +39,35 @@ ui_container(char* fmt, ...) {
     push_widget_column();
 }
 
+internal int
+menu_list(String8* list, s32 count, char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    int clicked_which = -1;
+    UI_COLUMN {
+        for(int i = 0; i < count; i++){
+            
+            Widget* widget = push_widget(list[i]);
+            
+            widget_set_property(widget, WP_CLICKABLE);
+            widget_set_property(widget, WP_RENDER_TEXT);
+            widget_set_property(widget, WP_RENDER_BORDER);
+            widget_set_property(widget, WP_RENDER_BACKGROUND);
+            widget_set_property(widget, WP_SPACING);
+            widget_set_property(widget, WP_LERP_COLOURS);
+            widget_set_property(widget, WP_GHOST_LAYOUT);
+            //widget_set_property(widget, WP_LERP_POSITION);
+            auto result = update_widget(widget);
+            if(result.clicked) { clicked_which = i; break; }
+            
+        }
+    }
+    return clicked_which;
+}
+
 internal void
 ui_panel_header(Panel* panel, char* fmt, ...){
     va_list args;
@@ -54,26 +83,36 @@ ui_panel_header(Panel* panel, char* fmt, ...){
             
             ID("change type"){
                 dropdown = arrow_dropdown("%.*s", string.length, string.text);
+                
             }
-            
         }
-        
     }
-    
-    ID("%d", (int)panel) {
-        if(dropdown){
-            UI_WRAP {
-                if(button_fixed("properties")){
-                    panel->type = PANEL_PROPERTIES;
+    UI_COLUMN{
+        ID("%d", (int)panel) {
+            if(dropdown){
+                UI_ROW UI_WIDTHFILL{
+                    xspacer(50);
+                    if(button("properties")){
+                        panel->type = PANEL_PROPERTIES;
+                    }
                 }
-                if(button_fixed("code editor")){
-                    panel->type = PANEL_EDITOR;
+                UI_ROW UI_WIDTHFILL{
+                    xspacer(50);
+                    if(button("code editor")){
+                        panel->type = PANEL_EDITOR;
+                    }
                 }
-                if(button_fixed("debug info")){
-                    panel->type = PANEL_DEBUG;
+                UI_ROW UI_WIDTHFILL{
+                    xspacer(50);
+                    if(button("debug info")){
+                        panel->type = PANEL_DEBUG;
+                    }
                 }
-                if(button_fixed("console")){
-                    panel->type = PANEL_CONSOLE;
+                UI_ROW UI_WIDTHFILL{
+                    xspacer(50);
+                    if(button("console")){
+                        panel->type = PANEL_CONSOLE;
+                    }
                 }
             }
         }
@@ -134,15 +173,6 @@ button(char* fmt, ...){
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
     va_end(args);
     
-#if 0    
-    Widget_Style style = {};
-    style.background_colour = v4f_from_colour({0x2F9160ff});
-    style.text_colour = v4f_from_colour(ui->theme.text);
-    style.border_colour = v4f_from_colour({0x103321ff});
-    style.font_scale = 0.8f;
-    push_style(style);
-#endif
-    
     Widget* widget = push_widget(string);
     
     widget_set_property(widget, WP_CLICKABLE);
@@ -154,6 +184,7 @@ button(char* fmt, ...){
     //widget_set_property(widget, WP_LERP_POSITION);
     auto result = update_widget(widget);
     return result.clicked;
+    
 }
 
 internal b32

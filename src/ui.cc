@@ -457,6 +457,7 @@ push_default_style(){
     style.border_colour = v4f_from_colour(ui->theme.text);
     style.background_colour = v4f_from_colour(ui->theme.background);
     style.font_scale = 0.75f;
+    style.rounded_corner_amount = 3.0f;
     push_style(style);
     
 }
@@ -561,6 +562,11 @@ get_widget(String8 string){
     }
     
     return widget;
+}
+
+internal Widget*
+get_current_window() {
+    return ui->windows[ui->current_window];
 }
 
 internal b32
@@ -1415,12 +1421,23 @@ render_widgets(Widget* widget){
     }
     
     
-    if(widget_has_property(widget, WP_RENDER_BACKGROUND)){
-        v4f bbox = v4f2(widget->pos, widget->min);
-        bbox.y -= widget->min.height;
-        bbox = inflate_rect(bbox, widget->hot_transition*2.0);
-        //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
-        push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
+    if(widget_has_property(widget, WP_RENDER_BACKGROUND) ||
+       widget_has_property(widget, WP_HOVER_RENDER_BACKGROUND)){
+        if((widget_has_property(widget, WP_HOVER_RENDER_BACKGROUND) &&
+            ui->hot == widget->id) || 
+           widget_has_property(widget, WP_RENDER_BACKGROUND)){
+            
+            
+            v4f bbox = v4f2(widget->pos, widget->min);
+            bbox.y -= widget->min.height;
+            if(widget_has_property(widget, WP_FIRST_TRANSITION)){
+                bbox = inflate_rect(bbox, widget->hot_transition*2.0);
+            }
+            //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
+            push_rectangle(bbox, widget->style.rounded_corner_amount, 
+                           colour_from_v4f(widget->style.background_colour));
+            
+        }
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
@@ -1444,7 +1461,8 @@ render_widgets(Widget* widget){
                 lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
             }
         }
-        push_rectangle_outline(bbox, 0.2, 3, colour_from_v4f(border_colour));
+        push_rectangle_outline(bbox, 0.2, widget->style.rounded_corner_amount, 
+                               colour_from_v4f(border_colour));
     }
     
     if(widget_has_property(widget, WP_RENDER_HOOK)){
@@ -1691,6 +1709,8 @@ render_panels(Panel* root, v4f rect){
                 
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Code Editor");
+                    
+#if 0
                     UI_ROW {
                         label("view");
                         for(int i = 0; i < editor->view_count; i++){
@@ -1703,6 +1723,7 @@ render_panels(Panel* root, v4f rect){
                             editor->view_count++;
                         }
                     }
+#endif
                     
                     UI_CONTAINER("snippet"){
                         present_arc(editor->root);
@@ -1762,18 +1783,19 @@ render_panels(Panel* root, v4f rect){
             }
         }else if(root->type == PANEL_HEADER) {
             UI_WINDOW(rect, "Header#%d", (int)root){
+                widget_remove_property(get_current_window(), WP_RENDER_BORDER);
                 ID("%d", (int)root) {
                     b32 result = false;
                     UI_ROW {
-                        result = arrow_dropdown2("File");
+                        result = arrow_dropdown3("File");
                         xspacer();
-                        result = arrow_dropdown2("Edit");
+                        result = arrow_dropdown3("Edit");
                         xspacer();
-                        result = arrow_dropdown2("Compile");
+                        result = arrow_dropdown3("Compile");
                         xspacer();
-                        result = arrow_dropdown2("Window");
+                        result = arrow_dropdown3("Window");
                         xspacer();
-                        result = arrow_dropdown2("Help");
+                        result = arrow_dropdown3("Help");
                     }
                 }
             }

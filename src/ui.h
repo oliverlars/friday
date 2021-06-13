@@ -32,6 +32,7 @@ enum Widget_Property {
     WP_RENDER_DOUBLE_BORDER,
     WP_RENDER_BACKGROUND,
     WP_RENDER_UNDERLINE,
+    WP_HOVER_RENDER_BACKGROUND,
     WP_LERP_POSITION,
     WP_LERP_COLOURS,
     WP_CLICKABLE,
@@ -64,6 +65,7 @@ struct Widget_Style {
     v4f border_colour;
     v4f background_colour;
     f32 font_scale;
+    f32 rounded_corner_amount;
 };
 
 

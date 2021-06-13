@@ -1382,6 +1382,7 @@ init_shaders(){
 
 internal void
 process_and_draw_commands(){
+    ;
     
     
     f32* rectangles = (f32*)push_size_zero(&platform->frame_arena, MAX_DRAW*BYTES_PER_RECTANGLE);
@@ -1441,7 +1442,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_RECTANGLE]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_RECTANGLE,
+                                    num_verts*BYTES_PER_RECTANGLE,
                                     rectangles);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1491,7 +1492,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_TRIANGLE]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_TRIANGLE,
+                                    num_verts*BYTES_PER_TRIANGLE,
                                     triangles);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1533,7 +1534,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_RECTANGLE_OUTLINE]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_RECTANGLE_OUTLINE,
+                                    num_verts*BYTES_PER_RECTANGLE_OUTLINE,
                                     rectangle_outlines);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1576,7 +1577,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_CIRCLE]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_CIRCLE,
+                                    num_verts*BYTES_PER_CIRCLE,
                                     circles);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1624,7 +1625,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_GLYPH]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_GLYPH,
+                                    num_verts*BYTES_PER_GLYPH,
                                     glyphs);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1668,7 +1669,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_RECTANGLE_TEXTURED]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_RECTANGLE_TEXTURED,
+                                    6*BYTES_PER_RECTANGLE_TEXTURED,
                                     rectangles_textured);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     
@@ -1720,7 +1721,7 @@ process_and_draw_commands(){
                 {
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->buffers[COMMAND_BEZIER]);
                     glBufferSubData(GL_ARRAY_BUFFER, 0, 
-                                    MAX_DRAW*BYTES_PER_BEZIER,
+                                    num_verts*BYTES_PER_BEZIER,
                                     beziers);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
                     

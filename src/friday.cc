@@ -735,13 +735,18 @@ UPDATE {
         backdrop.g /= 1.2f;
         backdrop.b /= 1.2f;
         push_rectangle(v4f(0,0, platform->window_size.width,platform->window_size.height), 1, backdrop);
+        f32 widget_start = platform->get_time();
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);
             render_widgets(it);
         }
-        
-        
+        f32 widget_end = platform->get_time();
+        if(widget_end - widget_start > 0.001){
+        }
+        //log("number of widgets: %d",number_of_widgets);
+        //if(number_of_widgets != 28) assert(0);
+        number_of_widgets = 0;
         Colour select_colour;
         select_colour.packed = 0xB73E4Aff;
         select_colour.a *= 0.4f;

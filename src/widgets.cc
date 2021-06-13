@@ -18,6 +18,7 @@ yspacer(f32 space){
 
 internal void
 ui_window(v4f rect, char* fmt, ...) {
+    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -30,6 +31,7 @@ ui_window(v4f rect, char* fmt, ...) {
 
 internal void
 ui_container(char* fmt, ...) {
+    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -121,6 +123,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
 
 internal void
 label(char* fmt, ...){
+    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -168,6 +171,7 @@ arrow_dropdown(char* fmt, ...){
 
 internal b32
 button(char* fmt, ...){
+    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);

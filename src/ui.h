@@ -148,6 +148,8 @@ struct Panel {
 #define MAX_WIDGETS 4096
 #define MAX_TABLE_WIDGETS 2*MAX_WIDGETS
 
+global s64 number_of_widgets;
+
 
 struct ID_Node {
     UI_ID id;
@@ -218,3 +220,5 @@ typedef u64 UI_ID;
 
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)
+
+global s64 max_hash_nexts;

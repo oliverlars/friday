@@ -293,6 +293,29 @@ load_theme_dots(){
 }
 
 internal void
+load_theme_matrix(){
+    
+    ui->theme.background.packed = 0x051812ff;
+    ui->theme.text.packed = 0x169B48ff;
+    
+    ui->theme.sub_colour.packed = 0x676e8aff;
+    ui->theme.border.packed = 0x35F192ff;
+    
+    ui->theme.select.packed = 0x85C3E5ff;
+    
+    ui->theme.text_comment.packed = 0xffc2d94d;
+    ui->theme.text_literal.packed = 0x54CB8Fff;
+    ui->theme.text_function.packed = 0x47C7F3ff;
+    ui->theme.text_type.packed = 0xFED35Eff;
+    ui->theme.text_misc.packed = 0x676E88ff;
+    
+    ui->theme.cursor.packed = 0xe08c17ff;
+    ui->theme.error.packed = 0xffcc3333;
+    
+    
+}
+
+internal void
 load_theme_dedouze(){
     ui->theme.background.packed = 0x1B5CCFff;
     ui->theme.text.packed = 0xFFFFC6ff;
@@ -386,6 +409,7 @@ generate_id(String8 label){
 
 internal UI_ID
 generate_id(char* fmt, ...){
+    ;
     va_list args;
     va_start(args, fmt);
     String8 string = make_stringfv(&platform->frame_arena, fmt, args);
@@ -470,6 +494,7 @@ get_last_widget(UI_ID id, String8 string){
 
 internal Widget*
 get_widget(String8 string){
+    ;
     if(string.length == 0) return nullptr;
     
     auto id = generate_id(string);
@@ -478,6 +503,7 @@ get_widget(String8 string){
     
     if(!widget){
         widget = push_type_zero(&platform->frame_arena, Widget);
+        number_of_widgets++;
         ui->widget_table[hash] = widget;
     }else{
         
@@ -501,7 +527,6 @@ get_widget(String8 string){
         if(!last_widget){
             return widget;
         }
-        
         do {
             if(string_eq(string, last_widget->string)){
                 break;
@@ -918,6 +943,7 @@ internal v2f layout_widgets(Widget* widget, v2f pos =  v2f(0,0), b32 dont_lerp_c
 
 internal v2f
 layout_row(Widget* widget, v2f pos, b32 dont_lerp_children){
+    ;
     
     v2f size = {};
     v2f start_pos = pos;
@@ -985,6 +1011,7 @@ layout_wrap(Widget* widget, v2f pos, b32 dont_lerp_children){
 
 internal v2f
 layout_column(Widget* widget, v2f pos, b32 dont_lerp_children){
+    ;
     
     v2f size = {};
     
@@ -1000,12 +1027,12 @@ layout_column(Widget* widget, v2f pos, b32 dont_lerp_children){
         
         size.width = max(size.width, next_size.width);
     }
-    
     return size;
 }
 
 internal v2f
 layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
+    ;
     v2f size = {};
     s32 number_of_children = 0;
     // NOTE(Oliver): layout as if it's a normal row
@@ -1117,6 +1144,7 @@ _layout_widthfill(Widget* widget, v2f pos, b32 dont_lerp_children){
 
 internal void
 layout_container(Widget* widget,  v2f pos, b32 dont_lerp_children){
+    ;
     
     if(widget->pos.x == 0 && widget->pos.y == 0){
         widget->pos = pos;
@@ -1139,6 +1167,7 @@ layout_window(Widget* widget,  v2f pos){
 
 internal v2f
 layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
+    ;
     if(!widget) return {};
     
     if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
@@ -1413,6 +1442,7 @@ static f32 font_scale = 0.85f;
 
 internal void
 render_panels(Panel* root, v4f rect){
+    ;
     if(!root) return;
     
     if(root->is_dragging){
@@ -1539,9 +1569,12 @@ render_panels(Panel* root, v4f rect){
                         }
                         yspacer(20);
                         label("frame graph"); 
+                        
+#if 0
                         UI_ROW UI_WIDTHFILL{
-                            frame_graph();
+                            //frame_graph();
                         }
+#endif
                         
                         UI_WIDTHFILL {
                             local_persist String8 string = make_string("test");

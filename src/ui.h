@@ -2,6 +2,7 @@ typedef u64 UI_ID;
 
 struct Theme {
     Colour background;
+    Colour darker_background;
     Colour text;
     
     Colour sub_colour;
@@ -55,6 +56,7 @@ enum Widget_Property {
     WP_FIRST_TRANSITION,
     WP_GHOST_LAYOUT,
     WP_ON_TOP,
+    WP_OVERLAP,
 };
 
 struct Widget_Style {
@@ -212,6 +214,7 @@ typedef u64 UI_ID;
 #define UI_ROW defer_loop(push_widget_row(), pop_layout())
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
 #define UI_WINDOW(rect, fmt, ...) defer_loop(ui_window(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
+#define UI_POPUP(rect, fmt, ...) defer_loop(ui_popup(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
 #define UI_CONTAINER(fmt, ...) defer_loop(ui_container(fmt, ##__VA_ARGS__), pop_widget_container()) 
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())

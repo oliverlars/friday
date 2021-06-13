@@ -1070,7 +1070,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(presenter->cursor.at == node){
+        if(presenter->cursor.at == node && ui->active == widget->id){
             presenter->cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(presenter->cursor.at);

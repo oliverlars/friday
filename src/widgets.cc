@@ -29,6 +29,18 @@ ui_window(v4f rect, char* fmt, ...) {
 }
 
 internal void
+ui_popup(v4f rect, char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    push_widget_popup(rect, string);
+    
+    push_widget_column();
+}
+
+internal void
 ui_container(char* fmt, ...) {
     
     va_list args;
@@ -114,9 +126,10 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                 }
                 
                 if(widget->checked){
-                    ui->popup_rect = v4f2(widget->pos, v2f(200,200));
+                    ui->popup_rect = v4f2(widget->pos, v2f(200,150));
                     ui->popup_rect.pos.x -= (ui->popup_rect.width - widget->min.width);
                     ui->popup_rect.pos.y -= widget->min.height;
+                    ui->popup_rect.pos.y -= 20;
                     ui->popup_rect.pos.y -= PADDING;
                     ui->popup_panel = panel;
                 }

@@ -281,7 +281,7 @@ internal void
 load_theme_dots(){
     
     ui->theme.background.packed = 0x121520ff;
-    ui->theme.darker_background.packed = 0x080A0Fff;
+    ui->theme.darker_background.packed = 0x303851ff;
     ui->theme.text.packed = 0xE7E7E7ff;
     
     ui->theme.sub_colour.packed = 0x676e8aff;
@@ -455,9 +455,10 @@ push_default_style(){
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
     style.border_colour = v4f_from_colour(ui->theme.text);
-    //style.background_colour = v4f_from_colour(ui->theme.background);
+    style.background_colour = v4f_from_colour(ui->theme.background);
     style.font_scale = 0.8f;
     push_style(style);
+    
 }
 
 
@@ -938,21 +939,36 @@ internal void
 push_widget_popup(v4f rect, String8 string){
     auto widget = push_widget();
     auto layout = push_layout(widget);
+    
     // NOTE(Oliver): i must be able to just call
     // push_widget(string)???????????
     widget->id = generate_id(string);
     widget->string = string;
     
-    push_default_style();
-    widget->style.background_colour = v4f_from_colour(ui->theme.darker_background);
+    ui->current_window = ui->window_count;
+    ui->windows[ui->window_count++] = widget;
     
+    
+    Widget_Style style = {};
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour(ui->theme.text);
+    style.background_colour = v4f_from_colour(ui->theme.darker_background);
+    style.background_colour.a *= 0.5f;
+    style.font_scale = 0.8f;
+    push_style(style);
+    
+    widget_set_property(widget, WP_OVERLAP);
     widget_set_property(widget, WP_CLIP);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
-    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_RENDER_HOOK);
     
+    auto render_hook = [](Widget* widget){
+        push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, ui->theme.darker_background);
+    };
+    widget->render_hook = render_hook;
+    auto result = update_widget(widget);
     widget->min = rect.size;
     widget->pos = rect.pos;
-    auto result = update_widget(widget);
     push_widget_padding(v2f(10, 10));
 }
 
@@ -1401,7 +1417,7 @@ render_widgets(Widget* widget){
         bbox.y -= widget->min.height;
         bbox = inflate_rect(bbox, widget->hot_transition*2.0);
         //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
-        push_rectangle(bbox, 1, ui->theme.background);
+        push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
@@ -1674,7 +1690,13 @@ render_panels(Panel* root, v4f rect){
             UI_WINDOW(rect, "Debug#%d", (int)root){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Debug");
-                    if(dropdown("navigation")){
+                    yspacer();
+                    b32 result = 0;
+                    UI_WIDTHFILL {
+                        result = arrow_dropdown2("navigation");
+                    }
+                    
+                    if(result){
                         UI_COLUMN {
                             label("current line: %d", presenter->cursor.line_index);
                             label("current pos: %d", presenter->cursor.buffer_index);
@@ -1718,7 +1740,7 @@ internal void
 render_popup(){
     
     if(ui->popup){
-        UI_WINDOW(ui->popup_rect, "popup"){
+        UI_POPUP(ui->popup_rect, "popup"){
             ID("%d", (int)ui->popup_panel) {
                 UI_ROW UI_WIDTHFILL{
                     if(button("Properties")){

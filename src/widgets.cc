@@ -190,6 +190,50 @@ arrow_dropdown(char* fmt, ...){
 }
 
 internal b32
+arrow_dropdown2(char* fmt, ...){
+    
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    auto widget = push_widget(string);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_FIRST_TRANSITION);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_RENDER_BACKGROUND);
+    
+    Widget_Style style = {};
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour(ui->theme.text);
+    style.background_colour = v4f_from_colour(ui->theme.darker_background);
+    style.font_scale = 0.8f;
+    push_style(style);
+    
+    auto render_hook = [](Widget* widget) {
+        auto bbox = v4f2(widget->pos, widget->min);
+        f32 padded_size = widget->min.height;
+        v2f tpos = bbox.pos;
+        tpos.y -= padded_size/2.0;
+        tpos.x += padded_size/2.0;
+        push_triangle(tpos, padded_size, 0.25 + lerp(0.0, 0.25, widget->active_transition), ui->theme.text);
+        bbox.pos.x += padded_size/2.0;
+        widget_render_text(bbox.pos , widget, ui->theme.text);
+    };
+    
+    widget->render_hook = render_hook;
+    auto result = update_widget(widget);
+    widget->min = get_text_size(widget->string, widget->style.font_scale);
+    widget->min.width += 2.0*widget->min.height;
+    if(result.clicked){
+        widget->checked = !widget->checked;
+    }
+    return widget->checked;
+    
+}
+
+internal b32
 button(char* fmt, ...){
     
     va_list args;

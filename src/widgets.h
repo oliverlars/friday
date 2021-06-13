@@ -7,8 +7,13 @@ yspacer(f32 space = 10.0f);
 
 internal void
 ui_window(v4f rect, char* fmt, ...);
+
+internal void
+ui_popup(v4f rect, char* fmt, ...);
+
 internal void
 ui_container(char* fmt, ...);
+
 internal void
 ui_panel_header(Panel* panel, char* fmt, ...);
 
@@ -17,6 +22,10 @@ label(char* fmt, ...);
 
 internal b32
 arrow_dropdown(char* fmt, ...);
+
+internal b32
+arrow_dropdown2(char* fmt, ...);
+
 internal b32
 button(char* fmt, ...);
 

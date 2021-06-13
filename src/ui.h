@@ -135,6 +135,7 @@ enum Panel_Type {
     PANEL_STATUS,
     PANEL_DEBUG,
     PANEL_CONSOLE,
+    PANEL_HEADER,
 };
 
 struct Panel {

@@ -1615,7 +1615,7 @@ render_panels(Panel* root, v4f rect){
                         
                         if(result){
                             yspacer(10);
-                            UI_WIDTHFILL { if(button("Render as Default")) present_style = 0;}
+                            UI_WIDTHFILL { if(button("Render as default")) present_style = 0;}
                             UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
                             UI_WIDTHFILL { if(button("Render as Pascal")) present_style = 2;}
                             UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
@@ -1662,10 +1662,12 @@ render_panels(Panel* root, v4f rect){
                                 }
                                 
                             }
+                            yspacer(10);
+                            
                         }
                         
                         UI_WIDTHFILL {
-                            result = arrow_dropdown2("Frame Graph");
+                            result = arrow_dropdown2("Frame graph");
                         }
                         if(result){
                             yspacer(20);
@@ -1756,6 +1758,23 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Console");
                     label("%f", time_per_gui_update);
+                }
+            }
+        }else if(root->type == PANEL_HEADER) {
+            UI_WINDOW(rect, "Header#%d", (int)root){
+                ID("%d", (int)root) {
+                    b32 result = false;
+                    UI_ROW {
+                        result = arrow_dropdown2("File");
+                        xspacer();
+                        result = arrow_dropdown2("Edit");
+                        xspacer();
+                        result = arrow_dropdown2("Compile");
+                        xspacer();
+                        result = arrow_dropdown2("Window");
+                        xspacer();
+                        result = arrow_dropdown2("Help");
+                    }
                 }
             }
         }

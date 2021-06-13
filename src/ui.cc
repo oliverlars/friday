@@ -1508,18 +1508,16 @@ render_panels(Panel* root, v4f rect){
                         local_persist v4f rect  = {};
                         yspacer(20);
                         
-                        UI_WIDTHFILL UI_ROW{
-                            
-                            UI_COLUMN {
-                                label("font size"); 
-                                yspacer(15);
-                                label("indent level"); 
-                            }
-                            UI_COLUMN {
-                                fslider(0, 2, &font_scale, "font scale");
-                                fslider(0, 50, &presenter->indent_level, "indent");
-                            }
+                        UI_WIDTHFILL{
+                            label("font size"); 
+                            fslider(0, 2, &font_scale, "font scale");
                         }
+                        
+                        UI_WIDTHFILL{
+                            label("indent scale"); 
+                            fslider(0, 50, &presenter->indent_level, "indent");
+                        }
+                        
                         
                         yspacer(20);
                         UI_ROW UI_WIDTHFILL {

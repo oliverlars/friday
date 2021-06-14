@@ -441,8 +441,10 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     auto widget = push_widget(string);
     push_default_style();
     widget_set_property(widget, WP_SPACING);
+    widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_HOVER_INFLATE);
     widget_set_property(widget, WP_CLICKABLE);
     //widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
@@ -452,52 +454,32 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
-        {
-            v4f pc = bbox;
-            pc.width *= (widget->value);
-            push_rectangle(pc, 1, ui->theme.sub_colour);
-        }
-        if(widget_has_property(widget, WP_RENDER_BORDER)){
-            bbox = inflate_rect(bbox, widget->hot_transition*2.5f);
-            v4f border_colour;
-            if(widget->id == ui->hot){
-                border_colour = v4f_from_colour(ui->theme.cursor);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.2f);
-                }
-            }else {
-                border_colour = v4f_from_colour(ui->theme.border);
-                if(widget_has_property(widget, WP_LERP_COLOURS)){
-                    lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
-                }
-            }
-            push_rectangle_outline(bbox, 0.2f, 3, colour_from_v4f(border_colour));
-            
-            pos.x += 1;
-            pos.y -= 1;
-        }
+        v4f pc = bbox;
+        pc.width *= (widget->value);
+        push_rectangle(pc, 1, ui->theme.sub_colour);
+        
+        pos.x += 1;
+        pos.y -= 1;
+        
         f32 centre = pos.x + widget->min.x/2.0f;
         String8 string = make_stringf(&platform->frame_arena, "%.2f", widget->value);
         f32 text_centre = get_text_width(string, widget->style.font_scale)/2.0f;
         f32 text_x = centre - text_centre;
         push_string(v2f(text_x, bbox.y), string, ui->theme.text, widget->style.font_scale);
+        
     };
     
     widget->render_hook = render_hook;
     widget->value = (*value - min)/(max - min);
     auto result = update_widget(widget);
     widget->min.height = get_font_line_height(widget->style.font_scale);
-    if(result.clicked){
-        f32 x = (result.clicked_position.x - result.pos.x)/result.size.width;
-        *value = min + x*(max-min);
-        widget->value = (*value - min)/(max - min);
-    }
     if(ui->dragging && ui->active == widget->id){
-        f32 x = result.delta.x/result.size.width;
-        *value += x*(max-min);
+        f32 x = (platform->mouse_position.x - result.pos.x)/result.size.width;
+        *value = x*(max-min);
         clampf(value, min, max);
         widget->value = (*value - min)/(max - min);
     }
+    
 }
 
 internal b32

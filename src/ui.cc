@@ -841,7 +841,8 @@ update_widget(Widget* widget){
                 ui->active = widget->id;
             }
         }
-        
+        result.pos = bbox.pos;
+        result.size = bbox.size;
         if(is_in_rect(platform->mouse_position, bbox)){
             ui->hot = widget->id;
         }

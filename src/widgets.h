@@ -49,3 +49,11 @@ dropdown(char* fmt, ...);
 
 internal void
 text_box(String8* string);
+
+internal void
+filebar_dropdown(char* fmt, ...);
+
+
+internal b32 
+icon_button(Bitmap bitmap, char* fmt, ...);
+

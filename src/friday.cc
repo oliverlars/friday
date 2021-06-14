@@ -92,6 +92,7 @@ end_frame(){
 BEGIN_C_EXPORT
 global int pause = 0;
 
+
 PERMANENT_LOAD {
     platform = platform_;
     pause = 400;
@@ -144,6 +145,8 @@ PERMANENT_LOAD {
     presenter->select_first = first;
     
     srand(0);
+    
+    ui->logo = make_bitmap("icon.png");
 }
 
 HOT_LOAD {
@@ -735,7 +738,6 @@ UPDATE {
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
         render_popup();
-        
         // NOTE(Oliver): background
         Colour backdrop = ui->theme.background;
         backdrop.r /= 1.2f;

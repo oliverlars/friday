@@ -140,6 +140,32 @@ ui_panel_header(Panel* panel, char* fmt, ...){
 }
 
 internal void
+filebar_dropdown(char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    b32 dropdown = false;
+    
+    dropdown = arrow_dropdown3("%.*s", string.length, string.text);
+    auto widget = ui->current_widget;
+    if(dropdown){
+        widget->checked = !widget->checked;
+        ui->popup = widget->checked;
+    }
+    
+    if(widget->checked){
+        ui->popup_rect = v4f2(widget->pos, v2f(200,125));
+        ui->popup_rect.pos.x -= (ui->popup_rect.width - widget->min.width);
+        ui->popup_rect.pos.y -= widget->min.height;
+        ui->popup_rect.pos.y -= 20;
+        ui->popup_rect.pos.y -= PADDING;
+    }
+    
+}
+
+internal void
 label(char* fmt, ...){
     
     va_list args;
@@ -213,6 +239,7 @@ arrow_dropdown2(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_HOVER_RENDER_BORDER);
+    widget_set_property(widget, WP_RENDER_SHADOW);
     
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
@@ -306,6 +333,46 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_HOVER_INFLATE);
     //widget_set_property(widget, WP_LERP_POSITION);
     auto result = update_widget(widget);
+    return result.clicked;
+    
+}
+
+internal b32
+icon_button(Bitmap bitmap, char* fmt, ...){
+    
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    Widget* widget = push_widget(string);
+    
+    Widget_Style style = {};
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour(ui->theme.text);
+    style.background_colour = v4f_from_colour(ui->theme.darker_background);
+    style.font_scale = 0.7f;
+    style.rounded_corner_amount = 5.0f;
+    push_style(style);
+    
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_HOVER_INFLATE);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
+    //widget_set_property(widget, WP_LERP_POSITION);
+    widget->bitmap = bitmap;
+    auto render_hook = [](Widget* widget) {
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        push_rectangle_textured(v4f2(pos, widget->min), 3, widget->bitmap);
+    };
+    
+    widget->render_hook = render_hook;
+    
+    auto result = update_widget(widget);
+    
+    widget->min = v2f(bitmap.width, bitmap.height);
     return result.clicked;
     
 }

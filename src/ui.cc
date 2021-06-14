@@ -259,7 +259,7 @@ internal void
 load_theme_ayu(){
     
 #if 0    
-    ui->theme.background.packed = 0x070707ff;
+    ui->theme.background.packed = 0x151826ff;
     ui->theme.panel.packed = 0x161925ff;
     ui->theme.menu.packed = 0x0D1012ff;
     ui->theme.text.packed = 0xE7E7E7ff;
@@ -280,7 +280,7 @@ load_theme_ayu(){
 internal void
 load_theme_dots(){
     
-    ui->theme.background.packed = 0x121520ff;
+    ui->theme.background.packed = 0x161928ff;
     ui->theme.darker_background.packed = 0x303851ff;
     ui->theme.text.packed = 0xE7E7E7ff;
     
@@ -631,7 +631,7 @@ push_layout(Widget* widget){
 internal Widget*
 push_widget(){
     auto widget = make_widget();
-    
+    ui->current_widget = widget;
     if(!ui->layout_stack && !ui->root){
         ui->root = widget;
         return widget;
@@ -663,6 +663,7 @@ push_widget(){
 internal Widget*
 push_widget(String8 string){
     auto widget = make_widget(string);
+    ui->current_widget = widget;
     
     if(!ui->layout_stack && !ui->root){
         ui->root = widget;
@@ -1028,18 +1029,31 @@ layout_row(Widget* widget, v2f pos, b32 dont_lerp_children){
     v2f size = {};
     v2f start_pos = pos;
     v2f next_size = {};
+    v2f temp_pos = pos;
     ForEachWidgetSibling(widget){
         
-        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
+        v2f next_size = layout_widgets(it, temp_pos, dont_lerp_children);
         
         if(widget_has_property(it, WP_SPACING)){
-            pos.x += PADDING;
+            temp_pos.x += PADDING;
             size.width += PADDING;
         }
-        pos.x += next_size.width;
+        temp_pos.x += next_size.width;
         
         size.width += next_size.width;
         size.height = max(size.height, next_size.height);
+        
+    }
+    
+    ForEachWidgetSibling(widget){
+        
+        v2f next_size = layout_widgets(it, pos, dont_lerp_children);
+        layout_widgets(it, pos + v2f(0, next_size.height/2.0 - size.height/2.0), dont_lerp_children);
+        if(widget_has_property(it, WP_SPACING)){
+            pos.x += PADDING;
+        }
+        
+        pos.x += next_size.width;
     }
     
     return size;
@@ -1437,7 +1451,17 @@ render_widgets(Widget* widget){
         if(widget_has_property(widget, WP_HOVER_INFLATE)){
             bbox = inflate_rect(bbox, widget->hot_transition*2.0);
         }
+        if(widget_has_property(widget, WP_RENDER_SHADOW)){
+            v4f shadow_rect = bbox;
+            shadow_rect.pos += v2f(3, -3);
+            Colour shadow = colour_from_v4f(widget->style.background_colour);
+            shadow.r /= 2.0f;
+            shadow.g /= 2.0f;
+            shadow.b /= 2.0f;
+            push_rectangle(shadow_rect, widget->style.rounded_corner_amount, shadow);
+        }
         //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
+        
         push_rectangle(bbox, widget->style.rounded_corner_amount, 
                        colour_from_v4f(widget->style.background_colour));
         
@@ -1469,6 +1493,7 @@ render_widgets(Widget* widget){
                 lerp_rects(&widget->style.border_colour, border_colour, 0.05f);
             }
         }
+        
         push_rectangle_outline(bbox, 0.2, widget->style.rounded_corner_amount, 
                                colour_from_v4f(border_colour));
     }
@@ -1795,7 +1820,9 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     b32 result = false;
                     UI_ROW {
-                        result = arrow_dropdown3("File");
+                        //result = arrow_dropdown3("File");
+                        //filebar_dropdown("File");
+                        icon_button(ui->logo, "logo button");
                         xspacer();
                         result = arrow_dropdown3("Edit");
                         xspacer();

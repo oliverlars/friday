@@ -710,7 +710,6 @@ init_opengl_renderer(){
                               BYTES_PER_BEZIER, reinterpret_cast<void*>(sizeof(f32)*7));
         
     }
-    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     

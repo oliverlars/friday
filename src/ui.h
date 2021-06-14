@@ -32,6 +32,7 @@ enum Widget_Property {
     WP_RENDER_DOUBLE_BORDER,
     WP_RENDER_BACKGROUND,
     WP_RENDER_UNDERLINE,
+    WP_RENDER_SHADOW,
     WP_HOVER_RENDER_BACKGROUND,
     WP_HOVER_RENDER_BORDER,
     WP_HOVER_INFLATE,
@@ -61,6 +62,7 @@ enum Widget_Property {
     WP_ON_TOP,
     WP_OVERLAP,
     WP_FIT_TO_CHILDREN,
+    
 };
 
 struct Widget_Style {
@@ -103,6 +105,8 @@ struct Widget {
     f32 scroll_amount;
     f32 value;
     b32 dont_lerp_children;
+    
+    Bitmap bitmap;
     
     b32 dragging;
     
@@ -173,6 +177,7 @@ struct UI_State {
     
     Theme theme;
     
+    Bitmap logo;
     
     f32 round_amount;
     
@@ -197,6 +202,8 @@ struct UI_State {
     
     Widget** windows;
     int window_count;
+    
+    Widget* current_widget;
     
     b32 popup;
     v4f popup_rect;

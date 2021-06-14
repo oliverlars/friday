@@ -564,7 +564,7 @@ get_widget(String8 string){
     return widget;
 }
 
-internal Widget*
+internal inline Widget*
 get_current_window() {
     return ui->windows[ui->current_window];
 }
@@ -965,11 +965,13 @@ push_widget_popup(v4f rect, String8 string){
     style.background_colour.b /= 2.0;
     
     style.font_scale = 0.7f;
+    style.rounded_corner_amount = 5.0f;
     push_style(style);
     
     widget_set_property(widget, WP_OVERLAP);
     widget_set_property(widget, WP_CLIP);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_RENDER_HOOK);
     
     auto render_hook = [](Widget* widget){
@@ -997,6 +999,7 @@ push_widget_container(String8 string){
     widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_SCROLLING);
+    widget_set_property(widget, WP_FIT_TO_CHILDREN);
     
     auto result = update_widget(widget);
     widget->min = v2f(400, 200);
@@ -1255,13 +1258,16 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
         return {};
     }
-    
+    v2f size = {};
     if(widget_has_property(widget, WP_OVERLAP)){
         
         pos = widget->pos;
-        layout_widgets(widget->first_child, pos);
+        size = layout_widgets(widget->first_child, pos);
         
         //layout_window(widget, pos);
+    }
+    if(widget_has_property(widget, WP_FIT_TO_CHILDREN)){
+        widget->min = size;
     }
     
     if(widget_has_property(widget, WP_PADDING)){
@@ -1421,23 +1427,20 @@ render_widgets(Widget* widget){
     }
     
     
-    if(widget_has_property(widget, WP_RENDER_BACKGROUND) ||
-       widget_has_property(widget, WP_HOVER_RENDER_BACKGROUND)){
-        if((widget_has_property(widget, WP_HOVER_RENDER_BACKGROUND) &&
-            ui->hot == widget->id) || 
-           widget_has_property(widget, WP_RENDER_BACKGROUND)){
-            
-            
-            v4f bbox = v4f2(widget->pos, widget->min);
-            bbox.y -= widget->min.height;
-            if(widget_has_property(widget, WP_FIRST_TRANSITION)){
-                bbox = inflate_rect(bbox, widget->hot_transition*2.0);
-            }
-            //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
-            push_rectangle(bbox, widget->style.rounded_corner_amount, 
-                           colour_from_v4f(widget->style.background_colour));
-            
+    if((widget_has_property(widget, WP_HOVER_RENDER_BACKGROUND) &&
+        ui->hot == widget->id) || 
+       widget_has_property(widget, WP_RENDER_BACKGROUND)){
+        
+        
+        v4f bbox = v4f2(widget->pos, widget->min);
+        bbox.y -= widget->min.height;
+        if(widget_has_property(widget, WP_HOVER_INFLATE)){
+            bbox = inflate_rect(bbox, widget->hot_transition*2.0);
         }
+        //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
+        push_rectangle(bbox, widget->style.rounded_corner_amount, 
+                       colour_from_v4f(widget->style.background_colour));
+        
     }
     
     if(widget_has_property(widget, WP_RENDER_TEXT)){
@@ -1445,10 +1448,15 @@ render_widgets(Widget* widget){
     }
     
     
-    if(widget_has_property(widget, WP_RENDER_BORDER)){
+    if(widget_has_property(widget, WP_RENDER_BORDER) ||
+       (widget_has_property(widget, WP_HOVER_RENDER_BORDER) && 
+        ui->hot == widget->id)){
+        
         v4f bbox = v4f2(widget->pos, widget->min);
         bbox.y -= widget->min.height;
-        bbox = inflate_rect(bbox, widget->hot_transition*2.0f);
+        if(widget_has_property(widget, WP_HOVER_INFLATE)){
+            bbox = inflate_rect(bbox, widget->hot_transition*2.0);
+        }
         v4f border_colour = {};
         if(widget->id == ui->hot){
             border_colour = v4f_from_colour(ui->theme.cursor);

@@ -102,6 +102,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                 widget_set_property(widget, WP_SPACING);
                 widget_set_property(widget, WP_FIRST_TRANSITION);
                 widget_set_property(widget, WP_RENDER_HOOK);
+                widget_set_property(widget, WP_HOVER_INFLATE);
                 widget_set_property(widget, WP_RENDER_BORDER);
                 
                 auto render_hook = [](Widget* widget) {
@@ -164,8 +165,8 @@ arrow_dropdown(char* fmt, ...){
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_FIXED_SIZE);
     widget_set_property(widget, WP_SPACING);
-    widget_set_property(widget, WP_FIRST_TRANSITION);
     widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_HOVER_INFLATE);
     widget_set_property(widget, WP_RENDER_BORDER);
     
     push_default_style();
@@ -211,6 +212,7 @@ arrow_dropdown2(char* fmt, ...){
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_HOVER_RENDER_BORDER);
     
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
@@ -301,6 +303,7 @@ button(char* fmt, ...){
     widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_SPACING);
     widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_HOVER_INFLATE);
     //widget_set_property(widget, WP_LERP_POSITION);
     auto result = update_widget(widget);
     return result.clicked;

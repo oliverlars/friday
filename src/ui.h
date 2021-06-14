@@ -33,6 +33,8 @@ enum Widget_Property {
     WP_RENDER_BACKGROUND,
     WP_RENDER_UNDERLINE,
     WP_HOVER_RENDER_BACKGROUND,
+    WP_HOVER_RENDER_BORDER,
+    WP_HOVER_INFLATE,
     WP_LERP_POSITION,
     WP_LERP_COLOURS,
     WP_CLICKABLE,
@@ -58,6 +60,7 @@ enum Widget_Property {
     WP_GHOST_LAYOUT,
     WP_ON_TOP,
     WP_OVERLAP,
+    WP_FIT_TO_CHILDREN,
 };
 
 struct Widget_Style {

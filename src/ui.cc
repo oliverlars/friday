@@ -198,30 +198,38 @@ has_pressed_key_modified(Key key, Key_Modifiers modifiers){
 
 
 internal b32
-has_mouse_dragged(Platform_Event **event_out, Mouse_Button button, v2f* delta){
+has_left_dragged(v2f* delta = 0){
     b32 result = 0;
-    Platform_Event *event = 0;
-    for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_MOUSE_DRAG && button == event->mouse_button){
-            *event_out = event;
-            platform_consume_event(event);
-            if(delta){
-                delta->x += event->delta.x;
-                delta->y += event->delta.y;
-            }
-            
-            result = 1;
-        }
+    
+    Platform_Event* left_event = 0;
+    Platform_Event* move_event = 0;
+    result = has_mouse_moved(&move_event);
+    result = result & has_left_clicked(&left_event);
+    
+    if(result){
+        platform_consume_event(left_event);
+        platform_consume_event(move_event);
+        if(delta) *delta = move_event->delta;
     }
     return result;
 }
 
+
 internal b32
-has_mouse_dragged(Mouse_Button button, v2f* delta = 0) {
-    Platform_Event* event = 0;
-    b32 result = has_mouse_dragged(&event, button, delta);
+has_middle_dragged(v2f* delta = 0){
+    b32 result = 0;
+    Platform_Event* middle_event = 0;
+    Platform_Event* move_event = 0;
+    result = has_mouse_moved(&move_event);
+    result = result & has_middle_clicked(&middle_event);
+    if(result){
+        platform_consume_event(middle_event);
+        platform_consume_event(move_event);
+        if(delta) *delta = move_event->delta;
+    }
     return result;
 }
+
 
 internal b32
 has_mouse_scrolled(Platform_Event **event_out, v2f* delta){
@@ -1037,7 +1045,7 @@ push_widget_container(String8 string){
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
     
-    if(ui->dragging){
+    if(ui->dragging && ui->active == widget->id){
         widget->pos += platform->mouse_delta;
     }
     
@@ -1589,12 +1597,12 @@ render_panels(Panel* root, v4f rect){
         
         v2f delta = {};
         if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
-            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            if(has_left_dragged(&delta)){
                 root->parent->is_dragging = true;
             }
             platform->set_cursor_to_horizontal_resize();
         } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
-            if(has_mouse_dragged(MOUSE_BUTTON_LEFT, &delta)){
+            if(has_left_dragged(&delta)){
                 root->parent->is_dragging = true;
             }
         }

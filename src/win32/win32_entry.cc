@@ -122,16 +122,6 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
         global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
                                           global_platform.mouse_position.y - last_mouse.y);
-        if(1 || fabs(global_platform.mouse_position.x - last_mouse.x) >= 3 &&
-           fabs(global_platform.mouse_position.y - last_mouse.y) >= 3){
-            for(int i = 0; i < 3; i++){
-                if(mouse_buttons_pressed[i]){
-                    platform_push_event(platform_mouse_drag((Mouse_Button)i,
-                                                            v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                                global_platform.mouse_position.y - last_mouse.y)));
-                }
-            }
-        }
         
         platform_push_event(platform_mouse_move(global_platform.mouse_position,
                                                 v2f(global_platform.mouse_position.x - last_mouse.x,
@@ -149,8 +139,9 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
             TrackMouseEvent(&track_mouse_event);
         }
         
-    }
-    else if(message == WM_MOUSELEAVE){
+    }else if(message == WM_INPUT){
+        
+    } else if(message == WM_MOUSELEAVE){
         mouse_hover_active = 0;
     }
     else if(message == WM_MOUSEWHEEL){

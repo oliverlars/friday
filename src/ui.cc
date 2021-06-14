@@ -43,7 +43,7 @@ has_left_released_dont_consume(){
 
 
 internal b32
-has_left_clicked(Platform_Event **event_out){
+is_left_down(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
@@ -56,9 +56,9 @@ has_left_clicked(Platform_Event **event_out){
 }
 
 internal b32
-has_left_clicked(){
+is_left_down(){
     Platform_Event* event = 0;
-    b32 result = has_left_clicked(&event);
+    b32 result = is_left_down(&event);
     if (result){
         platform_consume_event(event);
     }
@@ -66,9 +66,9 @@ has_left_clicked(){
 }
 
 internal b32
-has_left_clicked_dont_consume(){
+is_left_down_dont_consume(){
     Platform_Event* event = 0;
-    b32 result = has_left_clicked(&event);
+    b32 result = is_left_down(&event);
     return(result);
 }
 
@@ -96,7 +96,7 @@ has_right_clicked(){
 }
 
 internal b32
-has_middle_clicked(Platform_Event **event_out){
+is_middle_down(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
@@ -109,9 +109,9 @@ has_middle_clicked(Platform_Event **event_out){
 }
 
 internal b32
-has_middle_clicked(){
+is_middle_down(){
     Platform_Event* event = 0;
-    b32 result = has_middle_clicked(&event);
+    b32 result = is_middle_down(&event);
     if (result){
         platform_consume_event(event);
     }
@@ -204,7 +204,7 @@ has_left_dragged(v2f* delta = 0){
     Platform_Event* left_event = 0;
     Platform_Event* move_event = 0;
     result = has_mouse_moved(&move_event);
-    result = result & has_left_clicked(&left_event);
+    result = result & is_left_down(&left_event);
     
     if(result){
         platform_consume_event(left_event);
@@ -221,7 +221,7 @@ has_middle_dragged(v2f* delta = 0){
     Platform_Event* middle_event = 0;
     Platform_Event* move_event = 0;
     result = has_mouse_moved(&move_event);
-    result = result & has_middle_clicked(&middle_event);
+    result = result & is_middle_down(&middle_event);
     if(result){
         platform_consume_event(middle_event);
         platform_consume_event(move_event);
@@ -574,7 +574,6 @@ get_widget(String8 string){
             widget->value = last_widget->value;
             widget->string = string;
             widget->id = id;
-            widget->dragging = last_widget->dragging;
         }
         
     }
@@ -815,8 +814,7 @@ update_widget(Widget* widget){
                     result.pos = bbox.pos;
                     result.size = bbox.size;
                 }
-                if(widget_has_property(widget, WP_DRAGGABLE) &&
-                   ui->dragging){
+                if(ui->dragging){
                     ui->dragging = false;
                 }
                 ui->active = -1;
@@ -827,21 +825,20 @@ update_widget(Widget* widget){
                     result.size = bbox.size;
                     ui->dragging = false;
                 }
-                if(widget_has_property(widget, WP_DRAGGABLE) &&
-                   ui->dragging){
+                if(ui->dragging){
                     ui->dragging = false;
                 }
                 ui->active = -1;
             }
         }else if(ui->hot == widget->id){
-            if(has_left_clicked()){
+            if(widget_has_property(widget, WP_DRAGGABLE) && is_left_down()){
                 ui->active = widget->id;
-                ui->drag_pos = platform->mouse_position;
                 ui->dragging = true;
-            }else if(has_middle_clicked()){
+            }else if(widget_has_property(widget, WP_DRAGGABLE) && is_middle_down()){
                 ui->active = widget->id;
-                ui->drag_pos = platform->mouse_position;
                 ui->dragging = true;
+            }else if(is_left_down()){
+                ui->active = widget->id;
             }
         }
         
@@ -1046,7 +1043,14 @@ push_widget_container(String8 string){
     push_widget_padding(v2f(10, 10));
     
     if(ui->dragging && ui->active == widget->id){
-        widget->pos += platform->mouse_delta;
+        log("WE ARE DRAGGIN ON FRAME: %.1f %.1f | %.1f %f1", 
+            platform->mouse_delta.x, platform->mouse_delta.y,
+            widget->pos.x, widget->pos.y);
+        widget->pos.x = widget->pos.x +  platform->mouse_delta.x;
+        widget->pos.y = widget->pos.y +  platform->mouse_delta.y;
+        
+    }else {
+        log("NO DRAG NO DRAG");
     }
     
 }
@@ -1290,10 +1294,6 @@ layout_container(Widget* widget,  v2f pos, b32 dont_lerp_children){
     
     pos = widget->pos;
     
-    if(widget->dragging){
-        assert(0);
-        pos += platform->mouse_position - ui->drag_pos;
-    }
     v2f size = layout_widgets(widget->first_child, pos);
     
 }
@@ -1597,12 +1597,12 @@ render_panels(Panel* root, v4f rect){
         
         v2f delta = {};
         if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
-            if(has_left_dragged(&delta)){
+            if(has_left_dragged()){
                 root->parent->is_dragging = true;
             }
             platform->set_cursor_to_horizontal_resize();
         } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
-            if(has_left_dragged(&delta)){
+            if(has_left_dragged()){
                 root->parent->is_dragging = true;
             }
         }

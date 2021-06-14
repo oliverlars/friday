@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <objbase.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
@@ -74,7 +75,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     LRESULT result = 0;
     
     local_persist b32 mouse_hover_active = 0;
-    local_persist b32 mouse_buttons_pressed[3] = {};
+    local_persist b32 mouse_valid = 0;
     
     Key_Modifiers modifiers = {};
     if(GetKeyState(VK_CONTROL) & 0x8000){
@@ -94,35 +95,35 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     }
     else if(message == WM_LBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
-        mouse_buttons_pressed[0] = 1;
     }
     else if(message == WM_LBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
-        mouse_buttons_pressed[0] = 0;
     }
     else if(message == WM_RBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
-        mouse_buttons_pressed[2] = 1;
-    }
-    else if(message == WM_RBUTTONUP){
+        
+    } else if(message == WM_RBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
-        mouse_buttons_pressed[2] = 0;
+        
     }
     else if(message == WM_MBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        mouse_buttons_pressed[1] = 1;
     }else if(message == WM_MBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
-        mouse_buttons_pressed[1] = 0;
     }
-    else if(message == WM_MOUSEMOVE){
-        s16 xpos = LOWORD(lparam);
-        s16 ypos = HIWORD(lparam);
+    else if(0 && message == WM_MOUSEMOVE){
+        f32 xpos = (f32)GET_X_LPARAM(lparam);
+        f32 ypos = (f32)GET_Y_LPARAM(lparam);
+        ypos = platform->window_size.height -  ypos;
         v2f last_mouse = global_platform.mouse_position;
-        global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
-                                          global_platform.mouse_position.y - last_mouse.y);
-        
+        global_platform.mouse_position = v2f(xpos, ypos);
+        if(mouse_valid){
+            
+            global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
+                                              global_platform.mouse_position.y - last_mouse.y);
+            
+        }
+        mouse_valid = true;
         platform_push_event(platform_mouse_move(global_platform.mouse_position,
                                                 v2f(global_platform.mouse_position.x - last_mouse.x,
                                                     global_platform.mouse_position.y - last_mouse.y)));
@@ -471,6 +472,12 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     b32 frame = 0;
     
     while(!global_platform.quit){
+        v2f last_mouse = global_platform.mouse_position;
+        global_platform.mouse_position = win32_get_mouse_position(hwnd);
+        
+        global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
+                                          global_platform.mouse_position.y - last_mouse.y);
+        
         global_platform.frame_arena = frame_arenas[frame];
         arena_clear(&frame_arenas[frame]);
         

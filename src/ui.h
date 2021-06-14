@@ -108,8 +108,6 @@ struct Widget {
     
     Bitmap bitmap;
     
-    b32 dragging;
-    
     Widget_Style style;
     
     void (*render_hook)(Widget* widget);
@@ -188,6 +186,7 @@ struct UI_State {
     UI_ID active;
     b32 dragging;
     
+    
     Widget* root;
     
     s32 current_window;
@@ -223,8 +222,6 @@ struct UI_State {
     } editing_string;
     
     int cursor_pos;
-    
-    v2f drag_pos;
 };
 
 global f32 time_per_gui_update;

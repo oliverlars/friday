@@ -1358,14 +1358,14 @@ init_shaders(){
             "return sqrt( res );\n"
             "}\n"
             "void main(){\n"
+            "if(gl_FragCoord.x >= clip_range.x && gl_FragCoord.x <= clip_range.x + clip_range.z &&\n"
+            "gl_FragCoord.y >= clip_range.y && gl_FragCoord.y <= clip_range.y + clip_range.w){\n"
             "float d = udBezier(gl_FragCoord.xy, frag_v0, frag_v1, frag_v2);\n"
-            //"d = segment(gl_FragCoord.xy, frag_v0, frag_v2);\n"
             "float alpha = d;\n"
-            //"colour = vec4(frag_colour.rgb, alpha);\n"
-            //"colour = vec4(mix( vec3(0.0), vec3(1.0), 1.0-step(0.05,abs(d)) ), 1.0);\n"
-            //"vec3 colour = mix( vec3(0.0), vec3(1.0), 1.0-step(1.0,abs(d)) );\n"
-            //"colour = vec4(vec3(1.0), alpha);\n"
             "colour = vec4(frag_colour.rgb, 1.0-smoothstep(frag_thickness-1, frag_thickness,abs(d)));\n"
+            "}else {\n"
+            "discard;\n"
+            "}\n"
             "}\n";
         
         GLuint program = make_program(bezier_vs, bezier_fs);

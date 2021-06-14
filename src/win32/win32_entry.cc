@@ -111,23 +111,9 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     }else if(message == WM_MBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_MIDDLE, global_platform.mouse_position));
     }
-    else if(0 && message == WM_MOUSEMOVE){
-        f32 xpos = (f32)GET_X_LPARAM(lparam);
-        f32 ypos = (f32)GET_Y_LPARAM(lparam);
-        ypos = platform->window_size.height -  ypos;
-        v2f last_mouse = global_platform.mouse_position;
-        global_platform.mouse_position = v2f(xpos, ypos);
-        if(mouse_valid){
-            
-            global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
-                                              global_platform.mouse_position.y - last_mouse.y);
-            
-        }
-        mouse_valid = true;
-        platform_push_event(platform_mouse_move(global_platform.mouse_position,
-                                                v2f(global_platform.mouse_position.x - last_mouse.x,
-                                                    global_platform.mouse_position.y - last_mouse.y)));
-        
+    else if(message == WM_MOUSEMOVE){
+        platform_push_event(platform_mouse_move(global_platform.mouse_position, 
+                                                global_platform.mouse_delta));
         if(!mouse_hover_active){
             mouse_hover_active = 1;
             TRACKMOUSEEVENT track_mouse_event = {};
@@ -472,6 +458,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
     b32 frame = 0;
     
     while(!global_platform.quit){
+        
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
         

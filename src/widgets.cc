@@ -72,7 +72,7 @@ menu_list(String8* list, s32 count, char* fmt, ...){
             widget_set_property(widget, WP_SPACING);
             widget_set_property(widget, WP_LERP_COLOURS);
             widget_set_property(widget, WP_GHOST_LAYOUT);
-            //widget_set_property(widget, WP_LERP_POSITION);
+            
             auto result = update_widget(widget);
             if(result.clicked) { clicked_which = i; break; }
             

@@ -115,11 +115,11 @@ PERMANENT_LOAD {
     ui->panel = (Panel*)push_type_zero(&platform->permanent_arena, Panel);
     ui->panel->split_ratio = 1.0f;
     ui->panel->type = PANEL_HEADER;
-    
     ui->editing_string.text = (char*)push_size_zero(&platform->permanent_arena, 8192); //big boi string
     ui->editing_string.length = 0;
     ui->editing_string.capacity = 8192;
-    split_panel(ui->panel, 0.08, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
+    split_panel(ui->panel, 0.06, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
+    ui->panel->first->no_pad = true;
     split_panel(ui->panel->second, 0.7, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
     split_panel(ui->panel->second->first, 0.92, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
     

@@ -1,11 +1,11 @@
 global UI_State* ui = 0;
 
 internal b32
-has_left_released(Platform_Event **event_out){
+has_mouse_released(Platform_Event **event_out, Mouse_Button button){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
-        if (event->type == PLATFORM_EVENT_MOUSE_RELEASE && event->mouse_button == MOUSE_BUTTON_LEFT){
+        if (event->type == PLATFORM_EVENT_MOUSE_RELEASE && event->mouse_button == button){
             *event_out = event;
             result = 1;
         }
@@ -16,7 +16,17 @@ has_left_released(Platform_Event **event_out){
 internal b32
 has_left_released(){
     Platform_Event* event = 0;
-    b32 result = has_left_released(&event);
+    b32 result = has_mouse_released(&event, MOUSE_BUTTON_LEFT);
+    if (result){
+        platform_consume_event(event);
+    }
+    return(result);
+}
+
+internal b32
+has_middle_released(){
+    Platform_Event* event = 0;
+    b32 result = has_mouse_released(&event, MOUSE_BUTTON_MIDDLE);
     if (result){
         platform_consume_event(event);
     }
@@ -26,7 +36,7 @@ has_left_released(){
 internal b32
 has_left_released_dont_consume(){
     Platform_Event* event = 0;
-    b32 result = has_left_released(&event);
+    b32 result = has_mouse_released(&event, MOUSE_BUTTON_LEFT);
     
     return(result);
 }
@@ -797,11 +807,33 @@ update_widget(Widget* widget){
                     result.pos = bbox.pos;
                     result.size = bbox.size;
                 }
+                if(widget_has_property(widget, WP_DRAGGABLE) &&
+                   ui->dragging){
+                    ui->dragging = false;
+                }
+                ui->active = -1;
+            }else if(has_middle_released()){
+                if(ui->hot == widget->id) {
+                    result.clicked_position = platform->mouse_position;
+                    result.pos = bbox.pos;
+                    result.size = bbox.size;
+                    ui->dragging = false;
+                }
+                if(widget_has_property(widget, WP_DRAGGABLE) &&
+                   ui->dragging){
+                    ui->dragging = false;
+                }
                 ui->active = -1;
             }
         }else if(ui->hot == widget->id){
             if(has_left_clicked()){
                 ui->active = widget->id;
+                ui->drag_pos = platform->mouse_position;
+                ui->dragging = true;
+            }else if(has_middle_clicked()){
+                ui->active = widget->id;
+                ui->drag_pos = platform->mouse_position;
+                ui->dragging = true;
             }
         }
         
@@ -929,7 +961,6 @@ push_widget_window(v4f rect, String8 string){
     ui->windows[ui->window_count++] = widget;
     
     push_default_style();
-    widget->style.background_colour = v4f_from_colour(ui->theme.background);
     
     widget_set_property(widget, WP_OVERLAP);
     widget_set_property(widget, WP_CLIP);
@@ -995,21 +1026,21 @@ internal void
 push_widget_container(String8 string){
     auto widget = push_widget(string);
     auto layout = push_layout(widget);
-    widget_set_property(widget, WP_CONTAINER);
-    widget_set_property(widget, WP_RENDER_DOUBLE_BORDER);
+    
     widget_set_property(widget, WP_DRAGGABLE);
-    widget_set_property(widget, WP_LERP_POSITION);
-    widget_set_property(widget, WP_SCROLLING);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
+    widget_set_property(widget, WP_OVERLAP);
+    widget_set_property(widget, WP_MANUAL_LAYOUT);
+    widget_set_property(widget, WP_CLIP);
     
     auto result = update_widget(widget);
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
-    if(result.middle_dragged){
-        //widget->pos = platform->mouse_position;
-        widget->dragging = true;
-        ui->drag_pos = platform->mouse_position;
+    
+    if(ui->dragging){
+        widget->pos += platform->mouse_delta;
     }
+    
 }
 
 internal void
@@ -1270,8 +1301,12 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     if(!widget) return {};
     
     if(widget_has_property(widget, WP_MANUAL_LAYOUT)){
-        return {};
+        if(widget->pos.x == 0 && widget->pos.y == 0){
+            widget->pos = pos;
+        }
+        
     }
+    
     v2f size = {};
     if(widget_has_property(widget, WP_OVERLAP)){
         
@@ -1295,21 +1330,6 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
         widget->min.height += (size.height - padding.height); 
         
     }
-    
-    if(widget_has_property(widget, WP_CONTAINER)){
-        if(widget->pos.x == 0 && widget->pos.y == 0){
-            widget->pos = pos;
-        }
-        pos = widget->pos;
-        pos.y += widget->scroll_amount;
-        v2f size = layout_widgets(widget->first_child, pos, widget->dont_lerp_children);
-        size.width = max(size.width, 200);
-        size.height = max(size.height, 100);
-        widget->min = size;
-        widget->dont_lerp_children = false;
-        //log("container size is now: %f %f", size.
-    }
-    
     
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
         lerp(&widget->pos.x, pos.x, 0.2f);
@@ -1376,41 +1396,10 @@ render_widgets(Widget* widget){
     if(!widget) return;
     v2f pos = widget->pos; 
     
-#if 0    
-    if(widget_has_property(widget, WP_CONTAINER) &&
-       widget_has_property(widget, WP_RENDER_CORNERS)){
-        v2f pos = widget->pos; 
-        
-        v4f bbox = v4f2(pos, widget->min);
-        bbox.y -= widget->min.height;
-        
-        push_rectangle_outline(bbox, 1, 3, ui->theme.text);
-        v4f v = bbox;
-        v.width -= PADDING*2;
-        v.x += PADDING;
-        v.height += PADDING;
-        v.y -= PADDING/2.0f;
-        push_rectangle(v, 1,ui->theme.background);
-        
-        v4f h = bbox;
-        h.width += PADDING;
-        h.x -= PADDING/2.0f;
-        h.height -= PADDING*2;
-        h.y += PADDING;
-        push_rectangle(h, 1,ui->theme.background);
-        
-        RENDER_CLIP(v4f2(bbox.pos, widget->min)){
-            ForEachWidgetChild(widget){
-                render_widgets(it);
-            }
-        }
-        
-    }
-#endif
+    pos.y -= widget->min.height;
     
     if(widget_has_property(widget, WP_CLIP)){
-        v4f bbox = v4f2(pos, widget->min);
-        bbox.y -= widget->min.height;
+        v4f bbox = v4f2(widget->pos, widget->min);
         RENDER_CLIP(bbox){
             ForEachWidgetChild(widget){
                 render_widgets(it);
@@ -1423,10 +1412,9 @@ render_widgets(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_PADDING)){
-        v4f bbox = v4f2(widget->pos, widget->min);
+        v4f bbox = v4f2(pos, widget->min);
     }
     
-    pos.y -= widget->min.height;
     
     if(ui->hot == widget->id){
         lerp(&widget->hot_transition, 1.0f, 0.1f);
@@ -1446,8 +1434,7 @@ render_widgets(Widget* widget){
        widget_has_property(widget, WP_RENDER_BACKGROUND)){
         
         
-        v4f bbox = v4f2(widget->pos, widget->min);
-        bbox.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
         if(widget_has_property(widget, WP_HOVER_INFLATE)){
             bbox = inflate_rect(bbox, widget->hot_transition*2.0);
         }
@@ -1455,9 +1442,9 @@ render_widgets(Widget* widget){
             v4f shadow_rect = bbox;
             shadow_rect.pos += v2f(3, -3);
             Colour shadow = colour_from_v4f(widget->style.background_colour);
-            shadow.r /= 2.0f;
-            shadow.g /= 2.0f;
-            shadow.b /= 2.0f;
+            shadow.r /= 3.0f;
+            shadow.g /= 3.0f;
+            shadow.b /= 3.0f;
             push_rectangle(shadow_rect, widget->style.rounded_corner_amount, shadow);
         }
         //push_rectangle(bbox, 1, colour_from_v4f(widget->style.background_colour));
@@ -1476,8 +1463,7 @@ render_widgets(Widget* widget){
        (widget_has_property(widget, WP_HOVER_RENDER_BORDER) && 
         ui->hot == widget->id)){
         
-        v4f bbox = v4f2(widget->pos, widget->min);
-        bbox.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
         if(widget_has_property(widget, WP_HOVER_INFLATE)){
             bbox = inflate_rect(bbox, widget->hot_transition*2.0);
         }
@@ -1503,45 +1489,12 @@ render_widgets(Widget* widget){
     }
     
     if(widget_has_property(widget, WP_OVERLAP)){
-        v4f bbox = v4f2(widget->pos, widget->min);
-        bbox.y -= widget->min.height;
+        v4f bbox = v4f2(pos, widget->min);
         RENDER_CLIP(bbox){
             render_widgets(widget->first_child);
         }
     }
     
-}
-
-internal void
-update_panel_split(Panel* parent, f32 split_ratio){
-    parent->first->split_ratio = split_ratio;
-    parent->second->split_ratio = 1.0f - split_ratio;
-}
-
-internal void
-ui_panel_resize_widgets(Panel* panel, v4f rect, char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
-    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
-    va_end(args);
-    
-    rect = inflate_rect(rect, 10);
-    auto widget = push_widget(string);
-    widget_set_property(widget, WP_DRAGGABLE);
-    widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_MANUAL_LAYOUT);
-    
-    
-    widget->pos = rect.pos;
-    widget->min = rect.size;
-    
-    auto result = update_widget(widget);
-    
-    if(result.left_dragged){
-        f32 delta = result.delta.x;
-        f32 divisor = rect.width/panel->split_ratio;
-        update_panel_split(panel->parent, platform->mouse_position.x/platform->window_size.x);
-    }
 }
 
 internal void 
@@ -1564,6 +1517,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     
     panel->first->split_type = split_type;
     panel->second->split_type = split_type;
+    
 }
 
 static int present_style = 0;
@@ -1622,11 +1576,13 @@ render_panels(Panel* root, v4f rect){
     }else {
         
         assert(!root->first && !root->second);
-        
-        rect.x += PADDING;
-        rect.y -= PADDING;
-        rect.width -= PADDING*2;
-        rect.height -= PADDING*2;
+        if(root->no_pad){
+        }else {
+            rect.x += PADDING;
+            rect.y -= PADDING;
+            rect.width -= PADDING*2;
+            rect.height -= PADDING*2;
+        }
         auto harea = v4f(rect.x-PADDING*2, rect.y-rect.height, PADDING*4, rect.height);
         auto varea = v4f(rect.x, rect.y-rect.height-PADDING*2, rect.width, PADDING*4);
         
@@ -1817,6 +1773,7 @@ render_panels(Panel* root, v4f rect){
         }else if(root->type == PANEL_HEADER) {
             UI_WINDOW(rect, "Header#%d", (int)root){
                 widget_remove_property(get_current_window(), WP_RENDER_BORDER);
+                widget_remove_property(get_current_window(), WP_RENDER_BACKGROUND);
                 ID("%d", (int)root) {
                     b32 result = false;
                     UI_ROW {

@@ -96,6 +96,7 @@ struct Platform {
     u64 frame_count;
     
     v2f mouse_position;
+    v2f mouse_delta;
     u64 event_count;
     Platform_Event events[8192];
     

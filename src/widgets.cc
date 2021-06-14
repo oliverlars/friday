@@ -93,7 +93,6 @@ ui_panel_header(Panel* panel, char* fmt, ...){
     UI_ROW {
         UI_WIDTHFILL{
             xspacer();
-            
             ID("change type"){
                 
                 auto widget = push_widget(string);
@@ -372,7 +371,7 @@ icon_button(Bitmap bitmap, char* fmt, ...){
     
     auto result = update_widget(widget);
     
-    widget->min = v2f(bitmap.width, bitmap.height);
+    widget->min = v2f(26, 26);
     return result.clicked;
     
 }
@@ -493,7 +492,7 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
         *value = min + x*(max-min);
         widget->value = (*value - min)/(max - min);
     }
-    if(result.left_dragged){
+    if(ui->dragging && ui->active == widget->id){
         f32 x = result.delta.x/result.size.width;
         *value += x*(max-min);
         clampf(value, min, max);

@@ -117,8 +117,6 @@ struct Widget {
 
 struct Widget_Update {
     b32 clicked;
-    b32 left_dragged;
-    b32 middle_dragged;
     b32 hovered;
     v2f delta;
     v2f clicked_position;
@@ -149,6 +147,7 @@ enum Panel_Type {
 
 struct Panel {
     b32 is_dragging;
+    b32 no_pad;
     Panel_Split_Type split_type;
     Panel_Type type;
     f32 split_ratio;
@@ -187,6 +186,7 @@ struct UI_State {
     
     UI_ID hot;
     UI_ID active;
+    b32 dragging;
     
     Widget* root;
     
@@ -204,6 +204,7 @@ struct UI_State {
     int window_count;
     
     Widget* current_widget;
+    
     
     b32 popup;
     v4f popup_rect;

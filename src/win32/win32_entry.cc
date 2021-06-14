@@ -120,7 +120,8 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
         s16 ypos = HIWORD(lparam);
         v2f last_mouse = global_platform.mouse_position;
         global_platform.mouse_position = win32_get_mouse_position(hwnd);
-        
+        global_platform.mouse_delta = v2f(global_platform.mouse_position.x - last_mouse.x,
+                                          global_platform.mouse_position.y - last_mouse.y);
         if(1 || fabs(global_platform.mouse_position.x - last_mouse.x) >= 3 &&
            fabs(global_platform.mouse_position.y - last_mouse.y) >= 3){
             for(int i = 0; i < 3; i++){
@@ -482,7 +483,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.frame_arena = frame_arenas[frame];
         arena_clear(&frame_arenas[frame]);
         
-        //win32_timer_begin_frame(&global_win32_timer);
+        win32_timer_begin_frame(&global_win32_timer);
         
         {
             platform->event_count = 0;
@@ -538,11 +539,11 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         platform->dt = ((f32)ElapsedMicroseconds.QuadPart/1000.0);
         frame = !frame;
         global_platform.frame_count++;
+        global_platform.mouse_delta = {};
         
         win32_code_update(&win32_app_code);
         
-        //win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
-        
+        win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
         
     }
     

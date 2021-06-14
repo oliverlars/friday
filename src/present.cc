@@ -1103,9 +1103,6 @@ present_editable_reference(Colour colour, Arc_Node* node){
         
     }
     
-    if(result.left_dragged){
-    }
-    
     if(result.hovered && node->reference){
         highlight_reference = node->reference;
     }
@@ -1122,9 +1119,20 @@ present_editable_string(Colour colour, Arc_Node* node){
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_ALT_STRING);
-    widget_set_property(widget, WP_FIRST_TRANSITION);
+    widget_set_property(widget, WP_HOVER_RENDER_BORDER);
+    widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
+    
+    Widget_Style style = {};
+    
+    style.text_colour = v4f_from_colour(colour),
+    style.border_colour  = v4f_from_colour(ui->theme.text),
+    style.font_scale = font_scale;
+    style.background_colour = v4f_from_colour(ui->theme.background);
+    style.rounded_corner_amount = 5.0f;
+    
+    push_style(style);
+    
     widget->alt_string = node->string;
-    widget->style.text_colour = v4f_from_colour(colour);
     widget->arc = node;
     
     if(presenter->select_start.at == node){
@@ -1135,6 +1143,7 @@ present_editable_string(Colour colour, Arc_Node* node){
     }
     
     if(ui->hot == widget->id){
+        
         highlight_reference = node->reference;
     }
     
@@ -1167,17 +1176,17 @@ present_editable_string(Colour colour, Arc_Node* node){
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
             v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
-            lerp(&presenter->cursor.pos.x, next.x, 0.4f);
-            lerp(&presenter->cursor.pos.y, next.y, 0.6f);
+            lerp(&presenter->cursor.pos.x, next.x, 0.1f);
+            lerp(&presenter->cursor.pos.y, next.y, 0.2f);
             
-            lerp(&presenter->cursor.v0.x, next.x, 0.4f);
-            lerp(&presenter->cursor.v0.y, next.y, 0.2f);
+            lerp(&presenter->cursor.v0.x, next.x, 0.1f);
+            lerp(&presenter->cursor.v0.y, next.y, 0.1f);
             
-            lerp(&presenter->cursor.v1.x, next.x, 0.3f);
-            lerp(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.7f);
+            lerp(&presenter->cursor.v1.x, next.x, 0.2f);
+            lerp(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.3f);
             
-            lerp(&presenter->cursor.v2.x, next.x, 0.2f);
-            lerp(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.8f);
+            lerp(&presenter->cursor.v2.x, next.x, 0.1f);
+            lerp(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.3f);
             
             if(presenter->mode == P_CREATE){
                 render_cursor(&presenter->cursor, cursor_size,colour_from_v4f(v4f(1,0,0,1)));
@@ -1202,14 +1211,6 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     auto result = update_widget(widget);
     
-    Widget_Style style = {};
-    
-    style.text_colour = v4f_from_colour(colour),
-    style.border_colour  = v4f_from_colour(ui->theme.text),
-    style.font_scale = font_scale;
-    
-    widget->style = style;
-    
     if(presenter->cursor.text_id == widget->id){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
@@ -1222,10 +1223,6 @@ present_editable_string(Colour colour, Arc_Node* node){
         set_cursor_as_node(&presenter->cursor, widget->arc);
         presenter->cursor.text_id = widget->id;
     } 
-    
-    if(result.left_dragged){
-        
-    }
     
     
     if(result.hovered && node->reference){

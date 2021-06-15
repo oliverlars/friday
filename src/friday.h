@@ -28,6 +28,8 @@ struct Editor_State {
     
     b32 should_reload;
     
+    
+    String8 file_location;
 };
 
 Editor_State* editor;

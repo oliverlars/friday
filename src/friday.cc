@@ -142,6 +142,8 @@ PERMANENT_LOAD {
     
     editor->views[editor->view_count++] = make_stringf(&editor->string_pool, "default");
     
+    editor->file_location = make_stringf(&editor->string_pool, "test.arc");
+    
     presenter->select_first = first;
     
     srand(0);
@@ -612,6 +614,12 @@ UPDATE {
         
         
         //adult_swim_trend();
+        
+        f32 amount = 0;
+        if(has_mouse_scrolled(&amount)){
+            next_font_scale += amount/1000.0f;
+        }
+        lerp(&font_scale, next_font_scale, 0.1f);
         
         if(has_pressed_key_modified(KEY_LBRACKET, KEY_MOD_CTRL)){
             if(presenter->cursor.at->ast_type == AST_TOKEN){
@@ -1127,8 +1135,9 @@ UPDATE {
         }
         
         highlight_reference = nullptr;
+        
         if(platform->frame_count == 0){
-            ui->active = presenter->cursor.text_id;
+            //ui->active = presenter->cursor.text_id;
         }
         
         if(editor->should_reload){
@@ -1156,6 +1165,7 @@ UPDATE {
         presenter->select_first_rect = v4f(0,0,0,0);
         presenter->select_second_rect = v4f(0,0,0,0);
         //font_scale += 0.0001f;
+        
     }
     platform->refresh_screen();
 }

@@ -1070,8 +1070,8 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(presenter->cursor.at == node && ui->active == widget->id){
-            presenter->cursor.text_id = widget->id;
+        if(presenter->cursor.text_id == widget->id){
+            //presenter->cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(presenter->cursor.at);
         }
@@ -1111,6 +1111,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
 
 internal void
 present_editable_string(Colour colour, Arc_Node* node){
+    
     auto string = &node->string;
     auto widget_string = make_stringf(&platform->frame_arena, "edit_string%d", (int)node);
     auto widget = push_widget(widget_string);
@@ -1172,9 +1173,11 @@ present_editable_string(Colour colour, Arc_Node* node){
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
         if(presenter->cursor.text_id == widget->id){
+            
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
+            
             v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
             lerp(&presenter->cursor.pos.x, next.x, 0.1f);
             lerp(&presenter->cursor.pos.y, next.y, 0.2f);
@@ -1202,8 +1205,8 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(presenter->cursor.at == node){
-            presenter->cursor.text_id = widget->id;
+        if(presenter->cursor.text_id == widget->id){
+            //presenter->cursor.text_id = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(presenter->cursor.at);
         }
@@ -1500,12 +1503,13 @@ internal void
 present_call(Arc_Node* node){
     UI_ROW{
         ID("call%d", (int)node){
-            
-            if(presenter->cursor.at == node){
-                present_editable_string(ui->theme.text_function, node);
-            }else{
-                replace_string(&node->string, node->reference->string);
-                present_editable_reference(ui->theme.text_function, node);
+            ID("name%d", (int)node){
+                if(presenter->cursor.at == node){
+                    present_editable_string(ui->theme.text_function, node);
+                }else{
+                    replace_string(&node->string, node->reference->string);
+                    present_editable_reference(ui->theme.text_function, node);
+                }
             }
             present_string(ui->theme.text_misc, make_string("("));
             

@@ -289,6 +289,7 @@ arrow_dropdown3(char* fmt, ...){
     widget_set_property(widget, WP_FIRST_TRANSITION);
     widget_set_property(widget, WP_RENDER_TEXT);
     widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
+    widget_set_property(widget, WP_HOVER_INFLATE);
     
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
@@ -506,36 +507,54 @@ dropdown(char* fmt, ...){
 
 internal void
 text_box(String8* string){
-    auto widget = push_widget(*string);
-    widget_set_property(widget, WP_SPACING);
+    
+    auto widget_string = make_stringf(&platform->frame_arena, "edit%d", (int)string);
+    auto widget = push_widget(widget_string);
+    
+    
     widget_set_property(widget, WP_RENDER_HOOK);
-    widget_set_property(widget, WP_RENDER_BORDER);
-    widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_LERP_POSITION);
-    widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_CLICKABLE);
+    widget_set_property(widget, WP_ALT_STRING);
+    widget_set_property(widget, WP_HOVER_RENDER_BORDER);
+    widget_set_property(widget, WP_RENDER_BORDER);
+    widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
     widget_set_property(widget, WP_TEXT_EDIT);
+    
+    widget->alt_string = *string;
+    
     push_default_style();
     auto render_hook = [](Widget* widget) {
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
-        if(ui->active == widget->id){
-            String8 s = make_stringf(&platform->frame_arena, "%.*s", ui->editing_string.length, ui->editing_string.text);
-            f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(s, widget->style.font_scale)/2.0f;
-            f32 text_x = centre - text_centre;
-            push_string(v2f(text_x, bbox.y), s, ui->theme.text);
+        Colour colour = colour_from_v4f(widget->style.text_colour);
+        
+        f32 centre = pos.x + widget->min.x/2.0f;
+        f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
+        f32 text_x = centre - text_centre;
+        
+        push_string(v2f(text_x, bbox.y), widget->alt_string, colour, widget->style.font_scale);
+        
+        if(ui->text_edit == widget->id){
             
-            v2f cursor = {};
-            cursor.x = text_x + get_text_width_n(s, ui->cursor_pos, widget->style.font_scale);
-            cursor.y = bbox.y;
-            push_rectangle(v4f2(cursor, v2f(2, widget->min.height)), 1, ui->theme.cursor);
-        }else {
-            f32 centre = pos.x + widget->min.x/2.0f;
-            f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
-            f32 text_x = centre - text_centre;
-            push_string(v2f(text_x, bbox.y), widget->string, ui->theme.text, widget->style.font_scale);
+            v2f next = {};
+            next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
+            next.y = bbox.y;
+            v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
+            
+            lerp(&ui->v0.x, next.x, 0.1f);
+            lerp(&ui->v0.y, next.y, 0.1f);
+            
+            lerp(&ui->v1.x, next.x, 0.2f);
+            lerp(&ui->v1.y, next.y+cursor_size.height/2.0, 0.3f);
+            
+            lerp(&ui->v2.x, next.x, 0.1f);
+            lerp(&ui->v2.y, next.y+cursor_size.height, 0.3f);
+            
+            push_bezier(ui->v0, ui->v1, ui->v2, 2, ui->theme.cursor);
+            
         }
     };
     
@@ -544,9 +563,8 @@ text_box(String8* string){
     auto result = update_widget(widget);
     widget->min = get_text_size(widget->string, widget->style.font_scale);
     if(result.clicked){
-        memcpy(ui->editing_string.text, string->text, string->length);
-        ui->editing_string.length = string->length;
-        ui->cursor_pos = string->length;
+        ui->cursor_pos = 0;
+        ui->text_edit = widget->id;
     }else {
         
     }

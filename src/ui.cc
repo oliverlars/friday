@@ -145,6 +145,32 @@ has_mouse_moved(v2f* delta = 0) {
 }
 
 internal b32
+has_mouse_scrolled(Platform_Event **event_out){
+    b32 result = 0;
+    Platform_Event *event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_MOUSE_SCROLL){
+            *event_out = event;
+            result = 1;
+        }
+    }
+    return(result);
+}
+
+internal b32
+has_mouse_scrolled(f32* amount = 0) {
+    Platform_Event* event = 0;
+    b32 result = has_mouse_scrolled(&event);
+    if(result){
+        platform_consume_event(event);
+        if(amount){
+            *amount = event->scroll.y;
+        }
+    }
+    return result;
+}
+
+internal b32
 has_pressed_key(Platform_Event** event_out, Key key){
     b32 result = 0;
     Platform_Event *event = 0;
@@ -298,7 +324,7 @@ load_theme_ayu(){
 internal void
 load_theme_dots(){
     
-    ui->theme.background.packed = 0x161928ff;
+    ui->theme.background.packed = 0x1C1F33ff;
     ui->theme.darker_background.packed = 0x303851ff;
     ui->theme.text.packed = 0xE7E7E7ff;
     
@@ -716,16 +742,16 @@ internal void present_cursor();
 
 internal void
 ui_edit_text(Widget* widget){
-    clampi(&ui->cursor_pos, 0, ui->editing_string.length);
-    auto last_widget = get_last_widget(widget->id, widget->string);
+    clampi(&ui->cursor_pos, 0, widget->alt_string.length);
+    auto string = &widget->alt_string;
     
     if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-            while(ui->editing_string.text[ui->cursor_pos-1] == ' '){
+        if(string->text[ui->cursor_pos-1] == ' '){
+            while(string->text[ui->cursor_pos-1] == ' '){
                 ui->cursor_pos--;
             }
         }else {
-            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+            while(string->text[ui->cursor_pos-1] != ' ' &&
                   ui->cursor_pos >= 0){
                 ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
             }
@@ -733,13 +759,13 @@ ui_edit_text(Widget* widget){
     }
     
     if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos] == ' '){
-            while(ui->editing_string.text[ui->cursor_pos] == ' '){
+        if(string->text[ui->cursor_pos] == ' '){
+            while(string->text[ui->cursor_pos] == ' '){
                 ui->cursor_pos++;
             }
         }else{
-            while(ui->editing_string.text[ui->cursor_pos] != ' ' &&
-                  ui->cursor_pos <= ui->editing_string.length){
+            while(string->text[ui->cursor_pos] != ' ' &&
+                  ui->cursor_pos <= string->length){
                 ui->cursor_pos++;
             }
         }
@@ -748,17 +774,19 @@ ui_edit_text(Widget* widget){
     if(has_pressed_key(KEY_LEFT)){
         ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
     }
+    
     if(has_pressed_key(KEY_RIGHT)){
-        ui->cursor_pos = ui->cursor_pos < ui->editing_string.length ? ui->cursor_pos +1: ui->editing_string.length;
+        ui->cursor_pos = ui->cursor_pos < string->length ? ui->cursor_pos +1: string->length;
     }
+    
     if(has_pressed_key_modified(KEY_BACKSPACE, KEY_MOD_CTRL)){
-        if(ui->editing_string.text[ui->cursor_pos-1] == ' '){
-            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+        if(string->text[ui->cursor_pos-1] == ' '){
+            pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }else {
-            while(ui->editing_string.text[ui->cursor_pos-1] != ' ' &&
+            while(string->text[ui->cursor_pos-1] != ' ' &&
                   ui->cursor_pos >= 0){
-                pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+                pop_from_string(string, ui->cursor_pos);
                 ui->cursor_pos = ui->cursor_pos >= 0 ? ui->cursor_pos -1: 0;
             }
         }
@@ -766,28 +794,28 @@ ui_edit_text(Widget* widget){
     
     if(has_pressed_key(KEY_BACKSPACE)){
         if(ui->cursor_pos){
-            pop_from_string(&ui->editing_string.string, ui->cursor_pos);
+            pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }
-    }
-    
-    if(has_pressed_key(KEY_END)){
-        ui->cursor_pos = ui->editing_string.length;
-    }
-    
-    if(has_pressed_key(KEY_HOME)){
-        ui->cursor_pos = 0;
-    }
-    
-    Platform_Event* event = 0;
-    for (;platform_get_next_event(&event);){
-        char c = event->character;
-        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-            insert_in_string(&ui->editing_string.string,
-                             &c,
-                             ui->cursor_pos++);
-            platform_consume_event(event);
+        
+        if(has_pressed_key(KEY_END)){
+            ui->cursor_pos = string->length;
         }
+        
+        if(has_pressed_key(KEY_HOME)){
+            ui->cursor_pos = 0;
+        }
+        
+        Platform_Event* event = 0;
+        for (;platform_get_next_event(&event);){
+            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+                insert_in_string(string,
+                                 event->character,
+                                 ui->cursor_pos++);
+                platform_consume_event(event);
+            }
+        }
+        
     }
 }
 
@@ -797,17 +825,19 @@ update_widget(Widget* widget){
     UI_ID last_active = ui->active;
     
     Widget* last_widget = get_widget(widget->string);
-    
     if(is_there_an_overlapping_window_after()){
-        // NOTE(Oliver): dont handle this widget, there's a window
-        // after that contains the mouse
+        
     }
     else if(last_widget){
+        
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         
+        if(is_in_rect(platform->mouse_position, bbox)){
+            ui->hot = widget->id;
+        }
         if(ui->active == widget->id){
-            if(has_left_released()){
+            if( has_left_released()){
                 if(ui->hot == widget->id && widget_has_property(widget, WP_CLICKABLE)) {
                     result.clicked = true;
                     result.clicked_position = platform->mouse_position;
@@ -837,21 +867,20 @@ update_widget(Widget* widget){
             }else if(widget_has_property(widget, WP_DRAGGABLE) && is_middle_down()){
                 ui->active = widget->id;
                 ui->dragging = true;
-            }else if(is_left_down()){
+            }else if(widget_has_property(widget, WP_CLICKABLE) && is_left_down()){
                 ui->active = widget->id;
             }
         }
         result.pos = bbox.pos;
         result.size = bbox.size;
-        if(is_in_rect(platform->mouse_position, bbox)){
-            ui->hot = widget->id;
-        }
         
         result.was_active = (last_active == widget->id) && (last_active != ui->active);
+        
     }
+    
     widget->style = ui->style_stack->style;
     
-    if(ui->active == widget->id && widget_has_property(widget, WP_TEXT_EDIT)){
+    if(ui->text_edit == widget->id && widget_has_property(widget, WP_TEXT_EDIT)){
         ui_edit_text(widget);
     }
     
@@ -955,13 +984,11 @@ push_widget_padding(v2f padding){
 
 internal void
 push_widget_window(v4f rect, String8 string){
-    auto widget = push_widget();
+    auto widget = push_widget(string);
     auto layout = push_layout(widget);
     
     // NOTE(Oliver): i must be able to just call
     // push_widget(string)???????????
-    widget->id = generate_id(string);
-    widget->string = string;
     
     ui->current_window = ui->window_count;
     ui->windows[ui->window_count++] = widget;
@@ -971,23 +998,20 @@ push_widget_window(v4f rect, String8 string){
     widget_set_property(widget, WP_OVERLAP);
     widget_set_property(widget, WP_CLIP);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
-    widget_set_property(widget, WP_RENDER_BORDER);
+    //widget_set_property(widget, WP_RENDER_BORDER);
+    
+    auto result = update_widget(widget);
     
     widget->min = rect.size;
     widget->pos = rect.pos;
-    auto result = update_widget(widget);
+    
     push_widget_padding(v2f(10, 10));
 }
 
 internal void
 push_widget_popup(v4f rect, String8 string){
-    auto widget = push_widget();
+    auto widget = push_widget(string);
     auto layout = push_layout(widget);
-    
-    // NOTE(Oliver): i must be able to just call
-    // push_widget(string)???????????
-    widget->id = generate_id(string);
-    widget->string = string;
     
     ui->current_window = ui->window_count;
     ui->windows[ui->window_count++] = widget;
@@ -1007,7 +1031,6 @@ push_widget_popup(v4f rect, String8 string){
     push_style(style);
     
     widget_set_property(widget, WP_OVERLAP);
-    widget_set_property(widget, WP_CLIP);
     widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_RENDER_HOOK);
@@ -1412,7 +1435,7 @@ render_widgets(Widget* widget){
             lerp(&widget->hot_transition, 0, 0.1f);
         }
         
-        if(ui->active == widget->id){
+        if(ui->active == widget->id || widget->checked){
             lerp(&widget->active_transition, 1.0f, 0.1f);
         }else if(!widget->checked) {
             lerp(&widget->active_transition, 0, 0.1f);
@@ -1520,6 +1543,7 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
 static int present_style = 0;
 internal void present_arc(Arc_Node* node);
 static f32 font_scale = 0.85f;
+static f32 next_font_scale = font_scale;
 
 internal void
 render_panels(Panel* root, v4f rect){
@@ -1625,6 +1649,8 @@ render_panels(Panel* root, v4f rect){
                             UI_WIDTHFILL { if(button("Render as Python")) present_style = 3;}
                             local_persist v4f rect  = {};
                             yspacer(10);
+                        }else {
+                            yspacer(1);
                         }
                         
                         UI_WIDTHFILL {
@@ -1634,7 +1660,7 @@ render_panels(Panel* root, v4f rect){
                             yspacer(10);
                             UI_WIDTHFILL{
                                 label("Font"); 
-                                fslider(0, 2, &font_scale, "font scale");
+                                fslider(0, 2, &next_font_scale, "font scale");
                             }
                             
                             UI_WIDTHFILL{
@@ -1642,6 +1668,9 @@ render_panels(Panel* root, v4f rect){
                                 fslider(0, 50, &presenter->indent_level, "indent");
                             }
                             yspacer(10);
+                        }else {
+                            yspacer(1);
+                            
                         }
                         
                         UI_WIDTHFILL {
@@ -1649,11 +1678,20 @@ render_panels(Panel* root, v4f rect){
                         }
                         if(result){
                             yspacer(10);
+                            
                             UI_ROW UI_WIDTHFILL {
                                 if(button("Compile")){
                                     compile_c(editor->root);
                                 }
                                 button("Run");
+                            }
+                            yspacer(1);
+                            UI_ROW UI_WIDTHFILL {
+                                label("File");
+                                widget_set_property(ui->current_widget, WP_FIXED_SIZE);
+                                text_box(&editor->file_location);
+                                yspacer(1);
+                                
                             }
                             UI_ROW UI_WIDTHFILL {
                                 if(button("Serialise")){
@@ -1668,6 +1706,8 @@ render_panels(Panel* root, v4f rect){
                             }
                             yspacer(10);
                             
+                        }else {
+                            yspacer(1);
                         }
                         
                         UI_WIDTHFILL {
@@ -1685,17 +1725,35 @@ render_panels(Panel* root, v4f rect){
                                 local_persist String8 string = make_string("test");
                                 text_box(&string);
                             }
+                        }else {
+                            yspacer(1);
                         }
+                        
                     }
                 }
             }
             
         }else if(root->type == PANEL_EDITOR) {
-            UI_WINDOW(rect, "Code Editor") {
-                
-                ID("%d", (int)root) {
-                    ui_panel_header(root, "Code Editor");
+            ID("%d", (int)root) {
+                UI_WINDOW(rect, "Editor") {
                     
+                    ui_panel_header(root, "Code Editor");
+                    switch(present_style){
+                        case 0: {
+                            label("Default style");
+                        }break;
+                        case 1: {
+                            label("C style");
+                            
+                        }break;
+                        case 2: {
+                            label("Pascal style");
+                            
+                        }break;
+                        case 3: {
+                            label("Python style");
+                        }break;
+                    }
 #if 0
                     UI_ROW {
                         label("view");
@@ -1717,14 +1775,14 @@ render_panels(Panel* root, v4f rect){
                 }
             }
         }else if(root->type == PANEL_STATUS){
-            UI_WINDOW(rect, "Status#%d", (int)root) {
+            UI_WINDOW(rect, "Status") {
                 UI_ROW {
                     label("delta time:"); 
                     label("%.1f", platform->dt);
                 }
             }
         }else if(root->type == PANEL_DEBUG){
-            UI_WINDOW(rect, "Debug#%d", (int)root){
+            UI_WINDOW(rect, "Debug"){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Debug");
                     yspacer();
@@ -1761,7 +1819,7 @@ render_panels(Panel* root, v4f rect){
                 }
             }
         }else if(root->type == PANEL_CONSOLE){
-            UI_WINDOW(rect, "Console#%d", (int)root){
+            UI_WINDOW(rect, "Console"){
                 ID("%d", (int)root) {
                     ui_panel_header(root, "Console");
                     label("%f", time_per_gui_update);

@@ -184,6 +184,7 @@ struct UI_State {
     
     UI_ID hot;
     UI_ID active;
+    UI_ID text_edit;
     b32 dragging;
     
     
@@ -222,6 +223,9 @@ struct UI_State {
     } editing_string;
     
     int cursor_pos;
+    v2f v0;
+    v2f v1;
+    v2f v2;
 };
 
 global f32 time_per_gui_update;

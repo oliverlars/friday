@@ -146,7 +146,6 @@ PERMANENT_LOAD {
     
     presenter->select_first = first;
     
-    srand(0);
     
     ui->logo = make_bitmap("icon.png");
 }
@@ -1143,8 +1142,7 @@ UPDATE {
         if(editor->should_reload){
             pool_free(&editor->arc_pool);
             editor->arc_pool = make_pool(sizeof(Arc_Node));
-            deserialise(make_string("test.arc"));
-            editor->root = deserialise(make_string("test.arc"));
+            editor->root = deserialise(editor->file_location);
             globals->presenter = push_type_zero(&platform->permanent_arena, Presenter_State);
             presenter = globals->presenter;
             ui->editing_string.length = 0;

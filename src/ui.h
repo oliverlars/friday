@@ -80,6 +80,7 @@ struct Widget {
     UI_ID id;
     String8 string;
     String8 alt_string;
+    String8* text_edit_string;
     
     Widget* next_hash;
     

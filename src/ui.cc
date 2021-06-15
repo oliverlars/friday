@@ -742,8 +742,8 @@ internal void present_cursor();
 
 internal void
 ui_edit_text(Widget* widget){
-    clampi(&ui->cursor_pos, 0, widget->alt_string.length);
-    auto string = &widget->alt_string;
+    clampi(&ui->cursor_pos, 0, widget->text_edit_string->length);
+    auto string = widget->text_edit_string;
     
     if(has_pressed_key_modified(KEY_LEFT, KEY_MOD_CTRL)){
         if(string->text[ui->cursor_pos-1] == ' '){
@@ -797,26 +797,25 @@ ui_edit_text(Widget* widget){
             pop_from_string(string, ui->cursor_pos);
             ui->cursor_pos--;
         }
-        
-        if(has_pressed_key(KEY_END)){
-            ui->cursor_pos = string->length;
-        }
-        
-        if(has_pressed_key(KEY_HOME)){
-            ui->cursor_pos = 0;
-        }
-        
-        Platform_Event* event = 0;
-        for (;platform_get_next_event(&event);){
-            if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
-                insert_in_string(string,
-                                 event->character,
-                                 ui->cursor_pos++);
-                platform_consume_event(event);
-            }
-        }
-        
     }
+    if(has_pressed_key(KEY_END)){
+        ui->cursor_pos = string->length;
+    }
+    
+    if(has_pressed_key(KEY_HOME)){
+        ui->cursor_pos = 0;
+    }
+    
+    Platform_Event* event = 0;
+    for (;platform_get_next_event(&event);){
+        if (event->type == PLATFORM_EVENT_CHARACTER_INPUT){
+            insert_in_string(string,
+                             event->character,
+                             ui->cursor_pos++);
+        }
+    }
+    
+    
 }
 
 internal Widget_Update
@@ -1695,9 +1694,8 @@ render_panels(Panel* root, v4f rect){
                             }
                             UI_ROW UI_WIDTHFILL {
                                 if(button("Serialise")){
-                                    auto str = make_stringf(&platform->frame_arena, "%s", "test.arc");
-                                    platform->delete_file(str);
-                                    serialise(str, editor->root);
+                                    platform->delete_file(editor->file_location);
+                                    serialise(editor->file_location, editor->root);
                                 }
                                 if(button("Deserialise")){
                                     editor->should_reload = true;

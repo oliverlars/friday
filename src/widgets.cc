@@ -511,19 +511,18 @@ text_box(String8* string){
     auto widget_string = make_stringf(&platform->frame_arena, "edit%d", (int)string);
     auto widget = push_widget(widget_string);
     
-    
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
-    widget_set_property(widget, WP_ALT_STRING);
     widget_set_property(widget, WP_HOVER_RENDER_BORDER);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
     widget_set_property(widget, WP_TEXT_EDIT);
     
-    widget->alt_string = *string;
+    widget->text_edit_string = string;
     
     push_default_style();
+    
     auto render_hook = [](Widget* widget) {
         v2f pos = widget->pos;
         pos.y -= widget->min.height;
@@ -532,15 +531,15 @@ text_box(String8* string){
         Colour colour = colour_from_v4f(widget->style.text_colour);
         
         f32 centre = pos.x + widget->min.x/2.0f;
-        f32 text_centre = get_text_width(widget->string, widget->style.font_scale)/2.0f;
+        f32 text_centre = get_text_width(*widget->text_edit_string, widget->style.font_scale)/2.0f;
         f32 text_x = centre - text_centre;
         
-        push_string(v2f(text_x, bbox.y), widget->alt_string, colour, widget->style.font_scale);
+        push_string(v2f(text_x, bbox.y), *widget->text_edit_string, colour, widget->style.font_scale);
         
         if(ui->text_edit == widget->id){
             
             v2f next = {};
-            next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
+            next.x = text_x + get_text_width_n(*widget->text_edit_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
             v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
             
@@ -561,12 +560,12 @@ text_box(String8* string){
     widget->render_hook = render_hook;
     
     auto result = update_widget(widget);
-    widget->min = get_text_size(widget->string, widget->style.font_scale);
+    widget->min = get_text_size(*string, widget->style.font_scale);
     if(result.clicked){
-        ui->cursor_pos = 0;
+        ui->cursor_pos = string->length;
         ui->text_edit = widget->id;
-    }else {
-        
+    }else if(result.was_active) {
+        ui->text_edit = -1;
     }
     
 }

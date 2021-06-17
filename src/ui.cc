@@ -302,6 +302,23 @@ has_input_character(Platform_Event **event_out){
     return(result);
 }
 
+
+internal f32
+animate(f32 source, f32 target, f32 value){
+    return (target - source)*(1.0f - powf(value, platform->dt));
+}
+
+internal void
+animate(f32* source, f32 target, f32 value){
+    *source += (target - *source)*(1.0f - powf(value, platform->dt));
+}
+
+internal void
+animate(int* source, int target, f32 value){
+    *source += (target - *source)*(1.0f - powf(value, platform->dt));
+}
+
+
 internal void
 load_theme_ayu(){
     
@@ -1363,8 +1380,8 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     }
     
     if(widget->pos.x && widget->pos.y && widget_has_property(widget, WP_LERP_POSITION)){
-        lerp(&widget->pos.x, pos.x, 0.2f);
-        lerp(&widget->pos.y, pos.y, 0.2f);
+        animate(&widget->pos.x, pos.x, 0.2f);
+        animate(&widget->pos.y, pos.y, 0.2f);
     }else if(!widget_has_property(widget, WP_CONTAINER)){
         widget->pos = pos;
     }
@@ -1437,15 +1454,15 @@ render_widgets(Widget* widget){
         
         
         if(ui->hot == widget->id){
-            lerp(&widget->hot_transition, 1.0f, 0.1f);
+            animate(&widget->hot_transition, 1.0f, 0.1f);
         }else {
-            lerp(&widget->hot_transition, 0, 0.1f);
+            animate(&widget->hot_transition, 0, 0.1f);
         }
         
         if(ui->active == widget->id || widget->checked){
-            lerp(&widget->active_transition, 1.0f, 0.1f);
+            animate(&widget->active_transition, 1.0f, 0.1f);
         }else if(!widget->checked) {
-            lerp(&widget->active_transition, 0, 0.1f);
+            animate(&widget->active_transition, 0, 0.1f);
         }
         
         
@@ -1849,6 +1866,8 @@ render_panels(Panel* root, v4f rect){
                         //result = arrow_dropdown3("File");
                         //filebar_dropdown("File");
                         icon_button(ui->logo, "logo button");
+                        xspacer();
+                        result = arrow_dropdown3("File");
                         xspacer();
                         result = arrow_dropdown3("Edit");
                         xspacer();

@@ -618,7 +618,7 @@ UPDATE {
         if(has_mouse_scrolled(&amount)){
             next_font_scale += amount/1000.0f;
         }
-        lerp(&font_scale, next_font_scale, 0.1f);
+        animate(&font_scale, next_font_scale, 0.1f);
         
         if(has_pressed_key_modified(KEY_LBRACKET, KEY_MOD_CTRL)){
             if(presenter->cursor.at->ast_type == AST_TOKEN){

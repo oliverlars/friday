@@ -1052,8 +1052,8 @@ present_editable_reference(Colour colour, Arc_Node* node){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
-            lerp(&presenter->cursor.pos.x, next.x, 0.4f);
-            lerp(&presenter->cursor.pos.y, next.y, 0.4f);
+            animate(&presenter->cursor.pos.x, next.x, 0.4f);
+            animate(&presenter->cursor.pos.y, next.y, 0.4f);
             
             if(presenter->mode == P_CREATE){
                 push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
@@ -1187,17 +1187,17 @@ present_editable_string(Colour colour, Arc_Node* node){
             next.y = bbox.y;
             
             v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
-            lerp(&presenter->cursor.pos.x, next.x, 0.1f);
-            lerp(&presenter->cursor.pos.y, next.y, 0.2f);
+            animate(&presenter->cursor.pos.x, next.x, 0.1f);
+            animate(&presenter->cursor.pos.y, next.y, 0.2f);
             
-            lerp(&presenter->cursor.v0.x, next.x, 0.1f);
-            lerp(&presenter->cursor.v0.y, next.y, 0.1f);
+            animate(&presenter->cursor.v0.x, next.x, 0.1f);
+            animate(&presenter->cursor.v0.y, next.y, 0.1f);
             
-            lerp(&presenter->cursor.v1.x, next.x, 0.2f);
-            lerp(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.3f);
+            animate(&presenter->cursor.v1.x, next.x, 0.2f);
+            animate(&presenter->cursor.v1.y, next.y+cursor_size.height/2.0, 0.3f);
             
-            lerp(&presenter->cursor.v2.x, next.x, 0.1f);
-            lerp(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.3f);
+            animate(&presenter->cursor.v2.x, next.x, 0.1f);
+            animate(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.3f);
             
             if(presenter->mode == P_CREATE){
                 render_cursor(&presenter->cursor, cursor_size,colour_from_v4f(v4f(1,0,0,1)));

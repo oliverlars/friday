@@ -118,10 +118,10 @@ PERMANENT_LOAD {
     ui->editing_string.text = (char*)push_size_zero(&platform->permanent_arena, 8192); //big boi string
     ui->editing_string.length = 0;
     ui->editing_string.capacity = 8192;
-    split_panel(ui->panel, 0.06, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR);
+    split_panel(ui->panel, 0.06, PANEL_SPLIT_HORIZONTAL, PANEL_EDITOR, false);
     ui->panel->first->no_pad = true;
     split_panel(ui->panel->second, 0.7, PANEL_SPLIT_VERTICAL, PANEL_PROPERTIES);
-    split_panel(ui->panel->second->first, 0.92, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS);
+    split_panel(ui->panel->second->first, 0.92, PANEL_SPLIT_HORIZONTAL, PANEL_STATUS, false);
     
     editor->string_pool = make_pool(256); //node strings are capped at 256 chars
     

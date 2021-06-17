@@ -146,6 +146,7 @@ enum Panel_Type {
 
 struct Panel {
     b32 is_dragging;
+    b32 draggable;
     b32 no_pad;
     Panel_Split_Type split_type;
     Panel_Type type;

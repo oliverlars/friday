@@ -1524,8 +1524,9 @@ render_widgets(Widget* widget){
     }
     
 }
+
 internal void 
-split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type){
+split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Type type, b32 draggable = true){
     if(!panel) return;
     
     assert(!panel->first && !panel->second);
@@ -1544,6 +1545,9 @@ split_panel(Panel* panel, f32 split_ratio, Panel_Split_Type split_type, Panel_Ty
     
     panel->first->split_type = split_type;
     panel->second->split_type = split_type;
+    
+    panel->first->draggable = draggable; 
+    panel->second->draggable = draggable; 
     
 }
 
@@ -1616,12 +1620,14 @@ render_panels(Panel* root, v4f rect){
         
         
         v2f delta = {};
-        if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
+        if(root->draggable &&
+           !root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
             if(has_left_dragged()){
                 root->parent->is_dragging = true;
             }
             platform->set_cursor_to_horizontal_resize();
-        } else if(!root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
+        } else if(root->draggable &&
+                  !root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
             if(has_left_dragged()){
                 root->parent->is_dragging = true;
             }

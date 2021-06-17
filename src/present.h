@@ -83,6 +83,11 @@ struct Presenter_State {
     
     f32 indent_level;
     
+    // HACK(Oliver): this is because we don't have the widget ids
+    // when setting the next cursor pos, maybe this can be changed
+    // but for now this'll do
+    b32 find_next_text_id;
+    
 };
 global Arc_Node* highlight_reference;
 

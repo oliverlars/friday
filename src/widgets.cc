@@ -446,7 +446,6 @@ fslider(f32 min, f32 max, f32* value, char* fmt, ...){
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_HOVER_INFLATE);
-    widget_set_property(widget, WP_CLICKABLE);
     //widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_LERP_COLOURS);
     
@@ -537,7 +536,7 @@ text_box(String8* string){
             push_string(v2f(text_x, bbox.y), *widget->text_edit_string, colour, widget->style.font_scale);
         }
         
-        if(ui->text_edit == widget->id){
+        if(ui->active == widget->id && ui->text_edit == widget->id){
             
             v2f next = {};
             next.x = text_x + get_text_width_n(*widget->text_edit_string, ui->cursor_pos, widget->style.font_scale);
@@ -565,8 +564,5 @@ text_box(String8* string){
     if(result.clicked){
         ui->cursor_pos = string->length;
         ui->text_edit = widget->id;
-    }else if(result.was_active) {
-        ui->text_edit = -1;
     }
-    
 }

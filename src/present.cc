@@ -695,6 +695,9 @@ tab_completer_type(Arc_Node* node){
 internal void
 set_next_cursor_pos(Cursor* cursor){
     if(!cursor->at) return;
+    if(cursor->direction != CURSOR_NONE){
+        presenter->find_next_text_id = true;
+    }
     auto dir = cursor->direction;
     auto count = cursor->direction_count;
     auto offset = presenter->number_of_deletions_before_cursor;
@@ -729,7 +732,6 @@ set_next_cursor_pos(Cursor* cursor){
             auto line = presenter->lines[line_index];
             next_pos = clampi(line.start+distance_from_start, line.start, line.end);
             cursor->at = presenter->buffer[next_pos].node;
-            
         }break;
         case CURSOR_DOWN:{
             
@@ -750,12 +752,9 @@ set_next_cursor_pos(Cursor* cursor){
     cursor->line_index = line_index;
 }
 
-internal void
+internal inline void
 render_cursor(Cursor* cursor, v2f size, Colour colour){
-    
     push_bezier(cursor->v0, cursor->v1, cursor->v2, size.width, colour);
-    //push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
-    //push_bezier(cursor->v0, cursor->v1, cursor->v1 + v2f(10,10) , 3, ui->theme.text);
 }
 
 internal void
@@ -998,7 +997,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     String8 string = make_stringf(&platform->frame_arena, "%.*s", node->reference->string.length,
                                   node->reference->string.text);
     
-    auto widget_string = make_stringf(&platform->frame_arena, "edit_string%d", (int)node);
+    auto widget_string = make_stringf(&platform->frame_arena, "editable_ref%d", (int)node);
     auto widget = push_widget(widget_string);
     
     widget_set_property(widget, WP_RENDER_HOOK);
@@ -1029,7 +1028,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
         pos.y -= widget->min.height;
         v4f bbox = v4f2(pos, widget->min);
         
-        if(!widget->alt_string.length && presenter->cursor.text_id != widget->id){
+        if(!widget->alt_string.length && ui->text_edit != widget->id){
             push_rectangle(v4f2(pos - v2f(0, 5), v2f(10, 3)), 1, colour_from_v4f(v4f(1,0,0,0)));
         }
         
@@ -1049,7 +1048,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
         
-        if(presenter->cursor.text_id == widget->id){
+        if(ui->text_edit == widget->id){
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
             next.y = bbox.y;
@@ -1070,10 +1069,17 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(presenter->cursor.text_id == widget->id){
-            //presenter->cursor.text_id = widget->id;
+        if(ui->text_edit == widget->id){
+            //ui->text_edit = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(presenter->cursor.at);
+        }
+    }
+    
+    if(presenter->find_next_text_id){
+        if(presenter->cursor.at == node){
+            ui->text_edit = widget->id;
+            presenter->find_next_text_id = false;
         }
     }
     
@@ -1088,7 +1094,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
     
     widget->style = style;
     
-    if(presenter->cursor.text_id == widget->id){
+    if(ui->text_edit == widget->id){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {
@@ -1099,8 +1105,12 @@ present_editable_reference(Colour colour, Arc_Node* node){
     if(result.clicked){
         set_cursor_as_node(&presenter->cursor, widget->arc);
         
-        presenter->cursor.text_id = widget->id;
+        ui->text_edit = widget->id;
         
+    }
+    
+    if(ui->active == widget->id){
+        ui->text_edit = widget->id;
     }
     
     if(result.hovered && node->reference){
@@ -1113,15 +1123,13 @@ internal void
 present_editable_string(Colour colour, Arc_Node* node){
     
     auto string = &node->string;
-    auto widget_string = make_stringf(&platform->frame_arena, "edit_string%d", (int)node);
+    auto widget_string = make_stringf(&platform->frame_arena, "editable_string%d", (int)node);
     auto widget = push_widget(widget_string);
     
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_LERP_POSITION);
     widget_set_property(widget, WP_CLICKABLE);
     widget_set_property(widget, WP_ALT_STRING);
-    widget_set_property(widget, WP_HOVER_RENDER_BORDER);
-    widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
     
     Widget_Style style = {};
     
@@ -1172,7 +1180,7 @@ present_editable_string(Colour colour, Arc_Node* node){
         
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
-        if(presenter->cursor.at == widget->arc){
+        if(ui->text_edit == widget->id){
             
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);
@@ -1205,28 +1213,34 @@ present_editable_string(Colour colour, Arc_Node* node){
     
     // NOTE(Oliver): custom text edit
     {
-        if(presenter->cursor.text_id == widget->id){
-            //presenter->cursor.text_id = widget->id;
+        if(ui->text_edit == widget->id){
+            //ui->text_edit = widget->id;
             if(node->reference) highlight_reference = node->reference;
             edit_text(presenter->cursor.at);
         }
     }
     
+    if(presenter->find_next_text_id){
+        if(presenter->cursor.at == node){
+            ui->text_edit = widget->id;
+            presenter->find_next_text_id = false;
+        }
+    }
+    
     auto result = update_widget(widget);
     
-    if(presenter->cursor.text_id == widget->id){
+    
+    if(widget->alt_string.length){
         v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
         widget->min = size;
     }else {
-        v2f size = get_text_size(widget->alt_string, widget->style.font_scale);
-        widget->min = size;
+        widget->min = get_text_size(" ", widget->style.font_scale);
     }
     
     if(result.clicked){
         set_cursor_as_node(&presenter->cursor, widget->arc);
-        presenter->cursor.text_id = widget->id;
+        ui->text_edit = widget->id;
     } 
-    
     
     if(result.hovered && node->reference){
         highlight_reference = node->reference;

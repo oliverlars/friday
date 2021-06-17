@@ -835,7 +835,7 @@ update_widget(Widget* widget){
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
         
-        if(is_in_rect(platform->mouse_position, bbox)){
+        if(!ui->dragging && is_in_rect(platform->mouse_position, bbox)){
             ui->hot = widget->id;
         }
         if(ui->active == widget->id){
@@ -849,7 +849,9 @@ update_widget(Widget* widget){
                 if(ui->dragging){
                     ui->dragging = false;
                 }
-                ui->active = -1;
+                if(!widget_has_property(widget, WP_TEXT_EDIT)){
+                    ui->active = -1;
+                }
             }else if(has_middle_released()){
                 if(ui->hot == widget->id) {
                     result.clicked_position = platform->mouse_position;
@@ -863,7 +865,7 @@ update_widget(Widget* widget){
                 ui->active = -1;
             }
         }else if(ui->hot == widget->id){
-            if(widget_has_property(widget, WP_DRAGGABLE) && is_left_down()){
+            if(widget_has_property(widget, WP_DRAGGABLE) && has_left_dragged()){
                 ui->active = widget->id;
                 ui->dragging = true;
             }else if(widget_has_property(widget, WP_DRAGGABLE) && has_middle_dragged()){
@@ -882,7 +884,9 @@ update_widget(Widget* widget){
     
     widget->style = ui->style_stack->style;
     
-    if(ui->text_edit == widget->id && widget_has_property(widget, WP_TEXT_EDIT)){
+    if(ui->active == widget->id && 
+       ui->text_edit == widget->id && 
+       widget_has_property(widget, WP_TEXT_EDIT)){
         ui_edit_text(widget);
     }
     
@@ -1061,7 +1065,6 @@ push_widget_container(String8 string){
     widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_OVERLAP);
-    widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_MANUAL_LAYOUT);
     
     auto result = update_widget(widget);
@@ -1069,8 +1072,8 @@ push_widget_container(String8 string){
     push_widget_padding(v2f(10, 10));
     
     if(ui->dragging && ui->active == widget->id){
-        widget->pos.x = widget->pos.x +  platform->mouse_delta.x;
-        widget->pos.y = widget->pos.y +  platform->mouse_delta.y;
+        widget->pos.x = widget->pos.x + platform->mouse_delta.x;
+        widget->pos.y = widget->pos.y + platform->mouse_delta.y;
     }
     
 }
@@ -1694,9 +1697,10 @@ render_panels(Panel* root, v4f rect){
                                 label("File");
                                 widget_set_property(ui->current_widget, WP_FIXED_SIZE);
                                 text_box(&editor->file_location);
-                                yspacer(1);
                                 
                             }
+                            yspacer(1);
+                            
                             UI_ROW UI_WIDTHFILL {
                                 if(button("Serialise")){
                                     platform->delete_file(editor->file_location);

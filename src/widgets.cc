@@ -110,7 +110,7 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                     v2f tpos = bbox.pos;
                     tpos.y -= padded_size/2.0;
                     tpos.x += padded_size/2.0;
-                    push_triangle(tpos, padded_size, 0.25 + lerp(0.0, 0.25, widget->active_transition), ui->theme.text);
+                    push_triangle(tpos, padded_size, 0.25 + animate(0.0, 0.25, widget->active_transition), ui->theme.text);
                     bbox.pos.x += padded_size/2.0;
                     widget_render_text(bbox.pos , widget, ui->theme.text);
                 };
@@ -202,7 +202,7 @@ arrow_dropdown(char* fmt, ...){
         v2f tpos = bbox.pos;
         tpos.y -= padded_size/2.0;
         tpos.x += padded_size/2.0;
-        push_triangle(tpos, padded_size, 0.25 + lerp(0.0, 0.25, widget->active_transition), ui->theme.text);
+        push_triangle(tpos, padded_size, 0.25 + animate(0.0, 0.25, widget->active_transition), ui->theme.text);
         bbox.pos.x += padded_size/2.0;
         widget_render_text(bbox.pos , widget, ui->theme.text);
     };
@@ -254,7 +254,7 @@ arrow_dropdown2(char* fmt, ...){
         v2f tpos = bbox.pos;
         tpos.y -= padded_size/2.0;
         tpos.x += padded_size/2.0;
-        push_triangle(tpos, padded_size, 0.25 + lerp(0.0, 0.25, widget->active_transition), ui->theme.text);
+        push_triangle(tpos, padded_size, 0.25 + animate(0.0, 0.25, widget->active_transition), ui->theme.text);
         bbox.pos.x += padded_size/2.0;
         widget_render_text(bbox.pos , widget, ui->theme.text);
     };
@@ -543,14 +543,14 @@ text_box(String8* string){
             next.y = bbox.y;
             v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
             
-            lerp(&ui->v0.x, next.x, 0.1f);
-            lerp(&ui->v0.y, next.y, 0.1f);
+            animate(&ui->v0.x, next.x, 0.1f);
+            animate(&ui->v0.y, next.y, 0.1f);
             
-            lerp(&ui->v1.x, next.x, 0.2f);
-            lerp(&ui->v1.y, next.y+cursor_size.height/2.0, 0.3f);
+            animate(&ui->v1.x, next.x, 0.2f);
+            animate(&ui->v1.y, next.y+cursor_size.height/2.0, 0.3f);
             
-            lerp(&ui->v2.x, next.x, 0.1f);
-            lerp(&ui->v2.y, next.y+cursor_size.height, 0.3f);
+            animate(&ui->v2.x, next.x, 0.1f);
+            animate(&ui->v2.y, next.y+cursor_size.height, 0.3f);
             
             push_bezier(ui->v0, ui->v1, ui->v2, 2, ui->theme.cursor);
             

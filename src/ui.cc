@@ -305,17 +305,17 @@ has_input_character(Platform_Event **event_out){
 
 internal f32
 animate(f32 source, f32 target, f32 value){
-    return (target - source)*(1.0f - powf(value, platform->dt));
+    return (target - source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(f32* source, f32 target, f32 value){
-    *source += (target - *source)*(1.0f - powf(value, platform->dt));
+    *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(int* source, int target, f32 value){
-    *source += (target - *source)*(1.0f - powf(value, platform->dt));
+    *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
 
 

@@ -60,6 +60,15 @@ platform_mouse_press(Mouse_Button button, v2f position){
 }
 
 internal Platform_Event
+platform_mouse_down(Mouse_Button button, v2f position){
+    Platform_Event event;
+    event.type = PLATFORM_EVENT_MOUSE_DOWN;
+    event.mouse_button = button;
+    event.position = position;
+    return event;
+}
+
+internal Platform_Event
 platform_mouse_release(Mouse_Button button, v2f position){
     Platform_Event event;
     event.type = PLATFORM_EVENT_MOUSE_RELEASE;
@@ -97,6 +106,13 @@ platform_get_next_event(Platform_Event** event){
 }
 
 internal void
+platform_push_event(Platform_Event event){
+    hard_assert(platform != 0);
+    if(platform->event_count < ArrayCount(platform->events)){
+        platform->events[platform->event_count++] = event;
+    }
+}
+internal void
 platform_consume_event(Platform_Event* event){
     event->type  = PLATFORM_EVENT_INVALID;
 }
@@ -110,14 +126,5 @@ platform_begin_frame(){
 internal void
 platform_end_frame(){
     platform->current_time += 1.0f / platform->target_fps;
-    
-    memset(platform->events, 0, 8192);
-}
-
-internal void
-platform_push_event(Platform_Event event){
-    hard_assert(platform != 0);
-    if(platform->event_count < ArrayCount(platform->events)){
-        platform->events[platform->event_count++] = event;
-    }
+    memset(platform->events, 0, 8192*sizeof(Platform_Event));
 }

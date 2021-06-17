@@ -50,9 +50,11 @@ enum Platform_Event_Type {
     
     PLATFORM_EVENT_MOUSE_BEGIN,
     PLATFORM_EVENT_MOUSE_PRESS,
+    PLATFORM_EVENT_MOUSE_DOWN,
     PLATFORM_EVENT_MOUSE_RELEASE,
     PLATFORM_EVENT_MOUSE_MOVE,
     PLATFORM_EVENT_MOUSE_SCROLL,
+    PLATFORM_EVENT_MOUSE_DRAG,
     PLATFORM_EVENT_MOUSE_END,
     
     PLATFORM_EVENT_COUNT,
@@ -94,6 +96,7 @@ struct Platform {
     
     u64 frame_count;
     
+    b32 is_left_down;
     v2f mouse_position;
     v2f mouse_delta;
     u64 event_count;

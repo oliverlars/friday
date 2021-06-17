@@ -1172,7 +1172,7 @@ present_editable_string(Colour colour, Arc_Node* node){
         
         push_string(pos, widget->alt_string, colour, widget->style.font_scale);
         
-        if(presenter->cursor.text_id == widget->id){
+        if(presenter->cursor.at == widget->arc){
             
             v2f next = {};
             next.x = pos.x + get_text_width_n(widget->alt_string, ui->cursor_pos, widget->style.font_scale);

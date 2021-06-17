@@ -533,8 +533,9 @@ text_box(String8* string){
         f32 centre = pos.x + widget->min.x/2.0f;
         f32 text_centre = get_text_width(*widget->text_edit_string, widget->style.font_scale)/2.0f;
         f32 text_x = centre - text_centre;
-        
-        push_string(v2f(text_x, bbox.y), *widget->text_edit_string, colour, widget->style.font_scale);
+        RENDER_CLIP(v4f2(pos, widget->min)){
+            push_string(v2f(text_x, bbox.y), *widget->text_edit_string, colour, widget->style.font_scale);
+        }
         
         if(ui->text_edit == widget->id){
             

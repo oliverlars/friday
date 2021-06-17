@@ -95,9 +95,11 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     }
     else if(message == WM_LBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
+        platform->is_left_down = true;
     }
     else if(message == WM_LBUTTONUP){
         platform_push_event(platform_mouse_release(MOUSE_BUTTON_LEFT, global_platform.mouse_position));
+        platform->is_left_down = false;
     }
     else if(message == WM_RBUTTONDOWN){
         platform_push_event(platform_mouse_press(MOUSE_BUTTON_RIGHT, global_platform.mouse_position));
@@ -134,6 +136,7 @@ win32_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam){
     else if(message == WM_MOUSEWHEEL){
         s16 wheel_delta = HIWORD(wparam);
         platform_push_event(platform_mouse_scroll(v2f(0, (f32)wheel_delta), modifiers));
+        
         log("scroll amount: %f", (f32)wheel_delta);
     }
     else if(message == WM_MOUSEHWHEEL){

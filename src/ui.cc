@@ -43,7 +43,7 @@ has_left_released_dont_consume(){
 
 
 internal b32
-is_left_down(Platform_Event **event_out){
+has_left_clicked(Platform_Event **event_out){
     b32 result = 0;
     Platform_Event *event = 0;
     for (;platform_get_next_event(&event);){
@@ -56,9 +56,9 @@ is_left_down(Platform_Event **event_out){
 }
 
 internal b32
-is_left_down(){
+has_left_clicked(){
     Platform_Event* event = 0;
-    b32 result = is_left_down(&event);
+    b32 result = has_left_clicked(&event);
     if (result){
         platform_consume_event(event);
     }
@@ -66,9 +66,14 @@ is_left_down(){
 }
 
 internal b32
-is_left_down_dont_consume(){
+is_left_down(){
+    return platform->is_left_down;
+}
+
+internal b32
+has_left_clicked_dont_consume(){
     Platform_Event* event = 0;
-    b32 result = is_left_down(&event);
+    b32 result = has_left_clicked(&event);
     return(result);
 }
 
@@ -227,13 +232,11 @@ internal b32
 has_left_dragged(v2f* delta = 0){
     b32 result = 0;
     
-    Platform_Event* left_event = 0;
     Platform_Event* move_event = 0;
     result = has_mouse_moved(&move_event);
-    result = result & is_left_down(&left_event);
+    result = result & is_left_down();
     
     if(result){
-        platform_consume_event(left_event);
         platform_consume_event(move_event);
         if(delta) *delta = move_event->delta;
     }
@@ -836,7 +839,7 @@ update_widget(Widget* widget){
             ui->hot = widget->id;
         }
         if(ui->active == widget->id){
-            if( has_left_released()){
+            if(has_left_released()){
                 if(ui->hot == widget->id && widget_has_property(widget, WP_CLICKABLE)) {
                     result.clicked = true;
                     result.clicked_position = platform->mouse_position;
@@ -863,10 +866,10 @@ update_widget(Widget* widget){
             if(widget_has_property(widget, WP_DRAGGABLE) && is_left_down()){
                 ui->active = widget->id;
                 ui->dragging = true;
-            }else if(widget_has_property(widget, WP_DRAGGABLE) && is_middle_down()){
+            }else if(widget_has_property(widget, WP_DRAGGABLE) && has_middle_dragged()){
                 ui->active = widget->id;
                 ui->dragging = true;
-            }else if(widget_has_property(widget, WP_CLICKABLE) && is_left_down()){
+            }else if(widget_has_property(widget, WP_CLICKABLE) && has_left_clicked()){
                 ui->active = widget->id;
             }
         }
@@ -1058,6 +1061,7 @@ push_widget_container(String8 string){
     widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_OVERLAP);
+    widget_set_property(widget, WP_RENDER_BORDER);
     widget_set_property(widget, WP_MANUAL_LAYOUT);
     
     auto result = update_widget(widget);
@@ -1068,6 +1072,7 @@ push_widget_container(String8 string){
         widget->pos.x = widget->pos.x +  platform->mouse_delta.x;
         widget->pos.y = widget->pos.y +  platform->mouse_delta.y;
     }
+    
 }
 
 internal void
@@ -1770,6 +1775,7 @@ render_panels(Panel* root, v4f rect){
                     UI_CONTAINER("snippet"){
                         present_arc(editor->root);
                     }
+                    
                 }
             }
         }else if(root->type == PANEL_STATUS){

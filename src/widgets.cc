@@ -532,16 +532,22 @@ text_box(String8* string){
         f32 centre = pos.x + widget->min.x/2.0f;
         f32 text_centre = get_text_width(*widget->text_edit_string, widget->style.font_scale)/2.0f;
         f32 text_x = centre - text_centre;
+        
+        v2f next = {};
+        next.x = text_x + get_text_width_n(*widget->text_edit_string, ui->cursor_pos, widget->style.font_scale);
+        next.y = bbox.y;
+        v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
+        
+        if(next.x >= widget->pos.x + widget->min.x){
+            text_x -= (next.x - (widget->pos.x + widget->min.x));
+            next.x = text_x + get_text_width_n(*widget->text_edit_string, ui->cursor_pos, widget->style.font_scale);
+        }
+        
         RENDER_CLIP(v4f2(pos, widget->min)){
             push_string(v2f(text_x, bbox.y), *widget->text_edit_string, colour, widget->style.font_scale);
         }
         
         if(ui->active == widget->id && ui->text_edit == widget->id){
-            
-            v2f next = {};
-            next.x = text_x + get_text_width_n(*widget->text_edit_string, ui->cursor_pos, widget->style.font_scale);
-            next.y = bbox.y;
-            v2f cursor_size = v2f(1.5, widget->min.height*0.9f);
             
             animate(&ui->v0.x, next.x, 0.1f);
             animate(&ui->v0.y, next.y, 0.1f);

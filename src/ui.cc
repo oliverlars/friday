@@ -1639,13 +1639,13 @@ render_panels(Panel* root, v4f rect){
         v2f delta = {};
         if(root->draggable &&
            !root->parent->is_dragging && is_in_rect(platform->mouse_position, harea)){
-            if(has_left_dragged()){
+            if(!ui->dragging && has_left_dragged()){
                 root->parent->is_dragging = true;
             }
             platform->set_cursor_to_horizontal_resize();
         } else if(root->draggable &&
                   !root->parent->is_dragging && is_in_rect(platform->mouse_position, varea)){
-            if(has_left_dragged()){
+            if(!ui->dragging && has_left_dragged()){
                 root->parent->is_dragging = true;
             }
         }

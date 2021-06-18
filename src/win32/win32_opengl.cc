@@ -123,5 +123,5 @@ win32_cleanup_opengl(HDC *device_context)
 internal void
 win32_opengl_refresh_screen()
 {
-    wglSwapLayerBuffers(global_device_context, WGL_SWAP_MAIN_PLANE);
+    SwapBuffers(global_device_context);
 }

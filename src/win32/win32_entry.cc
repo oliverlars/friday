@@ -471,7 +471,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         global_platform.frame_arena = frame_arenas[frame];
         arena_clear(&frame_arenas[frame]);
         
-        win32_timer_begin_frame(&global_win32_timer);
+        //win32_timer_begin_frame(&global_win32_timer);
         
         {
             platform->event_count = 0;
@@ -531,7 +531,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_sh
         
         win32_code_update(&win32_app_code);
         
-        win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
+        //win32_timer_end_frame(&global_win32_timer, 1000.0 * (1.0 / (f64)global_platform.target_fps));
         
     }
     

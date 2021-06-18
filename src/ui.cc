@@ -675,7 +675,6 @@ widget_properties_are_equal(Widget* a, Widget* b){
 
 internal Layout*
 push_layout(Widget* widget){
-    
     auto layout = push_type_zero(&platform->frame_arena, Layout);
     if(!ui->layout_stack){
         ui->layout_stack = layout;
@@ -732,6 +731,7 @@ push_widget(String8 string){
         ui->root = widget;
         return widget;
     }else if(!ui->layout_stack && ui->root) {
+        
         Widget* last = ui->root;
         for(; last->next_sibling; last = last->next_sibling);
         last->next_sibling = widget;
@@ -846,8 +846,7 @@ update_widget(Widget* widget){
     Widget* last_widget = get_widget(widget->string);
     if(is_there_an_overlapping_window_after()){
         
-    }
-    else if(last_widget){
+    }else if(last_widget){
         
         v4f bbox = v4f2(last_widget->pos, last_widget->min);
         bbox.y -= bbox.height; //we draw widgets from top left not bottom left
@@ -1007,7 +1006,9 @@ push_widget_padding(v2f padding){
 
 internal void
 push_widget_window(v4f rect, String8 string){
+    
     auto widget = push_widget(string);
+    
     auto layout = push_layout(widget);
     
     // NOTE(Oliver): i must be able to just call
@@ -1033,12 +1034,24 @@ push_widget_window(v4f rect, String8 string){
 
 internal void
 push_widget_popup(v4f rect, String8 string){
-    auto widget = push_widget(string);
+    
+    auto widget = make_widget(string);
+    
+    if(!ui->layout_stack && !ui->root){
+        ui->root = widget;
+    }else {
+        
+        Widget* last = ui->root;
+        for(; last->next_sibling; last = last->next_sibling);
+        last->next_sibling = widget;
+        widget->prev_sibling = last;
+        
+    }
+    
     auto layout = push_layout(widget);
     
     ui->current_window = ui->window_count;
     ui->windows[ui->window_count++] = widget;
-    
     
     Widget_Style style = {};
     style.text_colour = v4f_from_colour(ui->theme.text);
@@ -1057,6 +1070,7 @@ push_widget_popup(v4f rect, String8 string){
     widget_set_property(widget, WP_RENDER_BACKGROUND);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_CLIP);
     
     auto render_hook = [](Widget* widget){
         push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, colour_from_v4f(widget->style.background_colour));
@@ -1070,8 +1084,12 @@ push_widget_popup(v4f rect, String8 string){
 
 internal void
 pop_widget_window(){
-    while(ui->layout_stack) pop_layout();
+    pop_layout();
+    pop_layout();
+    pop_layout();
+    
     pop_style();
+    ui->current_window--;
 }
 
 internal void
@@ -1661,6 +1679,7 @@ render_panels(Panel* root, v4f rect){
         
         if(root->type == PANEL_PROPERTIES){
             UI_WINDOW(rect, "Properties#%d", (int)root) {
+                
                 ID("%d", (int)root){
                     ui_panel_header(root, "Properties");
                     yspacer(10);
@@ -1672,6 +1691,7 @@ render_panels(Panel* root, v4f rect){
                         }
                         
                         if(result){
+                            
                             yspacer(10);
                             UI_WIDTHFILL { if(button("Render as default")) present_style = 0;}
                             UI_WIDTHFILL { if(button("Render as C")) present_style = 1;}
@@ -1761,6 +1781,7 @@ render_panels(Panel* root, v4f rect){
                         
                     }
                 }
+                
             }
             
         }else if(root->type == PANEL_EDITOR) {
@@ -1886,35 +1907,36 @@ render_panels(Panel* root, v4f rect){
 }
 
 internal void
-render_popup(){
+panel_switch_popup(Panel* panel){
+    Widget* widget = ui->current_widget;
+    v4f rect = {};
+    rect = v4f2(widget->pos, v2f(200,125));
+    rect.pos.x -= (rect.width - widget->min.width);
+    rect.pos.y -= widget->min.height;
+    rect.pos.y -= 20;
+    rect.pos.y -= PADDING;
     
-    if(ui->popup){
-        UI_POPUP(ui->popup_rect, "popup"){
-            ID("%d", (int)ui->popup_panel) {
-                UI_ROW UI_WIDTHFILL{
-                    if(button("Properties")){
-                        ui->popup_panel->type = PANEL_PROPERTIES;
-                        ui->popup = false;
-                    }
+    UI_POPUP(rect, "popup"){
+        ID("%d", (int)ui->popup_panel) {
+            UI_ROW UI_WIDTHFILL{
+                if(button("Properties")){
+                    panel->type = PANEL_PROPERTIES;
                 }
-                UI_ROW UI_WIDTHFILL{
-                    if(button("Code Editor")){
-                        ui->popup_panel->type = PANEL_EDITOR;
-                        ui->popup = false;
-                    }
+            }
+            UI_ROW UI_WIDTHFILL{
+                if(button("Code Editor")){
+                    panel->type = PANEL_EDITOR;
                 }
-                UI_ROW UI_WIDTHFILL{
-                    if(button("Debug Info")){
-                        ui->popup_panel->type = PANEL_DEBUG;
-                        ui->popup = false;
-                        
-                    }
+            }
+            UI_ROW UI_WIDTHFILL{
+                if(button("Debug Info")){
+                    panel->type = PANEL_DEBUG;
+                    
                 }
-                UI_ROW UI_WIDTHFILL{
-                    if(button("Console")){
-                        ui->popup_panel->type = PANEL_CONSOLE;
-                        ui->popup = false;
-                    }
+            }
+            UI_ROW UI_WIDTHFILL{
+                if(button("Console")){
+                    panel->type = PANEL_CONSOLE;
                 }
             }
         }

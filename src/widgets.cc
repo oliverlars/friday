@@ -122,17 +122,12 @@ ui_panel_header(Panel* panel, char* fmt, ...){
                 
                 if(result.clicked){
                     widget->checked = !widget->checked;
-                    ui->popup = widget->checked;
                 }
                 
                 if(widget->checked){
-                    ui->popup_rect = v4f2(widget->pos, v2f(200,125));
-                    ui->popup_rect.pos.x -= (ui->popup_rect.width - widget->min.width);
-                    ui->popup_rect.pos.y -= widget->min.height;
-                    ui->popup_rect.pos.y -= 20;
-                    ui->popup_rect.pos.y -= PADDING;
-                    ui->popup_panel = panel;
+                    panel_switch_popup(panel);
                 }
+                
             }
         }
     }

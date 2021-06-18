@@ -240,7 +240,6 @@ typedef u64 UI_ID;
 #define UI_COLUMN defer_loop(push_widget_column(), pop_layout())
 #define UI_WINDOW(rect, fmt, ...) defer_loop(ui_window(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
 #define UI_POPUP(rect, fmt, ...) defer_loop(ui_popup(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
-#define UI_POPUP(rect, fmt, ...) defer_loop(ui_popup(rect, fmt, ##__VA_ARGS__), pop_widget_window()) 
 #define UI_CONTAINER(fmt, ...) defer_loop(ui_container(fmt, ##__VA_ARGS__), pop_widget_container()) 
 #define UI_WIDTHFILL defer_loop(push_widget_widthfill(), pop_layout())
 #define UI_HEIGHTFILL defer_loop(push_widget_heightfill(), pop_layout())
@@ -254,4 +253,5 @@ typedef u64 UI_ID;
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)
 
-global s64 max_hash_nexts;
+
+internal void panel_switch_popup();

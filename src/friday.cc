@@ -744,7 +744,6 @@ UPDATE {
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
-        render_popup();
         // NOTE(Oliver): background
         Colour backdrop = ui->theme.background;
         backdrop.r /= 1.2f;

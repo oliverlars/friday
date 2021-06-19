@@ -62,7 +62,8 @@ enum Widget_Property {
     WP_ON_TOP,
     WP_OVERLAP,
     WP_FIT_TO_CHILDREN,
-    
+    WP_KEEP_INSIDE_WINDOW,
+    WP_ALWAYS_ON_TOP
 };
 
 struct Widget_Style {
@@ -253,5 +254,8 @@ typedef u64 UI_ID;
 #define ForEachWidgetChild(w) for(auto it = w->first_child; it; it = it->next_sibling)
 #define ForEachWidgetSibling(w) for(auto it = w; it; it = it->next_sibling)
 
+
+internal v4f
+get_dropdown_rect_from_current_widget();
 
 internal void panel_switch_popup();

@@ -635,6 +635,7 @@ get_current_window() {
 internal b32
 is_there_an_overlapping_window_after(){
     if(ui->previous_window_count){
+        
         for(int i = ui->current_window+1; i < ui->previous_window_count; i++){
             auto window = ui->previous_windows[i];
             auto bounds = v4f2(window->pos, window->min);
@@ -698,6 +699,7 @@ push_widget(){
         ui->root = widget;
         return widget;
     }else if(!ui->layout_stack && ui->root) {
+        
         Widget* last = ui->root;
         for(; last->next_sibling; last = last->next_sibling);
         last->next_sibling = widget;
@@ -1058,9 +1060,9 @@ push_widget_popup(v4f rect, String8 string){
     style.border_colour = v4f_from_colour(ui->theme.text);
     
     style.background_colour = v4f_from_colour(ui->theme.darker_background);
-    style.background_colour.r /= 2.0;
-    style.background_colour.g /= 2.0;
-    style.background_colour.b /= 2.0;
+    style.background_colour.r /= 3.0;
+    style.background_colour.g /= 3.0;
+    style.background_colour.b /= 3.0;
     
     style.font_scale = 0.7f;
     style.rounded_corner_amount = 5.0f;
@@ -1071,6 +1073,8 @@ push_widget_popup(v4f rect, String8 string){
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_RENDER_HOOK);
     widget_set_property(widget, WP_CLIP);
+    widget_set_property(widget, WP_ALWAYS_ON_TOP);
+    widget_set_property(widget, WP_KEEP_INSIDE_WINDOW);
     
     auto render_hook = [](Widget* widget){
         push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, colour_from_v4f(widget->style.background_colour));
@@ -1373,6 +1377,10 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
         
     }
     
+    if(widget_has_property(widget, WP_KEEP_INSIDE_WINDOW)){
+        widget->pos.x += widget->min.width;
+    }
+    
     v2f size = {};
     if(widget_has_property(widget, WP_OVERLAP)){
         
@@ -1383,6 +1391,7 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
     }
     if(widget_has_property(widget, WP_FIT_TO_CHILDREN)){
         widget->min = size;
+        widget->min.x -= PADDING;
     }
     
     if(widget_has_property(widget, WP_PADDING)){
@@ -1889,6 +1898,22 @@ render_panels(Panel* root, v4f rect){
                         icon_button(ui->logo, "logo button");
                         xspacer();
                         result = arrow_dropdown3("File");
+                        if(result){
+                            v4f rect = get_dropdown_rect_from_current_widget();
+                            UI_POPUP(rect, "file popup"){
+                                
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("New")){
+                                    }
+                                }
+                                
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("OPen")){
+                                    }
+                                }
+                                
+                            }
+                        }
                         xspacer();
                         result = arrow_dropdown3("Edit");
                         xspacer();
@@ -1906,8 +1931,9 @@ render_panels(Panel* root, v4f rect){
     
 }
 
-internal void
-panel_switch_popup(Panel* panel){
+internal v4f
+get_dropdown_rect_from_current_widget() {
+    
     Widget* widget = ui->current_widget;
     v4f rect = {};
     rect = v4f2(widget->pos, v2f(200,125));
@@ -1915,7 +1941,12 @@ panel_switch_popup(Panel* panel){
     rect.pos.y -= widget->min.height;
     rect.pos.y -= 20;
     rect.pos.y -= PADDING;
-    
+    return rect;
+}
+
+internal void
+panel_switch_popup(Panel* panel){
+    auto rect = get_dropdown_rect_from_current_widget();
     UI_POPUP(rect, "popup"){
         ID("%d", (int)ui->popup_panel) {
             UI_ROW UI_WIDTHFILL{
@@ -1941,4 +1972,53 @@ panel_switch_popup(Panel* panel){
             }
         }
     }
+}
+
+internal void
+append_window_to(Widget** to, Widget* window) {
+    assert(to);
+    if(*to){
+        Widget* last = *to;
+        for(; last->next_sibling; last = last->next_sibling);
+        last->next_sibling = window;
+        window->prev_sibling = last;
+    }else {
+        *to = window;
+    }
+}
+
+internal void
+sort_windows() {
+    auto root = ui->root;
+    Widget* on_top = nullptr;
+    Widget* below = nullptr;
+    
+    while(root){
+        if(widget_has_property(root, WP_ALWAYS_ON_TOP)){
+            
+        }else {
+            Widget* next = make_widget();
+            *next = *root;
+            next->next_sibling = nullptr;
+            next->prev_sibling = nullptr;
+            append_window_to(&below, next);
+        }
+        root = root->next_sibling;
+    }
+    
+    root = ui->root;
+    while(root){
+        if(widget_has_property(root, WP_ALWAYS_ON_TOP)){
+            Widget* next = make_widget();
+            *next = *root;
+            next->next_sibling = nullptr;
+            next->prev_sibling = nullptr;
+            append_window_to(&on_top, next);
+        }
+        root = root->next_sibling;
+    }
+    if(on_top){
+        append_window_to(&below, on_top);
+    }
+    ui->root = below;
 }

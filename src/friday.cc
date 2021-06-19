@@ -612,8 +612,6 @@ UPDATE {
         presenter->delete_queue_size = 0;
         
         
-        //adult_swim_trend();
-        
         f32 amount = 0;
         if(has_mouse_scrolled(&amount)){
             next_font_scale += amount/1000.0f;
@@ -752,6 +750,8 @@ UPDATE {
         push_rectangle(v4f(0,0, platform->window_size.width,platform->window_size.height), 1, backdrop);
         f32 widget_start = platform->get_time();
         
+        
+        sort_windows();
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);

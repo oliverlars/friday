@@ -739,6 +739,7 @@ UPDATE {
             presenter->end_pos = 0;
             
         }
+        sort_windows();
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -751,7 +752,6 @@ UPDATE {
         f32 widget_start = platform->get_time();
         
         
-        sort_windows();
         
         ForEachWidgetSibling(ui->root){
             layout_widgets(it);

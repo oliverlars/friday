@@ -2011,8 +2011,31 @@ append_window_to(Widget** to, Widget* window) {
     }
 }
 
+internal int
+compare_windows(const void* a, const void* b){
+    Widget* window_a = (Widget*)a;
+    Widget* window_b = (Widget*)b;
+    if(widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
+       !widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
+        return 1;
+    }
+    if(!widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
+       widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
+        return -1;
+    }
+    if(widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
+       widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
+        return 0;
+    }
+}
+
 internal void
 sort_windows() {
+    if(ui->previous_windows){
+        qsort(ui->previous_windows, ui->previous_window_count, sizeof(Widget*),
+              compare_windows);
+    }
+    return; 
     auto root = ui->root;
     Widget* on_top = nullptr;
     Widget* below = nullptr;

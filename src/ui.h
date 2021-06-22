@@ -256,6 +256,9 @@ typedef u64 UI_ID;
 
 
 internal v4f
-get_dropdown_rect_from_current_widget();
+get_left_dropdown_rect_from_current_widget();
+
+internal v4f
+get_right_dropdown_rect_from_current_widget();
 
 internal void panel_switch_popup();

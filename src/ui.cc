@@ -1077,7 +1077,7 @@ push_widget_popup(v4f rect, String8 string){
     widget_set_property(widget, WP_KEEP_INSIDE_WINDOW);
     
     auto render_hook = [](Widget* widget){
-        push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, colour_from_v4f(widget->style.background_colour));
+        //push_triangle(widget->pos + v2f(widget->min.width-50,0),150, 0, colour_from_v4f(widget->style.background_colour));
     };
     widget->render_hook = render_hook;
     auto result = update_widget(widget);
@@ -1375,10 +1375,6 @@ layout_widgets(Widget* widget, v2f pos, b32 dont_lerp_children){
             widget->pos = pos;
         }
         
-    }
-    
-    if(widget_has_property(widget, WP_KEEP_INSIDE_WINDOW)){
-        widget->pos.x += widget->min.width;
     }
     
     v2f size = {};
@@ -1893,13 +1889,11 @@ render_panels(Panel* root, v4f rect){
                 ID("%d", (int)root) {
                     b32 result = false;
                     UI_ROW {
-                        //result = arrow_dropdown3("File");
-                        //filebar_dropdown("File");
                         icon_button(ui->logo, "logo button");
                         xspacer();
                         result = arrow_dropdown3("File");
                         if(result){
-                            v4f rect = get_dropdown_rect_from_current_widget();
+                            v4f rect = get_left_dropdown_rect_from_current_widget();
                             UI_POPUP(rect, "file popup"){
                                 
                                 UI_ROW UI_WIDTHFILL{
@@ -1908,7 +1902,27 @@ render_panels(Panel* root, v4f rect){
                                 }
                                 
                                 UI_ROW UI_WIDTHFILL{
-                                    if(button("OPen")){
+                                    if(button("Open")){
+                                    }
+                                }
+                                yspacer(5);
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("Save")){
+                                    }
+                                }
+                                
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("Save As")){
+                                    }
+                                }
+                                yspacer(5);
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("Import")){
+                                    }
+                                }
+                                
+                                UI_ROW UI_WIDTHFILL{
+                                    if(button("Import as")){
                                     }
                                 }
                                 
@@ -1932,21 +1946,31 @@ render_panels(Panel* root, v4f rect){
 }
 
 internal v4f
-get_dropdown_rect_from_current_widget() {
+get_right_dropdown_rect_from_current_widget() {
     
     Widget* widget = ui->current_widget;
     v4f rect = {};
     rect = v4f2(widget->pos, v2f(200,125));
     rect.pos.x -= (rect.width - widget->min.width);
     rect.pos.y -= widget->min.height;
-    rect.pos.y -= 20;
+    rect.pos.y -= PADDING;
+    return rect;
+}
+
+internal v4f
+get_left_dropdown_rect_from_current_widget() {
+    
+    Widget* widget = ui->current_widget;
+    v4f rect = {};
+    rect = v4f2(widget->pos, v2f(200,125));
+    rect.pos.y -= widget->min.height;
     rect.pos.y -= PADDING;
     return rect;
 }
 
 internal void
 panel_switch_popup(Panel* panel){
-    auto rect = get_dropdown_rect_from_current_widget();
+    auto rect = get_right_dropdown_rect_from_current_widget();
     UI_POPUP(rect, "popup"){
         ID("%d", (int)ui->popup_panel) {
             UI_ROW UI_WIDTHFILL{

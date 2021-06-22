@@ -739,7 +739,7 @@ UPDATE {
             presenter->end_pos = 0;
             
         }
-        sort_windows();
+        //sort_previous_windows();
         
         render_panels(ui->panel, v4f(0,platform->window_size.height, 
                                      platform->window_size.width, platform->window_size.height));
@@ -753,9 +753,19 @@ UPDATE {
         
         
         
-        ForEachWidgetSibling(ui->root){
-            layout_widgets(it);
-            render_widgets(it);
+        for(int i = 0; i < ui->window_count; i++){
+            if(widget_has_property(ui->windows[i], WP_ALWAYS_ON_TOP)){
+            }else {
+                layout_widgets(ui->windows[i]);
+                render_widgets(ui->windows[i]);
+            }
+        }
+        
+        for(int i = 0; i < ui->window_count; i++){
+            if(widget_has_property(ui->windows[i], WP_ALWAYS_ON_TOP)){
+                layout_widgets(ui->windows[i]);
+                render_widgets(ui->windows[i]);
+            }
         }
         
         f32 widget_end = platform->get_time();

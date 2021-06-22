@@ -636,11 +636,13 @@ internal b32
 is_there_an_overlapping_window_after(){
     if(ui->previous_window_count){
         
-        for(int i = ui->current_window+1; i < ui->previous_window_count; i++){
+        for(int i = 0; i < ui->previous_window_count; i++){
+            if(i == ui->current_window) continue;
             auto window = ui->previous_windows[i];
             auto bounds = v4f2(window->pos, window->min);
             bounds.y -= bounds.height;
-            if(is_in_rect(platform->mouse_position, bounds)){
+            if(widget_has_property(window, WP_ALWAYS_ON_TOP) &&
+               is_in_rect(platform->mouse_position, bounds)){
                 return true;
             }
         }
@@ -2013,59 +2015,58 @@ append_window_to(Widget** to, Widget* window) {
 
 internal int
 compare_windows(const void* a, const void* b){
-    Widget* window_a = (Widget*)a;
-    Widget* window_b = (Widget*)b;
-    if(widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
-       !widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
-        return 1;
-    }
-    if(!widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
-       widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
-        return -1;
-    }
-    if(widget_has_property(window_a, WP_ALWAYS_ON_TOP) && 
-       widget_has_property(window_b, WP_ALWAYS_ON_TOP)){
-        return 0;
+    Widget* window_a = *(Widget**)a;
+    Widget* window_b = *(Widget**)b;
+    int x = widget_has_property(window_a, WP_ALWAYS_ON_TOP);
+    int y = widget_has_property(window_b, WP_ALWAYS_ON_TOP);
+    return x-y;
+}
+
+internal int
+compare_windows(Widget* a, Widget* b){
+    int x = widget_has_property(a, WP_ALWAYS_ON_TOP);
+    int y = widget_has_property(b, WP_ALWAYS_ON_TOP);
+    return x-y;
+}
+
+internal void
+sort_previous_windows() {
+    
+    for(int i = 0; i < ui->previous_window_count -1; i++) {
+        int min = i;
+        for (int j = i + 1; j < ui->previous_window_count; j++)
+            if (compare_windows(ui->previous_windows[min], ui->previous_windows[j]) > 0){
+            min = j;
+        }
+        
+        // Move minimum element at current i.
+        Widget* key = ui->previous_windows[min];
+        while (min > i)
+        {
+            ui->previous_windows[min] = ui->previous_windows[min - 1];
+            min--;
+        }
+        ui->previous_windows[i] = key;
     }
 }
 
 internal void
 sort_windows() {
-    if(ui->previous_windows){
-        qsort(ui->previous_windows, ui->previous_window_count, sizeof(Widget*),
-              compare_windows);
-    }
-    return; 
-    auto root = ui->root;
-    Widget* on_top = nullptr;
-    Widget* below = nullptr;
     
-    while(root){
-        if(widget_has_property(root, WP_ALWAYS_ON_TOP)){
-            
-        }else {
-            Widget* next = make_widget();
-            *next = *root;
-            next->next_sibling = nullptr;
-            next->prev_sibling = nullptr;
-            append_window_to(&below, next);
+    for(int i = 0; i < ui->window_count -1; i++) {
+        int min = i;
+        for (int j = i + 1; j < ui->window_count; j++)
+            if (compare_windows(ui->windows[min], ui->windows[j]) > 0){
+            min = j;
         }
-        root = root->next_sibling;
-    }
-    
-    root = ui->root;
-    while(root){
-        if(widget_has_property(root, WP_ALWAYS_ON_TOP)){
-            Widget* next = make_widget();
-            *next = *root;
-            next->next_sibling = nullptr;
-            next->prev_sibling = nullptr;
-            append_window_to(&on_top, next);
+        
+        // Move minimum element at current i.
+        Widget* key = ui->windows[min];
+        while (min > i)
+        {
+            ui->windows[min] = ui->windows[min - 1];
+            min--;
         }
-        root = root->next_sibling;
+        ui->windows[i] = key;
     }
-    if(on_top){
-        append_window_to(&below, on_top);
-    }
-    ui->root = below;
 }

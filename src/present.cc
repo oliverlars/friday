@@ -884,7 +884,7 @@ arc_remove_property(Arc_Node* arc, Arc_Property property);
 
 internal void
 edit_text(Arc_Node* node){
-    if(presenter->mode == P_CREATE) return;
+    if(editor->mode == E_CREATE) return;
     clampi(&ui->cursor_pos, 0, node->string.length);
     auto string = &node->string;
     
@@ -1055,7 +1055,7 @@ present_editable_reference(Colour colour, Arc_Node* node){
             animate(&presenter->cursor.pos.x, next.x, 0.4f);
             animate(&presenter->cursor.pos.y, next.y, 0.4f);
             
-            if(presenter->mode == P_CREATE){
+            if(editor->mode == E_CREATE){
                 push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, colour_from_v4f(v4f(1,0,0,1)));
             }else {
                 push_rectangle(v4f2(presenter->cursor.pos, v2f(2, widget->min.height)), 1, ui->theme.cursor);
@@ -1199,7 +1199,7 @@ present_editable_string(Colour colour, Arc_Node* node){
             animate(&presenter->cursor.v2.x, next.x, 0.1f);
             animate(&presenter->cursor.v2.y, next.y+cursor_size.height, 0.3f);
             
-            if(presenter->mode == P_CREATE){
+            if(editor->mode == E_CREATE){
                 render_cursor(&presenter->cursor, cursor_size,colour_from_v4f(v4f(1,0,0,1)));
             }else {
                 render_cursor(&presenter->cursor, cursor_size, ui->theme.cursor);

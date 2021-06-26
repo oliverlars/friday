@@ -400,6 +400,7 @@ append_empty_arc_node(Arc_Node* at, Pool* pool){
 
 internal Arc_Node*
 make_declaration_from_node(Arc_Node* decl, Pool* pool){
+    
     arc_set_property(decl, AP_AST);
     decl->ast_type = AST_DECLARATION;
     

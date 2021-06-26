@@ -10,6 +10,7 @@
 #include "graph.h"
 #include "present.h"
 #include "c_backend.h"
+#include "editor.h"
 #include "friday.h"
 
 #include "extras.cc"
@@ -27,7 +28,7 @@
 #include "present.cc"
 #include "graph.cc"
 #include "c_backend.cc"
-
+#include "editor.cc"
 
 global Friday_Globals* globals = 0;
 
@@ -134,6 +135,7 @@ PERMANENT_LOAD {
     make_builtins();
     
     editor->root = scope;
+    editor->mode = E_EDIT;
     
     presenter->cursor.at = first;
     presenter->cursor.string = &first->string;
@@ -159,410 +161,6 @@ HOT_LOAD {
 
 HOT_UNLOAD {
     
-}
-
-internal void
-adult_swim_trend(){
-    local_persist int ch = 0;
-    local_persist int str = 0;
-    local_persist f32 indent_offset = 0;
-    char* strings[] = {
-        "what if", "string", "variables", "could be named", "string", "anything?",
-        "what if syntax", "s64", "1", "+", "2",  "didn't matter?", "void",
-        "what about tabs v spaces?", "f32", "no more what ifs, its real", "s32",
-        "if", "2", ">", "1", "welcome to friday", "s8", "1", "print", "welcom",
-    };
-    
-    char* as = "[as]";
-    if(str >= 22){
-        indent_offset += 0.05f;
-        //presenter->indent_level += 0.5f*sinf(indent_offset);
-    }
-    if(str == 12){
-        present_style = 1;
-    }
-    if(str == 30){
-        present_style = 0;
-    }
-    if(str == 32){
-        indent_offset += 0.02f;
-        presenter->indent_level += 0.5f*sinf(indent_offset);
-    }
-    if(pause > 0){
-        pause--;
-    }else if((platform->frame_count % 6) == 0){
-        switch(str){
-            case 0: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_D, {}));
-                    ch = 0;
-                }
-            }break;
-            case 1: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                }
-            }break;
-            case 2: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }
-                else if(ch < strlen(strings[str])){
-                    if(ch == 0){
-                        platform_push_event(platform_key_press(KEY_2, KEY_MOD_CTRL));
-                    }
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = -1;
-                }
-            }break;
-            case 3: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }
-                else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_D, {}));
-                    ch = 0;
-                    str++;
-                }
-            }break;
-            case 4: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                }
-            }break;
-            case 5: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    if(ch == 0){
-                        platform_push_event(platform_key_press(KEY_2, KEY_MOD_CTRL));
-                    }
-                    
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                    pause = 100;
-                }
-                break;
-                case 6: {
-                    if(ch == -1){
-                        platform_push_event(platform_key_press(KEY_ENTER, {}));
-                        ch++;
-                    }
-                    else if(ch < strlen(strings[str])){
-                        platform_push_event(platform_character_input(strings[str][ch++]));
-                    }else {
-                        str++;
-                        platform_push_event(platform_key_press(KEY_ENTER, {}));
-                        platform_push_event(platform_key_press(KEY_D, {}));
-                        ch = 0;
-                    }
-                }break;
-                case 7: {
-                    if(ch < strlen(strings[str])){
-                        platform_push_event(platform_character_input(strings[str][ch++]));
-                    }else {
-                        str++;
-                        platform_push_event(platform_key_press(KEY_ENTER, {}));
-                        ch = -1;
-                    }
-                }break;
-            }break;
-            case 8: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }
-                else if(ch < strlen(strings[str])){
-                    
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = 0;
-                }
-            }break;
-            
-            case 9: {
-                
-                if(ch < strlen(strings[str])){
-                    
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = 0;
-                }
-            }break;
-            
-            case 10: {
-                if(ch < strlen(strings[str])){
-                    
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = -1;
-                }
-            }break;
-            case 11: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_D, {}));
-                    ch = 0;
-                    pause = 100;
-                }
-            }break;
-            
-            case 12: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -2;
-                    str++;
-                    pause = 40;
-                }
-            }break;
-            case 13: {
-                if(ch == -2){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }
-                else if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_D, {}));
-                    ch = 0;
-                }
-            }break;
-            
-            case 14: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -2;
-                    str++;
-                    pause = 30;
-                }
-            }break;
-            case 15: {
-                if(ch == -2){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch == -1){
-                    
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    if(ch == 17){
-                        pause = 50;
-                    }
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    pause = 50;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_F, {}));
-                    str++;
-                    ch = -1;
-                }
-            }break;
-            case 16: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                    str++;
-                }
-            }break;
-            case 17: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = 0;
-                    str++;
-                }
-            }break;
-            case 18: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = 0;
-                }
-            }break;
-            case 19: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = 0;
-                }
-            }break;
-            case 20: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    str++;
-                    ch = -1;
-                }
-            }break;
-            case 21: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    if(ch == 6){
-                        pause = 40;
-                    }if(ch == 9){
-                        pause = 20;
-                    }
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    platform_push_event(platform_key_press(KEY_D, {}));
-                    str++;
-                    ch = 0;
-                }
-            }break;
-            case 22: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                }
-            }break;
-            case 23: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                }
-            }break;
-            case 24: {
-                if(ch == -1){
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch++;
-                }else if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = 0;
-                }
-            }break;
-            case 25: {
-                if(ch < strlen(strings[str])){
-                    platform_push_event(platform_character_input(strings[str][ch++]));
-                }else {
-                    str++;
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                    ch = -1;
-                    
-                    platform_push_event(platform_key_press(KEY_TAB, {}));
-                    platform_push_event(platform_key_press(KEY_ENTER, {}));
-                }
-            }break;
-            case 26: {
-                platform_push_event(platform_key_press(KEY_LEFT, {}));
-                str++;
-            }break;
-            case 27:{ 
-                platform_push_event(platform_key_press(KEY_UP, {}));
-                str++;
-            }break;
-            case 28:{ 
-                platform_push_event(platform_key_press(KEY_LEFT, {}));
-                str++;
-            }break;
-            case 29: {
-                platform_push_event(platform_key_press(KEY_LEFT, {}));
-                str++;
-                ch = strlen("welcome to friday");
-                ch = 5;
-            }break;
-            case 30:{
-                if(ch == 5){
-                    platform_push_event(platform_key_press(KEY_LEFT, {}));
-                    ch--;
-                }else if(ch >= 0){
-                    pause = 30;
-                    platform_push_event(platform_key_press(KEY_BACKSPACE, {KEY_MOD_CTRL}));
-                    ch--;
-                }else {
-                    str++;
-                    ch = 0;
-                    pause = 40;
-                }
-            }break;
-            case 31: {
-                if(ch < strlen(as)){
-                    platform_push_event(platform_character_input(as[ch++]));
-                }else {
-                    str++;
-                }
-            }break;
-        }
-    }
 }
 
 f32 graph_height = 100.0f;
@@ -646,7 +244,7 @@ UPDATE {
         }else if(has_pressed_key_modified(KEY_2, KEY_MOD_CTRL)){
             
             presenter->cursor.at->token_type = TOKEN_STRING;
-            presenter->mode = P_EDIT;
+            editor->mode = E_EDIT;
         }
         
         
@@ -784,12 +382,6 @@ UPDATE {
         //push_bezier(platform->mouse_position, v2f(50, 50), v2f(200, 200), 1, ui->theme.text);
         delta_times[platform->frame_count%64] = platform->dt;
         
-        if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
-           (presenter->last_cursor.at->ast_type == AST_TOKEN ||
-            presenter->last_cursor.at->ast_type == AST_TYPE_TOKEN) &&
-           presenter->last_cursor.at->string.length == 0){
-            mark_node_for_deletion(presenter->last_cursor.at);
-        }
         if(presenter->cursor.at->ast_type == AST_TOKEN){
             set_token_type(presenter->cursor.at);
             
@@ -798,6 +390,26 @@ UPDATE {
         if(presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
             set_type_token_type(presenter->cursor.at);
         }
+        
+        
+        handle_editor_input();
+#if 0        
+        if(presenter->last_cursor.at && presenter->last_cursor.at != presenter->cursor.at && 
+           (presenter->last_cursor.at->ast_type == AST_TOKEN ||
+            presenter->last_cursor.at->ast_type == AST_TYPE_TOKEN) &&
+           presenter->last_cursor.at->string.length == 0){
+            mark_node_for_deletion(presenter->last_cursor.at);
+        }
+        
+        if(presenter->cursor.at->ast_type == AST_TOKEN){
+            set_token_type(presenter->cursor.at);
+            
+        }
+        
+        if(presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
+            set_type_token_type(presenter->cursor.at);
+        }
+        
         if(has_pressed_key_modified(KEY_J, KEY_MOD_CTRL)){
             jump_to_declaration();
         }
@@ -816,13 +428,13 @@ UPDATE {
             }
         }
         //~ Check
-        if(presenter->mode == P_EDIT){
+        if(editor->mode == E_EDIT){
             if(has_pressed_key(KEY_ENTER)){
-                presenter->mode = P_CREATE;
+                editor->mode = E_CREATE;
             }
         }
         Arc_Node* would_be_reference = nullptr;
-        if(presenter->mode == P_CREATE){
+        if(editor->mode == E_CREATE){
             
             //~ Node creation keybinds
             if((presenter->cursor.at->ast_type == AST_TOKEN && 
@@ -860,7 +472,7 @@ UPDATE {
                     set_as_ast(next, AST_TOKEN);
                     insert_arc_node_as_child(after, expr);
                     insert_arc_node_as_child(expr, next);
-                    presenter->mode = P_EDIT;
+                    editor->mode = E_EDIT;
                 }else if(has_pressed_key(KEY_FULLSTOP)){
                     if(!presenter->cursor.at->next_sibling){
                         auto next = make_selectable_arc_node(&editor->arc_pool);
@@ -873,10 +485,10 @@ UPDATE {
                         set_as_ast(next, AST_TOKEN);
                         insert_arc_node_as_sibling(presenter->cursor.at, next);
                         advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                        presenter->mode = P_EDIT;
+                        editor->mode = E_EDIT;
                     }
                 }else if(has_pressed_key(KEY_ENTER)){
-                    presenter->mode = P_EDIT;
+                    editor->mode = E_EDIT;
                     advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 }
             }else if(has_pressed_key(KEY_D)){
@@ -894,7 +506,7 @@ UPDATE {
                 insert_arc_node_as_child(presenter->cursor.at->last_child, expr);
                 set_as_ast(expr, AST_TOKEN);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(has_pressed_key(KEY_F)){
                 if(!presenter->cursor.at->next_sibling){
@@ -914,7 +526,7 @@ UPDATE {
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(string_eq(presenter->cursor.at->string, "foreign")){
                 if(!presenter->cursor.at->next_sibling){
@@ -939,7 +551,7 @@ UPDATE {
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
             }else if(string_eq(presenter->cursor.at->string, "while")){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
@@ -957,7 +569,7 @@ UPDATE {
                 insert_arc_node_as_child(presenter->cursor.at->last_child, empty);
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
             }else if(string_eq(presenter->cursor.at->string, "using")){
                 if(!presenter->cursor.at->next_sibling){
                     append_empty_arc_node(presenter->cursor.at, &editor->arc_pool);
@@ -990,7 +602,7 @@ UPDATE {
                 insert_arc_node_as_child(presenter->cursor.at->last_child, body);
                 
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(string_eq(presenter->cursor.at->string, "return")){
                 
@@ -1003,7 +615,7 @@ UPDATE {
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TOKEN);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, next);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
                 
             }else if(string_eq(presenter->cursor.at->string, "new")){
@@ -1017,7 +629,7 @@ UPDATE {
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 set_as_ast(next, AST_TYPE_TOKEN);
                 insert_arc_node_as_child(presenter->cursor.at, next);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
             }else if(has_pressed_key(KEY_S)){
                 if(!presenter->cursor.at->next_sibling){
@@ -1028,7 +640,7 @@ UPDATE {
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->first_child, next);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(has_pressed_key(KEY_C)){
                 
@@ -1042,7 +654,7 @@ UPDATE {
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(presenter->cursor.at->string.length == 0){
                 if(presenter->cursor.at->parent &&
@@ -1060,12 +672,12 @@ UPDATE {
                     insert_arc_node_as_child(expr, next);
                 }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
             }else if(has_pressed_key(KEY_ENTER)){
                 auto next = make_selectable_arc_node(&editor->arc_pool);
                 insert_arc_node_as_sibling(presenter->cursor.at, next);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
             }else if(presenter->cursor.at->ast_type == AST_TOKEN ||
                      presenter->cursor.at->ast_type == AST_TYPE_TOKEN){
                 
@@ -1076,11 +688,11 @@ UPDATE {
                     arc_remove_property(next, AP_DELETABLE);
                 }
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
                 
             }else if(presenter->cursor.at->ast_type != AST_INVALID && !presenter->cursor.at->next_sibling){
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                presenter->mode = P_EDIT;
+                editor->mode = E_EDIT;
             }else if(can_resolve_reference(presenter->cursor.at, &would_be_reference)){
                 
                 if(would_be_reference->ast_type == AST_FUNCTION){
@@ -1095,7 +707,7 @@ UPDATE {
                     set_as_ast(next, AST_TOKEN);
                     insert_arc_node_as_child(presenter->cursor.at->first_child->first_child, next);
                     advance_cursor(&presenter->cursor, CURSOR_RIGHT);
-                    presenter->mode = P_EDIT;
+                    editor->mode = E_EDIT;
                     
                 }else {
                     if(!arc_has_property(presenter->cursor.at, AP_AST)){
@@ -1119,6 +731,7 @@ UPDATE {
                 }
             }
         }
+#endif
         
         //present_debug_arc(v2f(100, platform->window_size.height - 500), editor->root);
         f32 end = platform->get_time();

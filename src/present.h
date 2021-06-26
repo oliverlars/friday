@@ -8,11 +8,6 @@ enum Cursor_Direction {
     CURSOR_RIGHT,
 };
 
-enum Present_Mode {
-    P_EDIT,
-    P_CREATE,
-};
-
 struct Present_Node {
     Arc_Node* node;
 };
@@ -40,7 +35,6 @@ struct Cursor {
 
 struct Presenter_State {
     
-    Present_Mode mode;
     
     Present_Node* buffer;
     int buffer_pos;

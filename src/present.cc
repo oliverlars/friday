@@ -1262,7 +1262,8 @@ present_declaration(Arc_Node* node){
             present_space();
             present_arc(node->first_child->first_child);
             if(node->last_child->first_child){
-                if(node->last_child->first_child->string.length ||
+                if(node->last_child->first_child->next_sibling ||
+                   node->last_child->first_child->string.length ||
                    presenter->cursor.at == node->last_child->first_child){
                     present_space();
                     present_string(ui->theme.text_misc, make_string("="));
@@ -2042,9 +2043,12 @@ present_ast(Arc_Node* node){
                     present_string(ui->theme.text_misc, make_string("."));
                     present_arc(node->next_sibling);
                 }
-                else if(node->next_sibling && (node->next_sibling->string.length || 
-                                               node->next_sibling == presenter->cursor.at ||
-                                               node->next_sibling->token_type == TOKEN_ARRAY)){
+                else if(node->next_sibling && 
+                        (node->next_sibling->next_sibling || 
+                         node->next_sibling->string.length || 
+                         node->next_sibling == presenter->cursor.at ||
+                         node->next_sibling->token_type == TOKEN_ARRAY)){
+                    
                     if(node->next_sibling->token_type != TOKEN_ARRAY){
                         present_space();
                     }

@@ -314,12 +314,16 @@ UPDATE {
                                                             presenter->delete_queue_size*sizeof(Arc_Node*));
             int index = 0;
             for(int i = presenter->start_pos; i <= presenter->end_pos; i++){
-                //mark_node_for_deletion(presenter->buffer[i].node);
+                log("%.*s", expand_string(presenter->buffer[i].node->string));
                 if(arc_has_property(presenter->buffer[i].node, AP_DELETABLE)){
                     presenter->delete_queue[index++] = presenter->buffer[i].node;
+                }else {
+                    // NOTE(Oliver): we can't delete the actual node 
+                    // but we should delete its contents
+                    //presenter->buffer[i].node->string.length = 0;
                 }
             }
-            presenter->delete_queue_size = index-1;
+            presenter->delete_queue_size = index;
             advance_cursor(&presenter->cursor, CURSOR_LEFT, 1);
             
             presenter->select_start = {};

@@ -16,11 +16,16 @@ make_editable_declaration(Arc_Node* decl, Pool* pool){
     
     
     auto selectable_type = make_selectable_arc_node(pool);
+    arc_remove_property(selectable_type, AP_DELETABLE);
     auto selectable_expr = make_selectable_arc_node(pool);
+    arc_remove_property(selectable_expr, AP_DELETABLE);
     
     insert_arc_node_as_child(type, selectable_type);
+    
     set_as_ast(selectable_type, AST_TYPE_TOKEN);
     insert_arc_node_as_child(expr, selectable_expr);
+    
+    set_as_ast(selectable_expr, AST_TOKEN);
     
     return decl;
 }
@@ -30,6 +35,7 @@ handle_creation_mode_input() {
     
     auto current = presenter->cursor.at;
     auto pool = &editor->arc_pool;
+    
     if(has_pressed_key(KEY_D)){
         make_editable_declaration(current, pool);
         advance_cursor(&presenter->cursor, CURSOR_RIGHT);
@@ -39,21 +45,28 @@ handle_creation_mode_input() {
 
 internal void
 handle_edit_mode_input() {
+    
+    auto current = presenter->cursor.at;
     auto pool = &editor->arc_pool;
     
     if(has_pressed_key(KEY_ENTER)){
         Arc_Node* list = nullptr;
-        if(presenter->cursor.at->string.length){
-            if(is_sub_node_of_list(presenter->cursor.at, &list) &&
-               arc_has_property(presenter->cursor.at, AP_AST)){
+        if(current->string.length){
+            if(is_sub_node_of_list(current, &list) &&
+               arc_has_property(current, AP_AST)){
                 auto next = make_selectable_arc_node(pool);
-                insert_arc_node_as_sibling(presenter->cursor.at, next);
+                if(current->ast_type == AST_TYPE_TOKEN){
+                    set_as_ast(next, AST_TYPE_TOKEN);
+                }else if(current->ast_type == AST_TOKEN){
+                    set_as_ast(next, AST_TOKEN);
+                }
+                insert_arc_node_as_sibling(current, next);
                 advance_cursor(&presenter->cursor, CURSOR_RIGHT);
             }else {
                 editor->mode = E_CREATE;
             }
         }else {
-            mark_node_for_deletion(presenter->cursor.at);
+            mark_node_for_deletion(current);
             advance_cursor(&presenter->cursor, CURSOR_RIGHT);
         }
         

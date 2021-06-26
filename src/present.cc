@@ -404,7 +404,10 @@ internal void
 set_type_token_type(Arc_Node* node){
     Arc_Node* result;
     if(node->token_type == TOKEN_ARRAY) return;
-    
+    if(node->token_type == TOKEN_REFERENCE &&
+       node->string.length == 0){
+        node->token_type = TOKEN_UNASSIGNED;
+    }
     auto builtin = editor->builtins;
     while(builtin){
         if(builtin->ast_type == AST_TYPE_TOKEN && string_eq(node->string, builtin->string)){

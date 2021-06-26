@@ -216,6 +216,7 @@ UPDATE {
         }
         animate(&font_scale, next_font_scale, 0.1f);
         
+#if 0        
         if(has_pressed_key_modified(KEY_LBRACKET, KEY_MOD_CTRL)){
             if(presenter->cursor.at->ast_type == AST_TOKEN){
                 
@@ -246,6 +247,7 @@ UPDATE {
             presenter->cursor.at->token_type = TOKEN_STRING;
             editor->mode = E_EDIT;
         }
+#endif
         
         
         if(has_pressed_key_modified(KEY_RIGHT, KEY_MOD_SHIFT)){
@@ -320,7 +322,8 @@ UPDATE {
                 }else {
                     // NOTE(Oliver): we can't delete the actual node 
                     // but we should delete its contents
-                    //presenter->buffer[i].node->string.length = 0;
+                    
+                    presenter->buffer[i].node->string.length = 0;
                 }
             }
             presenter->delete_queue_size = index;

@@ -150,6 +150,8 @@ PERMANENT_LOAD {
     
     
     ui->logo = make_bitmap("icon.png");
+    
+    
 }
 
 HOT_LOAD {
@@ -199,7 +201,7 @@ frame_graph(){
 UPDATE {
     FRAME
     {
-        
+        highlight_reference = nullptr;
         platform->reset_cursor();
         f32 start = platform->get_time();
         presenter->number_of_deletions = 0;

@@ -1047,7 +1047,9 @@ present_editable_reference(Colour colour, Arc_Node* node){
         push_string(pos, widget->alt_string, colour_from_v4f(widget->style.text_colour), widget->style.font_scale);
         
         v4f underline = v4f(bbox.x, bbox.y, bbox.width, 3);
-        if(highlight_reference && (widget->arc->reference == highlight_reference || widget->arc == highlight_reference)){
+        if(highlight_reference && widget->arc->token_type == TOKEN_REFERENCE &&
+           (widget->arc->reference == highlight_reference 
+            || widget->arc == highlight_reference)){
             push_rectangle(underline, 1, colour_from_v4f(v4f(1,0,0,1)));
         }
         

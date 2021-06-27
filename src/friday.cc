@@ -145,6 +145,7 @@ PERMANENT_LOAD {
     editor->views[editor->view_count++] = make_stringf(&editor->string_pool, "default");
     
     editor->file_location = make_stringf(&editor->string_pool, "test.arc");
+    editor->image_location = make_stringf(&editor->string_pool, " ");
     
     presenter->select_first = first;
     
@@ -436,6 +437,7 @@ UPDATE {
                 }
             }
         }
+        
         //~ Check
         if(editor->mode == E_EDIT){
             if(has_pressed_key(KEY_ENTER)){
@@ -726,9 +728,12 @@ UPDATE {
                         }
                         
                         make_assignment_from_node(presenter->cursor.at, &editor->arc_pool);
+                        
                         auto next = make_selectable_arc_node(&editor->arc_pool);
+                        
                         next->string = presenter->cursor.at->string;
                         next->reference = presenter->cursor.at->reference;
+                        
                         set_as_ast(next, AST_TOKEN);
                         insert_arc_node_as_child(presenter->cursor.at->first_child, next);
                         

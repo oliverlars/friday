@@ -174,11 +174,41 @@ make_editable_function(Arc_Node* func, Pool* pool){
     return func;
 }
 
+internal Arc_Node*
+make_editable_assignment(Arc_Node* assign, Pool* pool){
+    arc_set_property(assign, AP_AST);
+    assign->ast_type = AST_ASSIGNMENT;
+    
+    auto lhs = make_arc_node(pool);
+    set_as_ast(lhs, AST_EXPR);
+    
+    auto rhs = make_arc_node(pool);
+    set_as_ast(rhs, AST_EXPR);
+    
+    insert_arc_node_as_child(assign, lhs);
+    insert_arc_node_as_sibling(lhs, rhs);
+    
+    auto selectable_lhs = make_selectable_arc_node(pool);
+    arc_remove_property(selectable_lhs, AP_DELETABLE);
+    insert_arc_node_as_child(lhs, selectable_lhs);
+    selectable_lhs->string = assign->string;
+    selectable_lhs->reference = assign->reference;
+    set_as_ast(selectable_lhs, AST_TOKEN);
+    
+    auto selectable_rhs = make_selectable_arc_node(pool);
+    arc_remove_property(selectable_rhs, AP_DELETABLE);
+    set_as_ast(selectable_rhs, AST_TOKEN);
+    insert_arc_node_as_child(rhs, selectable_rhs);
+    
+    return assign;
+}
+
 internal void
 handle_creation_mode_input() {
     
     auto current = presenter->cursor.at;
     auto pool = &editor->arc_pool;
+    
     
     if(string_eq(current->string, "if")){
         arc_set_property(current, AP_DELETABLE);
@@ -221,6 +251,7 @@ handle_creation_mode_input() {
         editor->mode = E_EDIT;
     }
     else if(has_pressed_key(KEY_F)){
+        
         arc_set_property(current, AP_DELETABLE);
         auto next_in_scope = make_selectable_arc_node(pool);
         
@@ -229,21 +260,59 @@ handle_creation_mode_input() {
         make_editable_function(current, pool);
         advance_cursor(&presenter->cursor, CURSOR_RIGHT);
         editor->mode = E_EDIT;
+        
     }
-    
 }
 
 internal void
 handle_edit_mode_input() {
     
+    if(arc_has_property(presenter->cursor.at, AP_AST) &&
+       presenter->cursor.at->ast_type == AST_TYPE_TOKEN &&
+       presenter->cursor.at->reference){
+        if(has_pressed_key_modified(KEY_P, KEY_MOD_CTRL)){
+            presenter->cursor.at->number_of_pointers++;
+        }else if(has_pressed_key_modified(KEY_P, KEY_MOD_SHIFT | KEY_MOD_CTRL)){
+            if(presenter->cursor.at->number_of_pointers <= 0){
+                presenter->cursor.at->number_of_pointers = 0;
+            }else {
+                presenter->cursor.at->number_of_pointers--;
+            }
+        }
+    }
+    
     auto current = presenter->cursor.at;
     auto pool = &editor->arc_pool;
-    
-    if(has_pressed_key(KEY_ENTER)){
+    if(has_pressed_key_modified(KEY_ENTER, KEY_MOD_CTRL)){
+        auto next_in_scope = make_selectable_arc_node(pool);
+        set_as_ast(next_in_scope, AST_TOKEN);
+        insert_arc_node_as_sibling(current, next_in_scope);
+        arc_set_property(current, AP_SLIDER);
+        advance_cursor(&presenter->cursor, CURSOR_RIGHT);
+    }
+    else if(has_pressed_key_modified(KEY_I, KEY_MOD_CTRL)){
+        auto next_in_scope = make_selectable_arc_node(pool);
+        set_as_ast(next_in_scope, AST_TOKEN);
+        insert_arc_node_as_sibling(current, next_in_scope);
+        arc_set_property(current, AP_IMAGE);
+    }
+    else if(has_pressed_key(KEY_ENTER)){
         Arc_Node* list = nullptr;
         if(current->string.length){
-            if(is_sub_node_of_list(current, &list) &&
-               arc_has_property(current, AP_AST)){
+            
+            Arc_Node* would_be_reference = nullptr;
+            if(can_resolve_reference(current, &would_be_reference)){
+                arc_set_property(current, AP_DELETABLE);
+                auto next_in_scope = make_selectable_arc_node(pool);
+                
+                arc_remove_property(next_in_scope, AP_DELETABLE);
+                insert_arc_node_as_sibling(current, next_in_scope);
+                set_token_type(current);
+                make_editable_assignment(current, pool);
+                editor->mode = E_EDIT;
+            }
+            else if(is_sub_node_of_list(current, &list) &&
+                    arc_has_property(current, AP_AST)){
                 auto next = make_selectable_arc_node(pool);
                 if(current->ast_type == AST_TYPE_TOKEN){
                     set_as_ast(next, AST_TYPE_TOKEN);

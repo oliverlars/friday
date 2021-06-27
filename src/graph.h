@@ -67,6 +67,8 @@ enum Arc_Property {
     AP_MARK_DELETE,
     AP_CONTAINS_SCOPE,
     AP_ROOT,
+    AP_SLIDER,
+    AP_IMAGE,
 };
 
 #define ARC_PROPERTIES_MAX 256

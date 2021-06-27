@@ -1989,7 +1989,8 @@ present_ast(Arc_Node* node){
             auto member = node->first_child;
             UI_COLUMN{
                 while(member){
-                    if(member->string.length || 
+                    if(member->next_sibling || 
+                       member->string.length || 
                        member == presenter->cursor.at){
                         present_arc(member);
                     }
@@ -2346,7 +2347,32 @@ present_pascal_ast(Arc_Node* node){
 internal void
 present_arc(Arc_Node* node){
     if(!node) return;
-    if(arc_has_property(node, AP_AST)){
+    if(arc_has_property(node, AP_SLIDER)){
+        local_persist f32 ui_mix_test = 0;
+        fslider(0, 10, &ui_mix_test, "slider");
+        present_space();
+        present_arc(node->next_sibling);
+        present_arc(node->first_child);
+    }
+    else if(arc_has_property(node, AP_IMAGE)){
+        UI_ROW {
+            UI_COLUMN{
+                UI_ROW{
+                    present_editable_string(ui->theme.text, node);
+                    editor->image_location = node->string;
+                    present_space();
+                    if(button("load")){
+                        editor->image = make_bitmap(string_to_cstr(&platform->frame_arena, editor->image_location));
+                        
+                    }
+                    present_space();
+                }
+                
+                image(editor->image, 20, "image");
+            }
+        }
+    }
+    else if(arc_has_property(node, AP_AST)){
         if(present_style == 0){
             present_ast(node);
         }else if(present_style == 1){

@@ -305,16 +305,19 @@ has_input_character(Platform_Event **event_out){
 
 internal f32
 animate(f32 source, f32 target, f32 value){
+    value = value/2.0f;
     return (target - source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(f32* source, f32 target, f32 value){
+    value = value/2.0f;
     *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(int* source, int target, f32 value){
+    value = value/2.0f;
     *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
 
@@ -1103,7 +1106,7 @@ push_widget_container(String8 string){
     auto widget = push_widget(string);
     auto layout = push_layout(widget);
     
-    widget_set_property(widget, WP_DRAGGABLE);
+    //widget_set_property(widget, WP_DRAGGABLE);
     widget_set_property(widget, WP_FIT_TO_CHILDREN);
     widget_set_property(widget, WP_OVERLAP);
     widget_set_property(widget, WP_MANUAL_LAYOUT);
@@ -1112,7 +1115,7 @@ push_widget_container(String8 string){
     widget->min = v2f(400, 200);
     push_widget_padding(v2f(10, 10));
     
-    if(ui->dragging && ui->active == widget->id){
+    if(0 && ui->dragging && ui->active == widget->id){
         widget->pos.x = widget->pos.x + platform->mouse_delta.x;
         widget->pos.y = widget->pos.y + platform->mouse_delta.y;
     }

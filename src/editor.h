@@ -23,6 +23,9 @@ struct Editor_State {
     Editor_Mode mode;
     
     String8 file_location;
+    String8 image_location;
+    
+    Bitmap image;
 };
 
 Editor_State* editor;

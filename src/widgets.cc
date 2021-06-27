@@ -366,9 +366,46 @@ icon_button(Bitmap bitmap, char* fmt, ...){
     widget->render_hook = render_hook;
     
     auto result = update_widget(widget);
-    
-    widget->min = v2f(26, 26);
+    widget->min = v2f(bitmap.width, bitmap.height);
     return result.clicked;
+    
+}
+
+internal void
+image(Bitmap bitmap, f32 size, char* fmt, ...){
+    
+    va_list args;
+    va_start(args, fmt);
+    String8 string = make_stringfv(&platform->frame_arena, fmt, args);
+    va_end(args);
+    
+    Widget* widget = push_widget(string);
+    
+    Widget_Style style = {};
+    style.text_colour = v4f_from_colour(ui->theme.text);
+    style.border_colour = v4f_from_colour(ui->theme.text);
+    style.background_colour = v4f_from_colour(ui->theme.darker_background);
+    style.font_scale = 0.7f;
+    style.rounded_corner_amount = 5.0f;
+    push_style(style);
+    
+    widget_set_property(widget, WP_LERP_COLOURS);
+    widget_set_property(widget, WP_HOVER_INFLATE);
+    widget_set_property(widget, WP_RENDER_HOOK);
+    widget_set_property(widget, WP_HOVER_RENDER_BACKGROUND);
+    
+    widget->bitmap = bitmap;
+    auto render_hook = [](Widget* widget) {
+        v2f pos = widget->pos;
+        pos.y -= widget->min.height;
+        push_rectangle_textured(v4f2(pos, widget->min), 3, widget->bitmap);
+    };
+    
+    widget->render_hook = render_hook;
+    
+    auto result = update_widget(widget);
+    widget->min = v2f(bitmap.width*0.2f*(1.0f+widget->hot_transition/2.0f), 
+                      bitmap.height*0.2f*(1.0f+widget->hot_transition/2.0f));
     
 }
 

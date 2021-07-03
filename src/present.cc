@@ -2355,6 +2355,7 @@ present_arc(Arc_Node* node){
         present_arc(node->first_child);
     }
     else if(arc_has_property(node, AP_IMAGE)){
+        local_persist f32 image_scale = 0.2f;
         UI_ROW {
             UI_COLUMN{
                 UI_ROW{
@@ -2367,8 +2368,8 @@ present_arc(Arc_Node* node){
                     }
                     present_space();
                 }
-                
-                image(editor->image, 20, "image");
+                fslider(0, 1, &image_scale, "image scale");
+                image(editor->image, image_scale, "image");
             }
         }
     }

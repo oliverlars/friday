@@ -301,7 +301,8 @@ handle_edit_mode_input() {
         if(current->string.length){
             
             Arc_Node* would_be_reference = nullptr;
-            if(can_resolve_reference(current, &would_be_reference)){
+            if(can_resolve_reference(current, &would_be_reference) &&
+               !arc_has_property(current, AP_AST)){
                 arc_set_property(current, AP_DELETABLE);
                 auto next_in_scope = make_selectable_arc_node(pool);
                 

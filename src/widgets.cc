@@ -372,7 +372,7 @@ icon_button(Bitmap bitmap, char* fmt, ...){
 }
 
 internal void
-image(Bitmap bitmap, f32 size, char* fmt, ...){
+image(Bitmap bitmap, f32 scale, char* fmt, ...){
     
     va_list args;
     va_start(args, fmt);
@@ -404,8 +404,8 @@ image(Bitmap bitmap, f32 size, char* fmt, ...){
     widget->render_hook = render_hook;
     
     auto result = update_widget(widget);
-    widget->min = v2f(bitmap.width*0.2f*(1.0f+widget->hot_transition/2.0f), 
-                      bitmap.height*0.2f*(1.0f+widget->hot_transition/2.0f));
+    widget->min = v2f(bitmap.width*scale*(1.0f+widget->hot_transition/2.0f), 
+                      bitmap.height*scale*(1.0f+widget->hot_transition/2.0f));
     
 }
 

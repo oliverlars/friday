@@ -305,18 +305,21 @@ has_input_character(Platform_Event **event_out){
 
 internal f32
 animate(f32 source, f32 target, f32 value){
+    return lerp(source, target, value);
     value = value/2.0f;
     return (target - source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(f32* source, f32 target, f32 value){
+    return lerp(source, target, value);
     value = value/2.0f;
     *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
 
 internal void
 animate(int* source, int target, f32 value){
+    return lerp(source, target, value);
     value = value/2.0f;
     *source += (target - *source)*(1.0f - exp(-value*platform->dt));
 }
